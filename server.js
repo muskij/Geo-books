@@ -25,7 +25,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
-const PORT = 3007; // Changed to 3007 to avoid EADDRINUSE
+const PORT = process.env.PORT || 3007; // Railway assigns PORT at runtime; 3007 stays as local fallback
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // Fail closed, not open: a misconfigured production deploy should refuse to
