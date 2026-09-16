@@ -385,7 +385,7 @@ const questionImportLimiter = rateLimit({
 
 // Middleware
 app.use(express.json());
-app.use(express.static(__dirname)); // Serve static files from project root
+app.use(express.static(__dirname, { index: 'index.htm' })); // Serve static files from project root; landing page is index.htm, not the express.static default of index.html
 
 // ---------------------------------------------------------------------------
 // Auth middleware
