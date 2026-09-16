@@ -1053,9 +1053,72 @@ app.post('/api/ai/chat', requireAuth, async (req, res) => {
 });
 
 // --- AI: quiz generation from document text (was generateQuiz) ---
+// ---------------------------------------------------------------------------
+// AI generation daily cap — server-enforced
+// ---------------------------------------------------------------------------
+// Previously the only cap was a client-side check in app.js's
+// startAiGeneration() comparing against a Firestore field in the browser —
+// trivially bypassed via devtools, and "unlimited" tiers (STANDARD/PREMIUM)
+// had no cap of any kind, client or server. Now that this hits paid OpenAI
+// usage, every tier gets a real, server-side, per-day ceiling. "Unlimited"
+// tiers get a generous ceiling (not literally infinite) purely as an
+// anti-abuse/cost-control safety net — the marketing copy can still say
+// "Unlimited AI-Generated Exams" since no real user will hit 20/day.
+const CBT_GENERATION_DAILY_CAP = {
+  FREE: 1,
+  EXAM_PASS_SEASON: 1,
+  EXAM_PASS_ANNUAL: 1,
+  UNIVERSITY_PASS_30: 1,
+  UNIVERSITY_PASS_70: 1,
+  TUTOR_COURSE_PASS: 1,
+  STANDARD: 20,
+  STANDARD_ANNUAL: 20,
+  PREMIUM: 20,
+  PREMIUM_ANNUAL: 20,
+};
+const DEFAULT_CBT_GENERATION_DAILY_CAP = 1; // no/unrecognized subscription
+
+async function checkAndIncrementCbtGenerationQuota(uid, isAdmin) {
+  if (isAdmin) return { allowed: true }; // admins bypass entirely, same as lecture quota
+
+  const userSnap = await db.collection('users').doc(uid).get();
+  const sub = userSnap.exists ? userSnap.data()?.subscription : null;
+  const tier = sub && sub.verified && sub.status === 'active' ? String(sub.tier || '').toUpperCase() : 'FREE';
+  const cap = CBT_GENERATION_DAILY_CAP[tier] ?? DEFAULT_CBT_GENERATION_DAILY_CAP;
+
+  const day = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+  const usageRef = db.collection('cbtGenerationUsage').doc(`${uid}_${day}`);
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(usageRef);
+    const count = snap.exists ? Number(snap.data().count) || 0 : 0;
+    if (count >= cap) {
+      return { allowed: false, cap };
+    }
+    tx.set(usageRef, {
+      uid, day, count: count + 1,
+      updatedAt: FieldValue.serverTimestamp()
+    }, { merge: true });
+    return { allowed: true, cap, used: count + 1 };
+  });
+}
+
 app.post('/api/ai/generate-quiz', requireAuth, async (req, res) => {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(503).json({ error: 'AI service not configured on server' });
+  if (!db) return res.status(503).json({ error: 'Server not configured' });
+
+  try {
+    const quota = await checkAndIncrementCbtGenerationQuota(req.user.uid, req.user.admin === true);
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: `Daily AI-generated exam limit reached (${quota.cap}/day). Try again tomorrow, or upgrade for a higher limit.`
+      });
+    }
+  } catch (e) {
+    console.error('CBT generation quota check failed:', e);
+    return res.status(500).json({ error: 'Could not verify generation quota' });
+  }
 
   const { text, count, intensity, style } = req.body || {};
   const safeCount = Math.max(5, Math.min(50, Math.floor(Number(count) || 20)));

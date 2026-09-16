@@ -4839,118 +4839,105 @@ aside#sidebar { position: fixed !important; }
           <button id="planBtnFREE" disabled class="w-full py-4 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-400 font-black uppercase tracking-widest text-[10px]">Current Plan</button>
         </div>
 
-        <!-- Exam Pass — Season -->
-        <div class="p-8 rounded-[2.5rem] bg-amber-500 text-white shadow-2xl shadow-amber-500/30 flex flex-col justify-between">
+        <!-- Exam Pass — single card, Season/Annual chosen via toggle (same
+             pattern as the Standard/Premium billing toggle below), instead
+             of two separate near-identical cards. -->
+        <div class="p-8 rounded-[2.5rem] bg-orange-600 text-white shadow-2xl shadow-orange-600/30 flex flex-col justify-between relative">
+          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white text-orange-600 text-[8px] font-black uppercase tracking-widest shadow-xl">Best Value</div>
           <div>
-            <h4 class="text-xl font-black mb-2">Exam Pass — Season</h4>
-            <div class="flex items-baseline gap-1 mb-6">
-              <span class="text-3xl font-black">₦2,000</span>
-              <span class="text-white/60 text-xs font-bold">one-time · 6 months</span>
+            <h4 class="text-xl font-black mb-2">Exam Pass</h4>
+            <div class="flex items-baseline gap-1 mb-1">
+              <span class="text-3xl font-black"><span id="priceEXAM_PASS">₦2,500</span></span>
+              <span class="text-white/60 text-xs font-bold" id="periodEXAM_PASS">one-time · 12 months</span>
+            </div>
+            <div class="inline-flex items-center gap-1 p-1 rounded-xl bg-black/15 mb-5 mt-2">
+              <button id="examPassToggleSeason" onclick="window.setExamPassDuration('season')" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all text-white/70">6mo</button>
+              <button id="examPassToggleAnnual" onclick="window.setExamPassDuration('annual')" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all bg-white text-orange-600">12mo</button>
             </div>
             <ul class="space-y-4 mb-8">
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-amber-200"></i>
+                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
                 <span>Unlimited Real Past Questions</span>
               </li>
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-amber-200"></i>
+                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
                 <span>Full JAMB UTME Simulator</span>
               </li>
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-amber-200"></i>
+                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
                 <span>Bookmarks, Analytics & World Ranking</span>
               </li>
             </ul>
           </div>
-          <button id="planBtnEXAM_PASS_SEASON" onclick="window.upgradeSubscription('EXAM_PASS_SEASON')" class="w-full py-4 rounded-xl bg-white text-amber-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get Exam Pass</button>
-        </div>
-
-        <!-- Exam Pass — Annual -->
-        <div class="p-8 rounded-[2.5rem] bg-orange-600 text-white shadow-2xl shadow-orange-600/30 flex flex-col justify-between relative">
-          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white text-orange-600 text-[8px] font-black uppercase tracking-widest shadow-xl">Best Value</div>
-          <div>
-            <h4 class="text-xl font-black mb-2">Exam Pass — Annual</h4>
-            <div class="flex items-baseline gap-1 mb-6">
-              <span class="text-3xl font-black">₦2,500</span>
-              <span class="text-white/60 text-xs font-bold">one-time · 12 months</span>
-            </div>
-            <ul class="space-y-4 mb-8">
-              <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
-                <span>Everything in Exam Pass — Season</span>
-              </li>
-              <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
-                <span>Covers a Full Academic Year</span>
-              </li>
-              <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
-                <span>Just ₦500 More Than Season</span>
-              </li>
-            </ul>
-          </div>
-          <button id="planBtnEXAM_PASS_ANNUAL" onclick="window.upgradeSubscription('EXAM_PASS_ANNUAL')" class="w-full py-4 rounded-xl bg-white text-orange-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get Exam Pass</button>
+          <button id="planBtnEXAM_PASS" onclick="window.upgradeSubscription(window.resolveExamPassTier())" class="w-full py-4 rounded-xl bg-white text-orange-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get Exam Pass</button>
         </div>
       </div>
+      <p class="text-center text-[9px] font-bold text-slate-400 mb-6 -mt-2">6-month pass is ₦2,000 · 12-month is just ₦500 more</p>
 
       <!-- University Pass: Hostel Finder + Lecture Recordings + Assessments,
            gated by a monthly lecture-view quota (30 or 70). See
            university.js's hasUniversityAccess() /
            /api/lectures/:id/view for enforcement. -->
-      <p class="text-center text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 mt-12">Going to University?</p>
+      <p class="text-center text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 mt-12">University-Bound? Want Tutor Courses Only?</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-6">
-        <!-- University Pass — 30 -->
-        <div class="p-8 rounded-[2.5rem] bg-violet-600 text-white shadow-2xl shadow-violet-600/30 flex flex-col justify-between relative">
-          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white text-violet-600 text-[8px] font-black uppercase tracking-widest shadow-xl">For Admitted Students</div>
+        <!-- University Pass — single card, lecture-view quota (30/70) chosen
+             via toggle, instead of two near-identical cards. -->
+        <div class="p-8 rounded-[2.5rem] bg-brand-600 text-white shadow-2xl shadow-brand-500/30 flex flex-col justify-between relative">
+          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white text-brand-600 text-[8px] font-black uppercase tracking-widest shadow-xl">For Admitted Students</div>
           <div>
-            <h4 class="text-xl font-black mb-2">University Pass — 30</h4>
+            <h4 class="text-xl font-black mb-2">University Pass</h4>
+            <div class="flex items-baseline gap-1 mb-1">
+              <span class="text-3xl font-black"><span id="priceUNIVERSITY_PASS">₦5,000</span></span>
+              <span class="text-white/60 text-xs font-bold">/month</span>
+            </div>
+            <div class="inline-flex items-center gap-1 p-1 rounded-xl bg-black/15 mb-5 mt-2">
+              <button id="uniPassToggle30" onclick="window.setUniversityPassQuota(30)" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all bg-white text-brand-600">30/mo</button>
+              <button id="uniPassToggle70" onclick="window.setUniversityPassQuota(70)" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all text-white/70">70/mo</button>
+            </div>
+            <ul class="space-y-4 mb-8">
+              <li class="flex items-center gap-2 text-xs font-bold">
+                <i data-lucide="check" class="w-4 h-4 text-brand-200"></i>
+                <span>Hostel Finder — Search Verified Listings</span>
+              </li>
+              <li class="flex items-center gap-2 text-xs font-bold">
+                <i data-lucide="check" class="w-4 h-4 text-brand-200"></i>
+                <span id="uniPassQuotaLine">30 Lecture Views / Month</span>
+              </li>
+              <li class="flex items-center gap-2 text-xs font-bold">
+                <i data-lucide="check" class="w-4 h-4 text-brand-200"></i>
+                <span>Cancel Anytime</span>
+              </li>
+            </ul>
+          </div>
+          <button id="planBtnUNIVERSITY_PASS" onclick="window.upgradeSubscription(window.resolveUniversityPassTier())" class="w-full py-4 rounded-xl bg-white text-brand-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get University Pass</button>
+        </div>
+
+        <!-- Tutor Course Pass — standalone access to the Tutor Hub course
+             catalog only, for students who want that section without the
+             full-platform Standard/Premium tiers below. -->
+        <div class="p-8 rounded-[2.5rem] bg-slate-800 text-white shadow-2xl shadow-slate-800/30 flex flex-col justify-between">
+          <div>
+            <h4 class="text-xl font-black mb-2">Tutor Course Pass</h4>
             <div class="flex items-baseline gap-1 mb-6">
               <span class="text-3xl font-black">₦5,000</span>
               <span class="text-white/60 text-xs font-bold">/month</span>
             </div>
             <ul class="space-y-4 mb-8">
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-violet-200"></i>
-                <span>Hostel Finder — Search Verified Listings</span>
+                <i data-lucide="check" class="w-4 h-4 text-slate-300"></i>
+                <span>Full Access to Tutor Hub Courses</span>
               </li>
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-violet-200"></i>
-                <span>30 Lecture Views / Month</span>
+                <i data-lucide="check" class="w-4 h-4 text-slate-300"></i>
+                <span>Watch Lessons from Verified Tutors</span>
               </li>
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-violet-200"></i>
+                <i data-lucide="check" class="w-4 h-4 text-slate-300"></i>
                 <span>Cancel Anytime</span>
               </li>
             </ul>
           </div>
-          <button id="planBtnUNIVERSITY_PASS_30" onclick="window.upgradeSubscription('UNIVERSITY_PASS_30')" class="w-full py-4 rounded-xl bg-white text-violet-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get University Pass</button>
-        </div>
-
-        <!-- University Pass — 70 -->
-        <div class="p-8 rounded-[2.5rem] bg-violet-900 text-white shadow-2xl shadow-violet-900/30 flex flex-col justify-between relative">
-          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white text-violet-900 text-[8px] font-black uppercase tracking-widest shadow-xl">Heavy Course Load</div>
-          <div>
-            <h4 class="text-xl font-black mb-2">University Pass — 70</h4>
-            <div class="flex items-baseline gap-1 mb-6">
-              <span class="text-3xl font-black">₦10,000</span>
-              <span class="text-white/60 text-xs font-bold">/month</span>
-            </div>
-            <ul class="space-y-4 mb-8">
-              <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-violet-300"></i>
-                <span>Hostel Finder — Search Verified Listings</span>
-              </li>
-              <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-violet-300"></i>
-                <span>70 Lecture Views / Month</span>
-              </li>
-              <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-violet-300"></i>
-                <span>Cancel Anytime</span>
-              </li>
-            </ul>
-          </div>
-          <button id="planBtnUNIVERSITY_PASS_70" onclick="window.upgradeSubscription('UNIVERSITY_PASS_70')" class="w-full py-4 rounded-xl bg-white text-violet-900 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get University Pass</button>
+          <button id="planBtnTUTOR_COURSE_PASS" onclick="window.upgradeSubscription('TUTOR_COURSE_PASS')" class="w-full py-4 rounded-xl bg-white text-slate-800 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get Tutor Course Pass</button>
         </div>
       </div>
 

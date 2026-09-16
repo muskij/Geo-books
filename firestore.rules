@@ -522,6 +522,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Daily AI-generated-exam quota tracking (server.js's
+    // checkAndIncrementCbtGenerationQuota). Written only by the Admin SDK
+    // from server.js — client never writes directly, same reasoning as
+    // lectureUsage above. Doc id is `${uid}_${YYYY-MM-DD}`.
+    match /cbtGenerationUsage/{usageDocId} {
+      allow read: if isAuthenticated() && usageDocId.matches(request.auth.uid + '_.*');
+      allow write: if false;
+    }
+
     match /hostels/{hostelId} {
       allow read: if hasUniversityAccess();
       allow write: if isAdmin();

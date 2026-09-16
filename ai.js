@@ -1,5 +1,5 @@
 import { toText, readJson, writeJson, hasAiAccess, hasAnyPaidPlan } from "./utils.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-functions.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
 const AI_SETTINGS_STORAGE_KEY = 'geo-books_ai_config';
 
@@ -49,6 +49,38 @@ function isLikelyApiKey(value) {
   return v.length >= 30 && /^[A-Za-z0-9._-]+$/.test(v);
 }
 
+// --- Server-mediated AI (replaces the old Cloud Functions path) ----------
+// generateQuiz/aiChatCompletion used to run as Firebase Cloud Functions,
+// called via httpsCallable(). Those were retired when the backend moved off
+// the Blaze plan (see server.js's "MIGRATED FROM CLOUD FUNCTIONS" comment) —
+// the real implementation now lives at POST /api/ai/generate-quiz and
+// POST /api/ai/chat on this same Express server, gated by requireAuth
+// (a Firebase ID token, same as every other authenticated route here).
+async function callServerAi(path, body) {
+  const user = getAuth().currentUser;
+  if (!user) throw new Error('AI_AUTH_REQUIRED');
+  const idToken = await user.getIdToken();
+
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  const text = await res.text();
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch {}
+
+  if (!res.ok) {
+    const msg = toText(json?.error || res.statusText).trim() || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  return json;
+}
+
 export function getAiSettings() {
   const saved = readJson(AI_SETTINGS_STORAGE_KEY, {});
   const apiKey = toText(saved.apiKey || '').trim() || null;
@@ -62,18 +94,14 @@ export function getAiSettings() {
 
 export async function generateQuizFromNeuralCore(payload) { 
   assertAiAccess(hasAnyPaidPlan); // CBT/exam generation - any paid plan, not just Premium+Elite
-  const functions = getFunctions(); 
-  const callAiCore = httpsCallable(functions, 'generateQuiz'); 
-  
-  // The API Key is securely stored on the server via Google Secret Manager 
-  const result = await callAiCore({ 
-    text: payload.text, 
-    strict: payload.strict,
+
+  // The API key lives server-side (server.js's OPENAI_API_KEY) — never sent to the client.
+  return await callServerAi('/api/ai/generate-quiz', {
+    text: payload.text,
     count: payload.count,
     style: payload.style,
     intensity: payload.intensity
-  }); 
-  return result.data; 
+  });
 } 
 
 export async function aiChatCompletion({ messages, model, temperature, maxTokens, accessCheck } = {}) {
@@ -92,18 +120,15 @@ export async function aiChatCompletion({ messages, model, temperature, maxTokens
   // hasAnyPaidPlan so every paid tier gets through, while humanizer/
   // support/tutor keep using the default hasAiAccess (Premium+Elite only).
   assertAiAccess(accessCheck);
-  // Now routing through secure Cloud Function to protect API keys
-  const functions = getFunctions();
-  const callAiChat = httpsCallable(functions, 'aiChatCompletion');
-  
+  // Routed through this server's own /api/ai/chat (see server.js) — the
+  // OpenAI API key stays server-side, never exposed to the browser.
   try {
-    const result = await callAiChat({
+    return await callServerAi('/api/ai/chat', {
       messages: Array.isArray(messages) ? messages : [],
-      model: model,
-      temperature: temperature,
-      maxTokens: maxTokens
+      model,
+      temperature,
+      maxTokens
     });
-    return result.data;
   } catch (error) {
     console.error("AI Chat Error:", error);
     throw error;
