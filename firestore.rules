@@ -1,0 +1,744 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- GLOBAL HELPERS ---
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Single hardcoded "break-glass" admin. Every other admin path (custom
+    // claim, /admins/{uid} doc, users/{uid}.role) still works for anyone
+    // else who's been granted access, but this exact email is guaranteed
+    // admin no matter what — it can't be locked out by a bad claim
+    // revocation, a deleted /admins doc, etc. Firebase ID tokens carry a
+    // provider-verified `email` claim, so this can't be spoofed by the
+    // client the way a Firestore field could be.
+    function isRootAdmin() {
+      return isAuthenticated() && request.auth.token.email == 'peak.flow.digitals@gmail.com';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        isRootAdmin() ||
+        request.auth.token.admin == true || // canonical: Firebase custom claim, set via scripts/set-admin-claim.js
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '').lower() == 'admin')
+      );
+    }
+
+    function isSeller() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SELLER' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('sellerOnboarded', false) == true
+      );
+    }
+
+    function userXp() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.xp;
+    }
+
+    // --- COLLECTION RULES ---
+
+    match /admins/{adminId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Real past-question bank (JAMB/WAEC/NECO/NABTEB). Anyone signed in can
+    // read active questions to build a CBT session; only admins can write
+    // directly here, and in practice bulk imports go through the
+    // /api/questions/bulk-import server route (Admin SDK, bypasses these
+    // rules entirely) so a single large import doesn't need per-doc rule
+    // evaluation against a client session.
+    match /questions/{questionId} {
+      allow read: if isAuthenticated() && resource.data.get('isActive', true) == true;
+      allow write: if isAdmin();
+    }
+
+    // Topic video lessons (parity with myschool.ng's per-subject video
+    // lessons). Small enough in volume that admins add these directly via
+    // the client SDK rather than needing a bulk-import server route.
+    match /videoLessons/{lessonId} {
+      allow read: if isAuthenticated() && resource.data.get('isActive', true) == true;
+      allow write: if isAdmin();
+    }
+
+    // Scholarship / Opportunity Board — admin-curated (same pattern as
+    // videoLessons above), so users can only ever read published, active
+    // listings, never write them directly. Sponsored placement is just a
+    // field on the doc (`sponsored: true`), sorted client-side.
+    match /scholarships/{itemId} {
+      allow read: if isAuthenticated() && resource.data.get('isActive', true) == true;
+      allow write: if isAdmin();
+    }
+
+    // Crowd-sourced suggestions for the board above. Any signed-in user can
+    // submit one; only the submitter or an admin can read it back (so users
+    // can't browse each other's submissions), and only admins can update
+    // (mark reviewed) or delete.
+    match /scholarshipSuggestions/{suggestionId} {
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow delete: if isAdmin();
+      allow update: if (isOwner(userId) && isAllowedUserUpdate() && isAllowedSubscriptionSelfUpdate()) || isAdmin();
+
+      function isAllowedUserUpdate() {
+        let changed = request.resource.data.diff(resource.data).changedKeys();
+        // Prevent users from tampering with their own XP, Level, or Rank.
+        // Note: `sellerOnboarded` is deliberately NOT in this blocklist —
+        // unlike `role` (which can carry ADMIN/other privileged values),
+        // it's a narrow boolean that only unlocks isSeller() (posting to
+        // marketItems/skills as yourself). It grants no elevated access to
+        // anyone else's data, so it's safe to let users self-service it
+        // the same way isSelfServiceSubscription() below lets them
+        // self-service a FREE tier.
+        return !changed.hasAny(['xp', 'level', 'rank_title', 'role']);
+      }
+
+      // A user can put their own subscription into a pending/unverified
+      // state (i.e. "I just submitted payment details, please verify") or
+      // switch themselves to FREE, but can never self-grant a verified,
+      // active paid plan — only an admin (see verifySubscription in
+      // main_admin.htm) can flip verified/status to true/"active" for a
+      // paid tier. Without this, upgradeSubscription()'s client-side
+      // updateDoc() could be called directly with verified:true to grant
+      // free premium access.
+      function isAllowedSubscriptionSelfUpdate() {
+        let hasSub = request.resource.data.keys().hasAny(['subscription']);
+        return !hasSub || isSelfServiceSubscription(request.resource.data.subscription);
+      }
+
+      function isSelfServiceSubscription(s) {
+        return (s.tier == 'FREE' && s.verified == true && s.status == 'active') ||
+               (s.verified == false && s.status == 'pending');
+      }
+    }
+
+    match /notes/{noteId} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
+    }
+
+    match /flashcards/{cardId} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid);
+    }
+
+    match /skills/{skillId} {
+      allow read: if true;
+      allow create: if isSeller();
+      allow update, delete: if isAuthenticated() && (resource.data.sellerId == request.auth.uid || isAdmin());
+    }
+
+    match /gigs/{gigId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (resource.data.posterId == request.auth.uid || isAdmin());
+    }
+
+    match /gigApplications/{applicationId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && (
+        resource.data.applicantId == request.auth.uid ||
+        resource.data.posterId == request.auth.uid ||
+        isAdmin()
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    match /marketItems/{itemId} {
+      allow read: if true;
+      allow create: if isSeller();
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.sellerId || isAdmin());
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.sellerId || 
+        isAdmin() ||
+        isMarketplacePublicUpdate()
+      );
+
+      function isMarketplacePublicUpdate() {
+        let changed = request.resource.data.diff(resource.data).changedKeys();
+        return changed.hasOnly(['views', 'ratingSum', 'ratingCount']);
+      }
+
+      // One review per user per item — the document ID *is* the reviewer's
+      // uid, so a second submission overwrites their own prior review
+      // instead of stacking a duplicate. This is what makes it safe for
+      // submitRating() to run a single transaction that adjusts the
+      // parent's ratingSum/ratingCount by a delta (see app.js) without a
+      // race against someone spamming ratings from a fresh doc each time.
+      match /reviews/{reviewerId} {
+        allow read: if true;
+        allow create, update: if isAuthenticated() && request.auth.uid == reviewerId;
+        allow delete: if isAuthenticated() && (request.auth.uid == reviewerId || isAdmin());
+      }
+    }
+
+    match /campusPosts/{postId} {
+      allow read: if true;
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.content is string &&
+        request.resource.data.content.size() <= 280 &&
+        request.resource.data.get('likes', 0) == 0 &&
+        request.resource.data.get('reposts', 0) == 0 &&
+        request.resource.data.get('commentsCount', 0) == 0 &&
+        (
+          !('tags' in request.resource.data) ||
+          (
+            request.resource.data.tags is list &&
+            request.resource.data.tags.size() <= 2 &&
+            request.resource.data.tags.hasOnly(['ForSale', 'StudyPartner', 'Event', 'Help', 'Announcement'])
+          )
+        );
+
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin() ||
+        isCampusPublicUpdate()
+      );
+
+      // Anyone signed in can bump like/repost/comment counters (that's the
+      // point — it's a public engagement action, not just the post owner),
+      // but ONLY by exactly +1 or -1 per write, matching the actual
+      // like/unlike and reply-count transactions the client runs. Without
+      // this, "allow update if changedKeys is only these 3 fields" let any
+      // signed-in user set likes to any arbitrary number in one write
+      // (e.g. updateDoc(ref, {likes: 999999999}) directly via the SDK,
+      // skipping the transaction entirely) — inflating engagement metrics
+      // with no rate limit at all.
+      function isCampusPublicUpdate() {
+        let changed = request.resource.data.diff(resource.data).changedKeys();
+        return changed.hasOnly(['likes', 'reposts', 'commentsCount']) &&
+          isStepOfOne('likes') && isStepOfOne('reposts') && isStepOfOne('commentsCount');
+      }
+      function isStepOfOne(field) {
+        let before = resource.data.get(field, 0);
+        let after = request.resource.data.get(field, before);
+        return after == before || (after is number && before is number && after >= 0 && (after == before + 1 || after == before - 1));
+      }
+
+      match /replies/{replyId} {
+        allow read: if true;
+        allow create: if isAuthenticated() &&
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.content is string &&
+          request.resource.data.content.size() <= 280;
+        allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      }
+    }
+
+    match /chats/{chatId} {
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.participants || isAdmin());
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (request.auth.uid in resource.data.participants || isAdmin());
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants ||
+          isAdmin()
+        );
+        allow create: if isAuthenticated() && (
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants ||
+          isAdmin()
+        );
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Support Tickets / Messages (Direct Admin Contact)
+    match /support_messages/{msgId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    match /communityPosts/{postId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Payment receiving-account details (bank/account info shown in the
+    // "Send Payment To" modal, app.js's loadPaymentReceivingAccount()).
+    // This collection had NO rule at all before this fix — Firestore
+    // default-denies anything unmatched, so this read has likely never
+    // worked for a signed-in user, only for Admin SDK writes from the
+    // admin panel (which bypass rules entirely). Read requires sign-in
+    // (not fully public, since it's account/payment info); write is
+    // admin-only, matching how the admin panel edits it.
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /books/{bookId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (resource.data.uploaderId == request.auth.uid || isAdmin());
+    }
+
+    match /goals/{goalId} {
+      allow read, write: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
+    }
+
+    // CAPS Tracker — one self-reported doc per student (doc ID == uid), unlike
+    // goals/notes which are many-docs-per-user. Doc-ID ownership lets the
+    // rule check isOwner(uid) directly instead of reading resource.data.userId,
+    // which also means it works on create (resource is null pre-write, but
+    // the path segment itself already proves ownership).
+    match /capsRecords/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // GPA/CGPA Calculator + Result Tracker — same one-doc-per-student
+    // pattern as capsRecords above (doc ID == uid).
+    match /academicRecords/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // Legend-rank (rank 6, 40,000 XP) monthly reward claims — see
+    // claimLegendReward() in app.js. Doc ID is `${uid}_${YYYY-MM}`, so the
+    // "one claim per month" limit is enforced structurally: a user can only
+    // ever create the one doc ID matching themselves + the current month.
+    // Fulfillment (marking a claim as sent) is admin-only, done from
+    // main_admin.htm.
+    match /rewardClaims/{claimId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() &&
+        request.resource.data.uid == request.auth.uid &&
+        claimId == request.auth.uid + '_' + request.resource.data.period &&
+        userXp() >= 40000;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /warRooms/{roomId} {
+      allow read: if isAuthenticated();
+      allow create: if (userXp() >= 3500) && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.createdBy ||
+        request.auth.uid in resource.data.members ||
+        isAdmin() ||
+        (resource.data.visibility == "public" && request.resource.data.members.hasAny([request.auth.uid]))
+      );
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.createdBy || isAdmin());
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid in get(/databases/$(database)/documents/warRooms/$(roomId)).data.members ||
+          isAdmin()
+        );
+        allow create: if isAuthenticated() && (
+          request.auth.uid in get(/databases/$(database)/documents/warRooms/$(roomId)).data.members ||
+          isAdmin()
+        );
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Admin Settings (e.g., Authorized Sellers list)
+    match /admin_settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Promo Codes — doc ID is the code itself (uppercased).
+    // Any signed-in user can fetch ONE code by exact ID to validate it at
+    // checkout (get), but cannot list/enumerate the whole collection —
+    // that would let someone scrape every live code. Only admins
+    // (main_admin.htm's Promo Codes section) can create/edit/delete codes,
+    // and only the redemption transaction in app.js (bounded by the
+    // subscriptionRequests + users rules below) can bump usedCount.
+    match /promoCodes/{code} {
+      allow get: if isAuthenticated();
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['usedCount']) &&
+        request.resource.data.usedCount == resource.data.usedCount + 1 &&
+        resource.data.active != false &&
+        (resource.data.maxUses == 0 || resource.data.usedCount < resource.data.maxUses)
+      );
+    }
+
+    // Structured payment-verification submissions created by the payment
+    // details form (name/bank/account number/promo). Users can only see
+    // and create their own; only admins can update status or delete.
+    match /subscriptionRequests/{requestId} {
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    // CBT Exams
+    match /exams/{examId} {
+      allow read: if true; // Everyone can see exams
+      allow write: if isAdmin();
+    }
+
+    // CBT Attempts — was missing entirely, so app.js's addDoc()/getDocs()
+    // calls against this collection were silently hitting Firestore's
+    // default-deny (no matching rule = no access). That meant no attempt
+    // was ever actually persisted, and every "CBT Attempts" / "Avg score"
+    // stat in main_admin.htm's Analytics and CBT Suite sections was reading
+    // an empty collection. A student can create only their own attempt
+    // (uid must match their auth uid, and can't be forged to someone
+    // else's); admins get full read for analytics/per-exam stats; nothing
+    // is ever mutated after the fact (attempts are an append-only log).
+    match /cbtAttempts/{attemptId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // CBT question bookmarks ("Bookmark" button during any exam — see
+    // app.js's toggleBookmarkQuestion/initBookmarksSync). This collection
+    // had no rule at all, so every read/write hit Firestore's default-deny
+    // with "Missing or insufficient permissions" — not a typo'd rule like
+    // lectureProgress/lectureBookmarks above, just never written. Doc id is
+    // '<uid>_<questionFingerprint>'; the fingerprint isn't stored as a data
+    // field, so create/update check the id's uid-prefix (not an exact
+    // reconstruction) plus the uid field, matching exactly what the client
+    // writes. read/delete key off resource.data.uid for the same list-query
+    // reason as lectureProgress above (initBookmarksSync queries with
+    // where('uid','==',uid), orderBy('createdAt','desc')).
+    match /bookmarks/{bookmarkId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create, update: if isAuthenticated() && bookmarkId.matches(request.auth.uid + '_.*') &&
+        request.resource.data.uid == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    // Activity Logs
+    match /activity_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated(); // Any system action can log
+      allow update, delete: if isAdmin();
+    }
+
+    // In-app notifications (bell icon). Only admin-initiated flows write
+    // these right now — window.verifySubscription() and
+    // window.submitGiftXp() in main_admin.htm — since both are genuine
+    // "something happened to you" events a user should be able to trust.
+    // A user can read/mark-read/delete their own, never anyone else's, and
+    // can never create one for themselves (that would let a user fake a
+    // "payment verified" notification, even though only they'd see it —
+    // not worth the trust erosion for zero benefit).
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAdmin();
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['read']);
+      allow delete: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // Audit trail for admin XP gifts/deductions (window.submitGiftXp in
+    // main_admin.htm). Was referenced by a code comment there ("see the
+    // xpGifts rule comment in firestore.rules") but no rule for this
+    // collection actually existed — under Firestore's default-deny, every
+    // one of these audit-log writes has been silently failing (caught by
+    // its own try/catch, so the XP change itself still went through; only
+    // the paper trail was missing).
+    match /xpGifts/{giftId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false; // audit trail — nobody edits history, including admins
+    }
+
+    // --- UNIVERSITY SECTION ---
+
+    // Hostel Finder: student-facing listings, admin-managed (mirrors the
+    // books/marketItems pattern — public read, isAdmin() write). No
+    // separate "headAdmin" tier exists in this project, so this reuses the
+    // same isAdmin() every other admin-only collection here uses.
+    // Grants read access to the University section (Hostel Finder +
+    // Lectures) to users with an active, verified University Pass, either
+    // tier. Lecture VIEW quotas (30/mo or 70/mo) are enforced separately,
+    // server-side, in server.js's /api/lectures/:id/view — rules can gate
+    // read access to the collection but can't practically track a
+    // rolling monthly counter, so that lives in the app server instead.
+    function hasUniversityAccess() {
+      return isAdmin() || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscription.tier in ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'] &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscription.verified == true &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscription.status == 'active'
+      );
+    }
+
+    // Written only by server.js (Admin SDK, bypasses these rules entirely)
+    // via /api/lectures/:id/view. Read-only here so a student can show
+    // their own "X/30 lectures this month" progress in the UI.
+    // Was referenced by university.js's markLectureWatched() but had no
+    // rule at all — every write was silently denied by default-deny.
+    // Doc id is '<uid>_<lectureId>', matching how the client builds it.
+    //
+    // read/delete key off resource.data.uid, NOT the doc-id pattern below —
+    // university.js queries this with where('uid','==',uid), and Firestore
+    // rejects a whole list query outright if it can't statically prove every
+    // possible result satisfies the rule. An ID-pattern rule can't be proven
+    // against a field-filtered query (the query doesn't constrain on
+    // __name__), so every read silently came back "Missing or insufficient
+    // permissions" even though each doc's actual owner was correct. Keying
+    // the rule off the same field the query filters on is what lets
+    // Firestore verify the query is safe.
+    match /lectureProgress/{progressDocId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create, update: if isAuthenticated() && progressDocId == request.auth.uid + '_' + request.resource.data.lectureId &&
+        request.resource.data.uid == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    // "Watch Later" bookmarks — same doc-id-ownership pattern on write, same
+    // field-based read/delete fix as lectureProgress above (same list-query
+    // rejection reason).
+    match /lectureBookmarks/{bookmarkDocId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create, update: if isAuthenticated() && bookmarkDocId == request.auth.uid + '_' + request.resource.data.lectureId &&
+        request.resource.data.uid == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    match /lectureUsage/{usageDocId} {
+      allow read: if isAuthenticated() && usageDocId.matches(request.auth.uid + '_.*');
+      allow write: if false;
+    }
+
+    match /hostels/{hostelId} {
+      allow read: if hasUniversityAccess();
+      allow write: if isAdmin();
+    }
+
+    // Lecturer access grants. A lecturer can read their own grant doc (to
+    // know their own accessGranted/courses); only isAdmin() can read the
+    // full list or write grants/revocations. accessGranted/courses/
+    // institutionId/grantedBy/grantedAt/revokedAt are only ever set by an
+    // admin via main_admin.htm, exactly like the spec's "head admin only"
+    // intent. A lecturer MAY update their own profile-only fields (display
+    // name, department, logo, bio, onboarding flag) — this is the
+    // lecturer.html onboarding/edit-profile flow — but the allowlist below
+    // means touching any grant-related field falls through to isAdmin()
+    // and gets denied for a non-admin caller, same allowlist pattern as
+    // users/{userId}'s isAllowedUserUpdate() above.
+    match /lecturers/{uid} {
+      allow read: if isAuthenticated() && (request.auth.uid == uid || isAdmin());
+      allow create, delete: if isAdmin();
+      allow update: if (isAuthenticated() && request.auth.uid == uid && isAllowedLecturerSelfUpdate()) || isAdmin();
+
+      function isAllowedLecturerSelfUpdate() {
+        let changed = request.resource.data.diff(resource.data).changedKeys();
+        return changed.hasOnly(['name', 'department', 'logoUrl', 'bio', 'onboardingCompletedAt', 'updatedAt']);
+      }
+    }
+
+    // Lectures uploaded either directly by an admin or by a lecturer who
+    // holds an active grant in /lecturers/{uid} scoped to the exact
+    // courseId being uploaded. Update/delete stays with the uploader or
+    // an admin, matching the ownership pattern used elsewhere (books,
+    // marketItems, gigs).
+    // Manual assessments authored by lecturers/head admin. AI-generated
+    // practice tests are deliberately NOT stored here — see university.js's
+    // startAiPracticeTest(), which generates fresh via the existing
+    // generateExamFromText()/aiChatCompletion pipeline and hands off
+    // straight to cbt.htm without a Firestore write, same as ExamVault.htm.
+    // Announcements — fees, registration windows, deadlines. Read gated
+    // same as everything else in University; write restricted to admin or
+    // a lecturer granted for that institution (checked via lecturers/{uid}
+    // rather than course-scoping, since announcements aren't per-course).
+    match /announcements/{announcementId} {
+      allow read: if hasUniversityAccess();
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (
+          request.resource.data.createdBy == request.auth.uid &&
+          exists(/databases/$(database)/documents/lecturers/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/lecturers/$(request.auth.uid)).data.get('accessGranted', false) == true
+        )
+      );
+      allow update, delete: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || isAdmin());
+    }
+
+    // Timetable + exam schedule, merged into one collection distinguished
+    // by `kind: 'class' | 'exam'` rather than two parallel collections —
+    // same shape, same access rules, no real reason to split them.
+    match /timetableEntries/{entryId} {
+      allow read: if hasUniversityAccess();
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (
+          request.resource.data.createdBy == request.auth.uid &&
+          request.resource.data.uploadedByRole == 'lecturer' &&
+          exists(/databases/$(database)/documents/lecturers/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/lecturers/$(request.auth.uid)).data.get('accessGranted', false) == true &&
+          request.resource.data.courseId in
+            get(/databases/$(database)/documents/lecturers/$(request.auth.uid)).data.get('courses', [])
+        )
+      );
+      allow update, delete: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || isAdmin());
+    }
+
+    // Topics/modules within a course — each can carry up to 5 resource
+    // types (mini-text, voice note, full lecture video, structured answer,
+    // quiz link). Powers the module/resource-grid UI in course-lectures.htm.
+    match /courseTopics/{topicId} {
+      allow read: if hasUniversityAccess();
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (
+          request.resource.data.createdBy == request.auth.uid &&
+          request.resource.data.uploadedByRole == 'lecturer' &&
+          exists(/databases/$(database)/documents/lecturers/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/lecturers/$(request.auth.uid)).data.get('accessGranted', false) == true &&
+          request.resource.data.courseId in
+            get(/databases/$(database)/documents/lecturers/$(request.auth.uid)).data.get('courses', [])
+        )
+      );
+      allow update, delete: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || isAdmin());
+    }
+
+    // Routing hint only — which course-lectures*.htm layout a course's
+    // students land on (see university.js's renderCoursePicker()). Not
+    // sensitive: worst case exposes a course's chosen template, never
+    // content, so any authenticated user can read it. Settable by an admin
+    // for any course, or by a lecturer for a course they actually teach —
+    // verified via their own lecturers/{uid} doc (accessGranted must be
+    // true, and courseId must be in their assigned courses list) rather
+    // than trusting anything the client claims about itself.
+    match /courseSettings/{courseId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/lecturers/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/lecturers/$(request.auth.uid)).data.accessGranted == true &&
+        courseId in get(/databases/$(database)/documents/lecturers/$(request.auth.uid)).data.courses
+      );
+    }
+
+    match /assessments/{assessmentId} {
+      allow read: if hasUniversityAccess();
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (
+          request.resource.data.createdBy == request.auth.uid &&
+          request.resource.data.uploadedByRole == 'lecturer' &&
+          exists(/databases/$(database)/documents/lecturers/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/lecturers/$(request.auth.uid)).data.get('accessGranted', false) == true &&
+          request.resource.data.courseId in
+            get(/databases/$(database)/documents/lecturers/$(request.auth.uid)).data.get('courses', [])
+        )
+      );
+      allow update, delete: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || isAdmin());
+    }
+
+    match /lectures/{lectureId} {
+      allow read: if hasUniversityAccess();
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (
+          request.resource.data.uploadedBy == request.auth.uid &&
+          request.resource.data.uploadedByRole == 'lecturer' &&
+          exists(/databases/$(database)/documents/lecturers/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/lecturers/$(request.auth.uid)).data.get('accessGranted', false) == true &&
+          request.resource.data.courseId in
+            get(/databases/$(database)/documents/lecturers/$(request.auth.uid)).data.get('courses', [])
+        )
+      );
+      allow update, delete: if isAuthenticated() && (resource.data.uploadedBy == request.auth.uid || isAdmin());
+    }
+
+    // --- Tutor Hub (Study Tools > Tutor Courses) ---
+    // Independent tutors, not tied to a university — same shape as
+    // lecturers/courseTopics/lectures above, but self-serve: a tutor
+    // applies by creating their own /tutors/{uid} doc with
+    // accessGranted:false, then an admin flips it to true (main_admin.htm).
+    // Unlike lecturers, an approved tutor creates their OWN tutorCourses
+    // docs rather than being assigned existing ones.
+    match /tutors/{uid} {
+      allow read: if isAuthenticated() && (request.auth.uid == uid || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == uid &&
+        request.resource.data.accessGranted == false;
+      allow delete: if isAdmin();
+      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == uid && isAllowedTutorSelfUpdate());
+
+      function isAllowedTutorSelfUpdate() {
+        let changed = request.resource.data.diff(resource.data).changedKeys();
+        return changed.hasOnly(['name', 'bio', 'logoUrl', 'subjects', 'onboardingCompletedAt', 'updatedAt']);
+      }
+    }
+
+    // Course catalog entries a tutor creates themselves once accessGranted.
+    // Publicly readable (browsable in tutor-courses.htm) — price/title/
+    // description aren't sensitive, only the paid content behind them is.
+    match /tutorCourses/{courseId} {
+      allow read: if true; // catalog is publicly browsable; gated content lives in tutorTopics
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (
+          request.resource.data.tutorId == request.auth.uid &&
+          exists(/databases/$(database)/documents/tutors/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.get('accessGranted', false) == true
+        )
+      );
+      allow update, delete: if isAuthenticated() && (resource.data.tutorId == request.auth.uid || isAdmin());
+    }
+
+    // Topics within a tutor's own course — same 5-resource shape as
+    // courseTopics (mini-text, voice note, full lecture, structured
+    // answer, quiz), gated on ownership of the parent tutorCourses doc
+    // rather than a courses[] assignment list.
+    match /tutorTopics/{topicId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        resource.data.createdBy == request.auth.uid ||
+        (
+          exists(/databases/$(database)/documents/tutorPurchases/$(request.auth.uid + '_' + resource.data.tutorCourseId)) &&
+          get(/databases/$(database)/documents/tutorPurchases/$(request.auth.uid + '_' + resource.data.tutorCourseId)).data.status == 'verified'
+        )
+      );
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (
+          request.resource.data.createdBy == request.auth.uid &&
+          exists(/databases/$(database)/documents/tutors/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/tutors/$(request.auth.uid)).data.get('accessGranted', false) == true &&
+          exists(/databases/$(database)/documents/tutorCourses/$(request.resource.data.tutorCourseId)) &&
+          get(/databases/$(database)/documents/tutorCourses/$(request.resource.data.tutorCourseId)).data.tutorId == request.auth.uid
+        )
+      );
+      allow update, delete: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || isAdmin());
+    }
+
+    // Pay-per-course purchase records. Doc id is `${buyerId}_${courseId}`
+    // (see server.js's /api/tutor-courses/:courseId/purchase) so the read
+    // rules above can do a direct get() instead of a query. A buyer can
+    // create their own 'recorded' (unverified) purchase; only an admin can
+    // flip it to 'verified' after confirming payment, same two-step flow
+    // as University Pass subscriptions.
+    match /tutorPurchases/{purchaseId} {
+      allow read: if isAuthenticated() && (resource.data.buyerId == request.auth.uid || resource.data.tutorId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() &&
+        request.resource.data.buyerId == request.auth.uid &&
+        purchaseId == (request.auth.uid + '_' + request.resource.data.tutorCourseId) &&
+        request.resource.data.status == 'recorded';
+      allow update, delete: if isAdmin();
+    }
+  }
+}

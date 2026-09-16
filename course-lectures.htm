@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Course — Geo-Books</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--ink:#18333b;--navy:#123a46;--teal:#0b9b96;--mint:#dff8f2;--orange:#ff8b62;--yellow:#ffd66b;--line:#dbe9e6}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#fffdf9;color:var(--ink);font-family:Arial,Helvetica,sans-serif;zoom:1}a{color:inherit;text-decoration:none}
+.site-header{height:78px;max-width:1240px;margin:auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:20}.logo{display:flex;align-items:center;gap:10px}.logo-mark{width:42px;height:42px;display:grid;place-items:center;position:relative;border-radius:13px 13px 13px 5px;background:var(--teal);color:white;font-weight:800;font-size:21px;box-shadow:0 7px 18px #0b9b962e}.logo-mark span{color:var(--yellow);font-size:12px;position:absolute;right:5px;top:5px}.logo-copy strong,.logo-copy small{display:block}.logo-copy strong{color:var(--navy);font-size:18px;line-height:1}.logo-copy small{margin-top:3px;color:#72878a;text-transform:uppercase;letter-spacing:.2em;font-size:8px;font-weight:700}.button{border:0;border-radius:12px;padding:14px 20px;display:inline-flex;align-items:center;justify-content:center;gap:15px;background:var(--orange);color:white;font-weight:800;font-size:13px;box-shadow:0 8px 20px #ff8b6238;cursor:pointer;transition:.2s}.button:hover{transform:translateY(-2px);background:#ff7850}.button.small{padding:11px 16px}.back-pill{padding:10px 16px;border-radius:11px;background:#f0f5f4;color:var(--navy);font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:8px}.back-pill:hover{background:#e5efed}
+.hero{min-height:460px;max-width:1360px;margin:auto;padding:50px max(28px,calc((100% - 1184px)/2)) 60px;display:grid;grid-template-columns:1.02fr .98fr;align-items:center;gap:55px;position:relative;overflow:hidden}.hero:before{content:"";position:absolute;width:580px;height:580px;border-radius:50%;right:-140px;top:-90px;background:#effbf6;z-index:-1}.eyebrow,.kicker{display:inline-flex;align-items:center;gap:8px;color:#087772;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.15em}.eyebrow{background:var(--mint);border-radius:30px;padding:8px 12px}.eyebrow span{color:var(--orange)}.hero h1{margin:20px 0;color:var(--navy);font-size:clamp(38px,5vw,64px);line-height:1.02;letter-spacing:-.06em}.hero h1 span{color:var(--teal);position:relative}.hero h1 span:after{content:"";height:7px;left:3px;right:0;bottom:-6px;position:absolute;background:var(--yellow);border-radius:50%;transform:rotate(-1deg)}.hero-copy>p{max-width:610px;color:#607579;font-size:16px;line-height:1.7}.hero-actions{display:flex;align-items:center;gap:28px;margin-top:30px}.hero-trust{margin-top:30px;display:flex;align-items:center;gap:15px}.hero-trust p{margin:0}.hero-trust strong,.hero-trust small{display:block}.hero-trust strong{font-size:11px}.hero-trust small{color:#7d9093;margin-top:3px;font-size:10px}
+.hero-visual{min-height:420px;position:relative;display:grid;place-items:center}.visual-blob{width:410px;height:410px;position:absolute;border-radius:45% 55% 55% 45%/57% 40% 60% 43%;background:#cff4e9;transform:rotate(8deg)}.study-card{width:min(390px,80%);position:relative;z-index:2;padding:20px;border:7px solid white;border-radius:23px;background:white;box-shadow:0 28px 65px #1c58582b;transform:rotate(-2deg)}.study-card-top{display:flex;align-items:center;gap:9px;color:#75898c;font-size:10px;font-weight:700}.study-card-top b{margin-left:auto;letter-spacing:2px}.mini-brand{width:24px;height:24px;display:grid;place-items:center;border-radius:7px;background:var(--teal);color:white;font-size:9px}.lesson-art{height:130px;margin:17px 0;padding:20px;position:relative;overflow:hidden;border-radius:14px;background:#fff2e9;display:grid;place-items:center}.lesson-label{color:var(--teal);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}.study-card h3{margin:7px 0 5px;font-size:19px;color:var(--navy)}.study-card>p{color:#7a8d90;font-size:11px;line-height:1.5}.lesson-progress{height:5px;margin-top:14px;border-radius:20px;background:#e8eeed;overflow:hidden}.lesson-progress span{display:block;height:100%;background:var(--teal)}.lesson-meta{margin-top:7px;display:flex;justify-content:space-between;color:#92a0a2;font-size:8px}.lesson-meta strong{color:var(--teal)}
+.proof-strip{max-width:1184px;margin:0 auto 40px;padding:22px 30px;display:grid;grid-template-columns:1.3fr repeat(3,1fr);align-items:center;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.proof-strip>p{color:#8da0a2;font-size:10px;text-transform:uppercase;letter-spacing:.14em;font-weight:800}.proof-strip>div{display:flex;align-items:center;gap:9px;border-left:1px solid var(--line);padding-left:28px}.proof-strip strong{font-size:21px;color:var(--teal)}.proof-strip span{max-width:100px;color:#718689;font-size:9px;line-height:1.3;text-transform:uppercase;font-weight:700}
+.section{max-width:1184px;margin:auto;padding:70px 28px}.section-heading{display:flex;justify-content:space-between;align-items:end;gap:50px;margin-bottom:45px}.section h2{margin:12px 0 0;color:var(--navy);font-size:clamp(30px,4vw,46px);line-height:1.08;letter-spacing:-.045em}.section-heading>p{max-width:420px;color:#718589;line-height:1.7;font-size:14px}.courses{max-width:none;background:#f4fbf8;padding-left:max(28px,calc((100% - 1128px)/2));padding-right:max(28px,calc((100% - 1128px)/2));padding-top:70px;padding-bottom:70px}.system-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.system-card{min-height:190px;padding:22px;border-radius:18px;background:white;border:1px solid #173a4312;transition:.2s;cursor:pointer;display:block}.system-card:hover{transform:translateY(-5px);box-shadow:0 17px 35px #2655521a}.system-top{display:flex;justify-content:space-between;align-items:center}.system-icon{width:47px;height:47px;display:grid;place-items:center;border-radius:14px;background:#ffe8df;color:#ef765d;font-size:24px;font-weight:800}.arrow{color:#9aa9aa;font-size:18px}.course-count{display:block;margin-top:26px;color:#8a9b9d;font-size:8px;text-transform:uppercase;letter-spacing:.13em;font-weight:800}.system-card h3{margin:7px 0 5px;color:var(--navy);font-size:16px}.system-card p{margin:0;color:#75898c;font-size:11px}.green .system-icon{background:#ddf5e5;color:#51a56d}.pink .system-icon{background:#ffe4ec;color:#d76a8c}.blue .system-icon{background:#e1f1ff;color:#4e95ce}.purple .system-icon{background:#e9e5fb;color:#7868c4}.yellow .system-icon{background:#fff2c9;color:#c38b07}.coral .system-icon{background:#ffe0dd;color:#d75f59}
+footer{max-width:1184px;margin:auto;padding:45px 28px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid var(--line);color:#73878a}footer p{font-size:10px;line-height:1.6}
+.empty-state{padding:80px 20px;text-align:center;color:#8a9b9d}.empty-state h3{color:var(--navy);font-size:20px;margin-bottom:8px}
+.module-list{display:grid;gap:10px}.module{border:1px solid #dce9e6;border-radius:16px;background:white;overflow:hidden;transition:.2s}.module.expanded{border-color:#efb7b0;box-shadow:0 14px 32px #5d867e12}.module-heading{width:100%;padding:17px 20px;display:grid;grid-template-columns:48px minmax(0,1fr) auto 30px;gap:15px;align-items:center;border:0;background:white;text-align:left;cursor:pointer;color:var(--ink)}.module-number{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:#ffe8e3;color:#d75f59;font-size:11px;font-weight:900}.module-title small,.module-title strong{display:block}.module-title small{margin-bottom:3px;color:#95a4a5;font-size:8px;text-transform:uppercase;letter-spacing:.12em}.module-title strong{color:var(--navy);font-size:15px}.module-time{color:#819395;font-size:10px}.module-toggle{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#f0f5f4;color:var(--teal);font-size:18px}.module-body{padding:0 20px 22px 83px;border-top:1px solid #edf2f1}.module-body>p{max-width:770px;color:#6f8488;font-size:12px;line-height:1.65}.resource-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.resource{padding:12px 10px;display:flex;align-items:center;gap:8px;border:1px solid #e3ebe9;border-radius:10px;background:#fbfdfc;text-align:left;cursor:pointer;color:var(--ink)}.resource:hover{border-color:#89ccc3;background:#f1fbf8}.resource.disabled{cursor:not-allowed;opacity:.45}.resource.disabled:hover{border-color:#e3ebe9;background:#fbfdfc}.resource>span{width:27px;height:27px;flex:none;display:grid;place-items:center;border-radius:8px;background:var(--mint);color:var(--teal);font-size:10px}.resource p{margin:0;min-width:0}.resource strong,.resource small{display:block}.resource strong{font-size:9px}.resource small{margin-top:2px;color:#98a5a6;font-size:7px}.resource i{margin-left:auto;color:#9cacab;font-style:normal}.module.red .module-number{background:#ffe3e3;color:#d85555}.module.amber .module-number{background:#fff0cf;color:#bd8100}.module.blue .module-number{background:#e2f2ff;color:#478fca}.module.teal .module-number{background:#dcf5f1;color:#168f89}.module.purple .module-number{background:#ebe7fb;color:#7764c4}.module.green .module-number{background:#e0f5e6;color:#4f9f67}.module.pink .module-number{background:#ffe4ed;color:#cd5e81}
+
+@media(max-width:650px){.module-heading{grid-template-columns:40px minmax(0,1fr) 26px;padding:14px 12px;gap:10px}.module-time{display:none}.module-body{padding:0 12px 16px}.resource-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.hero{grid-template-columns:1fr;padding-top:35px;text-align:center}.hero-copy>p{margin-left:auto;margin-right:auto}.hero-actions,.hero-trust{justify-content:center}.proof-strip{grid-template-columns:repeat(2,1fr);gap:15px}.proof-strip>p{grid-column:1/-1}.proof-strip>div{border-left:0;padding-left:0}.section-heading{align-items:flex-start;flex-direction:column}.system-grid{grid-template-columns:repeat(2,1fr)}footer{flex-direction:column;text-align:center}}
+@media(max-width:560px){.site-header{padding:0 18px}.hero{padding-left:20px;padding-right:20px}.hero h1{font-size:38px}.hero-actions{align-items:stretch;flex-direction:column;gap:16px}.hero-visual{min-height:340px}.visual-blob{width:280px;height:280px}.study-card{width:82%}.proof-strip{padding:20px}.section{padding:50px 20px}.system-grid{grid-template-columns:1fr}footer{padding-left:20px;padding-right:20px}}
+</style>
+</head>
+<body>
+<main>
+  <header class="site-header">
+    <a class="logo" href="geo-books.htm" aria-label="Geo-Books home">
+      <span class="logo-mark">G<span>+</span></span>
+      <span class="logo-copy"><strong>Geo-Books</strong><small>University</small></span>
+    </a>
+    <a class="back-pill" href="geo-books.htm">← Back to Geo-Books</a>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="hero-copy">
+      <div class="eyebrow"><span>✦</span> <span id="heroKicker">Loading course...</span></div>
+      <h1 id="heroTitle">Loading<br/><span>lectures.</span></h1>
+      <p id="heroDescription">Fetching your lectures for this course.</p>
+      <div class="hero-trust">
+        <p><strong id="heroLecturerLine">—</strong><small>Uploaded by your lecturer or head admin</small></p>
+      </div>
+    </div>
+    <div class="hero-visual" aria-label="Course illustration">
+      <div class="visual-blob"></div>
+      <div class="study-card">
+        <div class="study-card-top"><span class="mini-brand">G+</span><span>This course</span><b>•••</b></div>
+        <div class="lesson-art"><div style="font-size:52px" id="heroIcon">🎓</div></div>
+        <span class="lesson-label" id="heroCourseCode">Course</span>
+        <h3 id="heroLectureCount">— lectures</h3>
+        <p>All videos uploaded for this course, in one place.</p>
+        <div class="lesson-progress"><span style="width:100%"></span></div>
+        <div class="lesson-meta"><span>Ready to watch</span><strong>University Pass</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="proof-strip">
+    <p>This course</p>
+    <div><strong id="statLectureCount">0</strong><span>lectures uploaded</span></div>
+    <div><strong id="statLecturerCount">0</strong><span>contributors</span></div>
+    <div><strong id="statRecent">—</strong><span>most recent upload</span></div>
+  </section>
+
+  <section class="section courses" id="courses">
+    <div class="section-heading">
+      <div><span class="kicker">Course breakdown</span><h2>Work through it<br/>topic by topic.</h2></div>
+      <p>Each topic can include a mini-text, a voice note, the full recorded lecture, a structured exam-style answer, and a quiz. Anything not ready yet shows as "Coming soon."</p>
+    </div>
+    <div class="module-list" id="topicsList">
+      <div class="empty-state"><h3>Loading topics...</h3></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Geo-Books University — part of your University Pass.</p>
+    <a class="back-pill" href="geo-books.htm">← Back to Geo-Books</a>
+  </footer>
+</main>
+
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1nVLSPFs30wG-PLaEyFqm_PEVhZdzISU",
+    authDomain: "geo-books-8411e.firebaseapp.com",
+    projectId: "geo-books-8411e",
+    storageBucket: "geo-books-8411e.firebasestorage.app",
+    messagingSenderId: "972887107793",
+    appId: "1:972887107793:web:7e0374bf81e6713fd0fdf0",
+    measurementId: "G-RY84V5DXPN"
+  };
+  function getFirebaseApp() { return getApps().length ? getApps()[0] : initializeApp(firebaseConfig); }
+  const auth = getAuth(getFirebaseApp());
+  const db = getFirestore(getFirebaseApp());
+
+  const API_BASE_URL = window.GEO_BOOKS_API_URL ||
+    (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:3007' : '');
+
+  const escapeHTML = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const CARD_COLORS = ['green', 'pink', 'blue', 'purple', 'yellow', 'coral'];
+  const ICONS = ['✚', '◆', '♥', '◌', '≈', '⌁'];
+
+  const params = new URLSearchParams(location.search);
+  const courseId = params.get('course');
+
+  if (!courseId) {
+    document.getElementById('topicsList').innerHTML = `<div class="empty-state"><h3>No course selected</h3><p>Go back and pick a course first.</p></div>`;
+  }
+
+  let currentUser = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = 'geo-books.htm'; return; }
+    currentUser = user;
+
+    // Same access check as the main University section — this page is
+    // reachable only by URL, so it needs its own independent gate rather
+    // than relying on the SPA having already checked access.
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      const sub = snap.exists() ? snap.data().subscription : null;
+      const hasAccess = sub && ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'].includes(sub.tier) && sub.verified === true && sub.status === 'active';
+      const isAdmin = (await user.getIdTokenResult()).claims.admin === true;
+      if (!hasAccess && !isAdmin) {
+        document.body.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;">
+          <div><h2 style="color:var(--navy)">University Pass required</h2>
+          <p style="color:#718589;margin:12px 0 20px">You need an active University Pass to view course lectures.</p>
+          <a class="button" href="geo-books.htm">Back to Geo-Books</a></div></div>`;
+        return;
+      }
+    } catch (e) {
+      console.error('Access check failed:', e);
+    }
+
+    if (courseId) loadCourse(courseId);
+  });
+
+  async function loadCourse(cid) {
+    document.getElementById('heroKicker').textContent = cid;
+    document.getElementById('heroCourseCode').textContent = cid;
+    document.getElementById('heroTitle').innerHTML = `${escapeHTML(cid)}<br/><span>topics.</span>`;
+
+    try {
+      const snap = await getDocs(query(collection(db, 'courseTopics'), where('courseId', '==', cid), orderBy('topicNumber', 'asc')));
+      const topics = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderTopics(topics, cid);
+    } catch (e) {
+      console.error('Failed to load topics:', e);
+      document.getElementById('topicsList').innerHTML = `<div class="empty-state"><h3>Could not load topics</h3><p>${escapeHTML(e.message || '')}</p></div>`;
+    }
+  }
+
+  const MODULE_COLORS = ['red', 'amber', 'blue', 'teal', 'purple', 'green', 'pink'];
+  const RESOURCE_DEFS = [
+    { key: 'miniText', icon: '▤', label: 'Mini-text', sub: 'Open lesson workspace' },
+    { key: 'voiceNote', icon: '♪', label: 'Voice note', sub: 'Open lesson workspace' },
+    { key: 'fullLecture', icon: '▶', label: 'Full lecture', sub: 'Open lesson workspace' },
+    { key: 'structuredAnswer', icon: '✎', label: 'Structured answer', sub: 'Open lesson workspace' },
+    { key: 'quizAssessmentId', icon: '✓', label: 'Quiz', sub: 'Open lesson workspace' }
+  ];
+
+  function renderTopics(topics, cid) {
+    const readyCount = topics.filter((t) => RESOURCE_DEFS.some((r) => t[r.key])).length;
+    document.getElementById('heroDescription').textContent =
+      topics.length ? `${topics.length} topic${topics.length === 1 ? '' : 's'} for ${cid}. ${readyCount} ready so far.` : `No topics added for ${cid} yet — check back soon.`;
+    document.getElementById('heroLectureCount').textContent = `${topics.length} topic${topics.length === 1 ? '' : 's'}`;
+    document.getElementById('statLectureCount').textContent = topics.length;
+    const uploaders = new Set(topics.map((t) => t.createdBy).filter(Boolean));
+    document.getElementById('statLecturerCount').textContent = uploaders.size;
+    const mostRecent = topics[0]?.createdAt?.toDate ? topics[0].createdAt.toDate().toLocaleDateString() : '—';
+    document.getElementById('statRecent').textContent = mostRecent;
+    document.getElementById('heroLecturerLine').textContent = topics.some((t) => t.uploadedByRole === 'lecturer') ? 'Includes lecturer-authored topics' : 'Uploaded by Head Admin';
+
+    const list = document.getElementById('topicsList');
+    if (!topics.length) {
+      list.innerHTML = `<div class="empty-state"><h3>No topics yet</h3><p>Nothing has been added for this course yet.</p></div>`;
+      return;
+    }
+
+    list.innerHTML = topics.map((t, i) => {
+      const isReady = RESOURCE_DEFS.some((r) => t[r.key]);
+      const num = String(t.topicNumber ?? i + 1).padStart(2, '0');
+      return `
+      <div class="module ${MODULE_COLORS[i % MODULE_COLORS.length]}" data-topic-id="${t.id}">
+        <button class="module-heading" data-toggle="${t.id}">
+          <span class="module-number">${num}</span>
+          <span class="module-title"><small>Topic ${num}</small><strong>${escapeHTML(t.title || 'Untitled topic')}</strong></span>
+          <span class="module-time">${isReady ? 'Ready' : 'Coming soon'}</span>
+          <span class="module-toggle" id="toggle-${t.id}">+</span>
+        </button>
+        <div class="module-body" id="body-${t.id}" style="display:none">
+          ${t.description ? `<p>${escapeHTML(t.description)}</p>` : ''}
+          <div class="resource-grid">
+            ${RESOURCE_DEFS.map((r) => {
+              const has = !!t[r.key];
+              return `<div class="resource ${has ? '' : 'disabled'}" ${has ? `data-resource="${r.key}" data-topic-id="${t.id}"` : ''}>
+                <span>${r.icon}</span>
+                <p><strong>${r.label}</strong><small>${has ? r.sub : 'Coming soon'}</small></p>
+                ${has ? '<i>→</i>' : ''}
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    list.querySelectorAll('[data-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => toggleModule(btn.dataset.toggle, topics));
+    });
+    list.querySelectorAll('[data-resource]').forEach((el) => {
+      el.addEventListener('click', () => openResource(el.dataset.resource, el.dataset.topicId));
+    });
+
+    // First topic with content open by default, matching the reference layout.
+    const firstReady = topics.find((t) => RESOURCE_DEFS.some((r) => t[r.key]));
+    if (firstReady) toggleModule(firstReady.id, topics, true);
+  }
+
+  function toggleModule(topicId, topics, forceOpen) {
+    const body = document.getElementById(`body-${topicId}`);
+    const toggle = document.getElementById(`toggle-${topicId}`);
+    const wrap = document.querySelector(`.module[data-topic-id="${topicId}"]`);
+    const isOpen = body.style.display !== 'none';
+    const shouldOpen = forceOpen || !isOpen;
+    body.style.display = shouldOpen ? 'block' : 'none';
+    toggle.textContent = shouldOpen ? '−' : '+';
+    wrap.classList.toggle('expanded', shouldOpen);
+  }
+
+  // Resource keys map to lesson.htm's tab ids — clicking any resource now
+  // opens the full lesson workspace page instead of the old in-page modal.
+  const TAB_ID_BY_KEY = { miniText: 'mini', voiceNote: 'voice', fullLecture: 'full', structuredAnswer: 'answer', quizAssessmentId: 'quiz' };
+
+  function openResource(key, topicId) {
+    const tab = TAB_ID_BY_KEY[key] || 'mini';
+    window.location.href = `lesson.htm?course=${encodeURIComponent(courseId || '')}&topic=${encodeURIComponent(topicId)}&tab=${tab}`;
+  }
+</script>
+</body>
+</html>

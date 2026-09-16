@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Geo-Books — Built for Nigerian Students</title>
+<meta name="google-adsense-account" content="ca-pub-3177374567374612">
+<meta name="description" content="Geo-Books helps Nigerian students study smarter with AI, trade safely on campus, and connect with peers who get it.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%237c3aed'/%3E%3Cpath d='M18 30.5L32 22l14 8.5-14 8.5-14-8.5zm6 4.6L32 40l8-4.9V42L32 47l-8-5v-6.9z' fill='%23ffffff'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#7c3aed">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,600;1,700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          paper: { DEFAULT: '#f8fafc', dim: '#f1f5f9' },
+          ink:   { DEFAULT: '#0f172a', soft: '#475569' },
+          pass:  { 50:'#ecfdf5', 100:'#d1fae5', 400:'#34d399', 500:'#10b981', 600:'#059669' },
+          mark:  { 400:'#a78bfa', 500:'#7c3aed', 600:'#6d28d9' },
+        },
+        fontFamily: {
+          display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+          body: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+          mono: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root{ --paper:#f8fafc; --ink:#0f172a; }
+  .dark{ --paper:#020617; --ink:#f8fafc; }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ background:#f8fafc; }
+  html.dark{ background:#020617; }
+  body{
+    font-family:'Plus Jakarta Sans', system-ui, sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    overflow-x:hidden;
+    transition:background-color .4s ease, color .4s ease;
+  }
+  .font-display{ font-family:'Plus Jakarta Sans', system-ui, sans-serif; font-feature-settings:"liga" 1; }
+
+  /* marker-pen underline: a hand-drawn-feeling accent stroke under headline words */
+  .mark{
+    position:relative;
+    white-space:nowrap;
+  }
+  .mark svg{
+    position:absolute; left:-2%; bottom:-0.12em; width:104%; height:0.3em;
+    overflow:visible; pointer-events:none;
+  }
+  .mark path{
+    stroke:#7c3aed; stroke-width:6; fill:none; stroke-linecap:round;
+    stroke-dasharray:300; stroke-dashoffset:300;
+    animation:draw-mark 0.9s 0.5s cubic-bezier(.65,0,.35,1) forwards;
+  }
+  .dark .mark path{ stroke:#a78bfa; }
+  @keyframes draw-mark{ to{ stroke-dashoffset:0; } }
+
+  /* grade-slip style eyebrow labels */
+  .slip-label{
+    font-family:'Plus Jakarta Sans', system-ui, sans-serif;
+    font-weight:800;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+
+  .glass-nav{
+    background:rgba(248,250,252,.82);
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border-bottom:1px solid rgba(15,23,42,.08);
+  }
+  .dark .glass-nav{ background:rgba(2,6,23,.82); border-bottom:1px solid rgba(248,250,252,.08); }
+
+  .paper-card{
+    background:var(--paper);
+    border:1px solid rgba(15,23,42,.1);
+    border-radius:1.25rem;
+    transition:transform .35s cubic-bezier(.16,1,.3,1), border-color .35s, box-shadow .35s;
+  }
+  .dark .paper-card{ border-color:rgba(248,250,252,.1); }
+  .paper-card:hover{
+    transform:translateY(-6px);
+    border-color:#7c3aed;
+    box-shadow:0 20px 40px -16px rgba(15,23,42,.18);
+  }
+  .dark .paper-card:hover{ box-shadow:0 20px 40px -16px rgba(0,0,0,.5); }
+
+  /* stitched/perforated divider like a result-slip tear line */
+  .tear-line{
+    background-image: linear-gradient(to right, currentColor 50%, transparent 50%);
+    background-size: 14px 1.5px;
+    background-repeat: repeat-x;
+    background-position: left center;
+    color: rgba(15,23,42,.25);
+    height:1.5px;
+  }
+  .dark .tear-line{ color: rgba(248,250,252,.2); }
+
+  @keyframes marquee{ 0%{ transform:translateX(0); } 100%{ transform:translateX(-50%); } }
+  .animate-marquee{ animation:marquee 38s linear infinite; }
+  .animate-marquee:hover{ animation-play-state:paused; }
+
+  .scroll-reveal{ opacity:0; transform:translateY(28px); transition:opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1); }
+  .scroll-reveal.visible{ opacity:1; transform:translateY(0); }
+
+  ::-webkit-scrollbar{ width:9px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:rgba(15,23,42,.18); border-radius:20px; }
+  .dark ::-webkit-scrollbar-thumb{ background:rgba(248,250,252,.18); }
+
+  .university-track{ display:flex; width:fit-content; gap:5rem; padding:2rem 0; }
+
+  .btn-ink{
+    background:var(--ink); color:var(--paper);
+  }
+  .ruled-bg{
+    background-image: repeating-linear-gradient(transparent, transparent 38px, rgba(15,23,42,.06) 39px);
+  }
+  .dark .ruled-bg{
+    background-image: repeating-linear-gradient(transparent, transparent 38px, rgba(248,250,252,.05) 39px);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+  }
+</style>
+</head>
+<body class="antialiased font-body opacity-0 transition-opacity duration-500">
+<div id="toast-container" class="fixed bottom-8 right-8 z-[300] flex flex-col gap-3"></div>
+
+<!-- NAVIGATION -->
+<nav class="fixed top-0 left-0 right-0 z-[100] glass-nav transition-all duration-500">
+  <div class="max-w-7xl mx-auto px-6 sm:px-8 h-[72px] flex items-center justify-between">
+    <div class="flex items-center gap-3 group cursor-pointer" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+      <div class="w-10 h-10 rounded-xl bg-ink dark:bg-paper text-paper dark:text-ink flex items-center justify-center group-hover:-rotate-6 transition-all">
+        <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+      </div>
+      <span class="text-xl font-display font-bold tracking-tight">Geo-Books</span>
+    </div>
+
+    <div class="hidden lg:flex items-center gap-9">
+      <a href="#features" class="text-sm font-semibold text-ink-soft/70 dark:text-paper/60 hover:text-mark-500 transition-colors">Study tools</a>
+      <a href="#marketplace" class="text-sm font-semibold text-ink-soft/70 dark:text-paper/60 hover:text-mark-500 transition-colors">Marketplace</a>
+      <a href="#books" class="text-sm font-semibold text-ink-soft/70 dark:text-paper/60 hover:text-mark-500 transition-colors">Library</a>
+      <a href="#elite" class="text-sm font-semibold text-ink-soft/70 dark:text-paper/60 hover:text-mark-500 transition-colors">For the ambitious</a>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <button id="themeToggle" class="w-10 h-10 rounded-xl bg-ink/5 dark:bg-paper/10 flex items-center justify-center hover:bg-ink/10 dark:hover:bg-paper/20 transition-all active:scale-90">
+        <i data-lucide="sun" class="w-4 h-4 hidden dark:block text-mark-400"></i>
+        <i data-lucide="moon" class="w-4 h-4 block dark:hidden text-ink-soft"></i>
+      </button>
+      <div id="authButtons" class="flex items-center gap-3">
+        <button onclick="window.toggleAuthModal('login', true)" class="text-sm font-semibold text-ink-soft dark:text-paper/80 hover:text-mark-500 transition-all hidden sm:inline-block">Log in</button>
+        <button onclick="window.toggleAuthModal('signup', true)" class="px-5 py-2.5 rounded-full btn-ink text-sm font-bold hover:opacity-90 active:scale-95 transition-all">Get started</button>
+      </div>
+      <div id="userProfile" class="hidden">
+        <a href="geo-books.htm" id="dashboardLink" class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-pass-50 dark:bg-pass-600/20 text-pass-600 dark:text-pass-400 font-bold text-sm border border-pass-100 dark:border-pass-600/30 hover:shadow-md transition-all">
+          <span id="navDashboardText">Dashboard</span> <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main id="landingPage">
+
+  <!-- HERO -->
+  <section class="relative pt-40 pb-20 px-6 sm:px-8 ruled-bg overflow-hidden">
+    <div class="relative z-10 max-w-5xl mx-auto text-center">
+      <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-paper dark:bg-ink border border-ink/10 dark:border-paper/15 mb-10 shadow-sm">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-pass-500 opacity-60"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-pass-500"></span>
+        </span>
+        <span class="slip-label text-ink-soft/70 dark:text-paper/60">Built with Nigerian students, term by term</span>
+      </div>
+
+      <h1 class="text-5xl sm:text-7xl lg:text-[5.5rem] font-display font-medium tracking-tight leading-[0.95] mb-8">
+        Pass your exams.<br>
+        <span class="mark">Keep your <em class="italic">money</em>.<svg viewBox="0 0 400 20" preserveAspectRatio="none"><path d="M2 14 C 100 4, 300 18, 398 8"/></svg></span>
+      </h1>
+
+      <p class="max-w-2xl mx-auto text-lg sm:text-xl text-ink-soft/80 dark:text-paper/65 leading-relaxed mb-10">
+        Geo-Books is the study, trade, and connect app for Nigerian university students — an AI tutor that actually knows your syllabus, a campus market you can trust, and a network of people grinding the same courses as you.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <button onclick="window.toggleAuthModal('signup', true)" class="group w-full sm:w-auto px-9 py-4 rounded-full btn-ink font-bold hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2.5 text-base">
+          Create free account
+          <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+        </button>
+        <button onclick="window.toggleAuthModal('login', true)" class="w-full sm:w-auto px-9 py-4 rounded-full bg-transparent border-2 border-ink/15 dark:border-paper/20 font-bold hover:bg-ink/5 dark:hover:bg-paper/10 active:scale-95 transition-all text-base">
+          I already have an account
+        </button>
+      </div>
+    </div>
+
+    <!-- Dashboard mockup -->
+    <div class="mt-24 w-full max-w-5xl mx-auto">
+      <div class="relative">
+        <div class="relative bg-paper dark:bg-ink rounded-[1.75rem] border border-ink/10 dark:border-paper/15 shadow-2xl overflow-hidden">
+          <div class="h-12 border-b border-ink/10 dark:border-paper/10 flex items-center px-6 gap-3 bg-ink/[0.03] dark:bg-paper/[0.03]">
+            <div class="flex gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-mark-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div><div class="w-2.5 h-2.5 rounded-full bg-pass-500/60"></div></div>
+            <div class="mx-auto slip-label text-ink-soft/50 dark:text-paper/40">geo-books.ng/study</div>
+            <div class="w-16"></div>
+          </div>
+          <div class="p-6 sm:p-10 grid grid-cols-12 gap-6">
+            <div class="col-span-12 sm:col-span-3 space-y-5">
+              <div class="h-10 bg-ink/5 dark:bg-paper/10 rounded-xl w-full"></div>
+              <div class="p-6 bg-mark-500/10 rounded-2xl border border-mark-500/20 space-y-4">
+                <div class="w-10 h-10 rounded-xl bg-mark-500 text-white flex items-center justify-center"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
+                <div class="space-y-2.5">
+                  <div class="h-2 bg-mark-500/25 rounded-full w-full"></div>
+                  <div class="h-2 bg-mark-500/25 rounded-full w-2/3"></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-span-12 sm:col-span-6 space-y-6">
+              <div class="h-64 sm:h-72 bg-paper dark:bg-ink rounded-2xl border border-ink/10 dark:border-paper/10 shadow-sm p-7 flex flex-col">
+                <div class="flex items-center gap-3 mb-7">
+                  <div class="w-9 h-9 rounded-xl bg-ink/5 dark:bg-paper/10 flex items-center justify-center"><i data-lucide="book-open-check" class="w-5 h-5"></i></div>
+                  <div><div class="h-3 bg-ink/15 dark:bg-paper/20 rounded-full w-28 mb-2"></div><div class="h-2 bg-ink/8 dark:bg-paper/10 rounded-full w-16"></div></div>
+                </div>
+                <div class="flex-1 space-y-3.5">
+                  <div class="h-3.5 bg-ink/5 dark:bg-paper/8 rounded-lg w-full"></div>
+                  <div class="h-3.5 bg-ink/5 dark:bg-paper/8 rounded-lg w-[88%]"></div>
+                  <div class="h-3.5 bg-ink/5 dark:bg-paper/8 rounded-lg w-[78%]"></div>
+                  <div class="flex gap-2.5 mt-auto pt-4">
+                    <div class="px-4 py-2 rounded-lg bg-ink dark:bg-paper text-paper dark:text-ink text-[10px] font-bold uppercase tracking-wider">Ask the tutor</div>
+                    <div class="px-4 py-2 rounded-lg bg-ink/8 dark:bg-paper/10 text-ink-soft/60 dark:text-paper/50 text-[10px] font-bold uppercase tracking-wider">Save</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-span-12 sm:col-span-3 space-y-4">
+              <div class="p-5 bg-pass-50 dark:bg-pass-600/10 rounded-2xl border border-pass-500/20 h-32 flex flex-col items-center justify-center text-pass-600 dark:text-pass-400">
+                <i data-lucide="trending-up" class="w-6 h-6 mb-3"></i>
+                <div class="h-2 bg-pass-500/25 rounded-full w-14"></div>
+              </div>
+              <div class="p-5 bg-amber-500/10 rounded-2xl border border-amber-500/20 h-32 flex flex-col items-center justify-center text-amber-600 dark:text-amber-400">
+                <i data-lucide="award" class="w-6 h-6 mb-3"></i>
+                <div class="h-2 bg-amber-500/25 rounded-full w-14"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- UNIVERSITY MARQUEE -->
+  <div class="relative py-16 bg-paper-dim dark:bg-ink/40 overflow-hidden border-y border-ink/10 dark:border-paper/10">
+    <div class="max-w-7xl mx-auto px-8 mb-10 text-center">
+      <p class="slip-label text-ink-soft/50 dark:text-paper/40">Students already on Geo-Books, campus by campus</p>
+    </div>
+    <div class="flex overflow-hidden">
+      <div class="university-track animate-marquee">
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-mark-500 transition-colors">UNILAG</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-pass-500 transition-colors">UNIBEN</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-mark-500 transition-colors">OAU</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-pass-500 transition-colors">UI</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-mark-500 transition-colors">UNN</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-pass-500 transition-colors">LASU</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-mark-500 transition-colors">ABU</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-pass-500 transition-colors">FUTA</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-mark-500 transition-colors">UNILAG</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-pass-500 transition-colors">UNIBEN</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-mark-500 transition-colors">OAU</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-pass-500 transition-colors">UI</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-mark-500 transition-colors">UNN</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-pass-500 transition-colors">LASU</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-mark-500 transition-colors">ABU</span>
+        <span class="text-4xl font-display font-bold text-ink/15 dark:text-paper/15 hover:text-pass-500 transition-colors">FUTA</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section id="features" class="py-28 px-6 sm:px-8">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-20 scroll-reveal">
+        <div class="max-w-2xl">
+          <p class="slip-label text-mark-500 mb-5">Why students stay</p>
+          <h2 class="text-4xl sm:text-6xl font-display font-medium tracking-tight leading-[0.95] mb-6">Three problems,<br>one app.</h2>
+          <p class="text-ink-soft/70 dark:text-paper/60 text-lg">Studying, buying textbooks, and finding people who actually understand your course load — built for how Nigerian campus life really works.</p>
+        </div>
+        <button onclick="window.toggleAuthModal('signup', true)" class="px-7 py-3.5 rounded-full bg-ink/5 dark:bg-paper/10 font-bold text-sm hover:bg-ink hover:text-paper dark:hover:bg-paper dark:hover:text-ink transition-all shrink-0">See how it works →</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="paper-card p-9 group cursor-pointer scroll-reveal" onclick="window.toggleAuthModal('signup', true)">
+          <div class="w-14 h-14 rounded-2xl bg-mark-500/10 text-mark-500 flex items-center justify-center mb-8 group-hover:-rotate-6 transition-all">
+            <i data-lucide="book-open-check" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-2xl font-display font-semibold mb-4">Study Tutor</h3>
+          <p class="text-ink-soft/70 dark:text-paper/55 leading-relaxed">An AI that's actually read your syllabus — past questions, exam patterns, and a study plan that fits your course outline, not a generic one.</p>
+        </div>
+        <div class="paper-card p-9 group cursor-pointer scroll-reveal" onclick="window.toggleAuthModal('signup', true)">
+          <div class="w-14 h-14 rounded-2xl bg-pass-500/10 text-pass-500 flex items-center justify-center mb-8 group-hover:-rotate-6 transition-all">
+            <i data-lucide="shield-check" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-2xl font-display font-semibold mb-4">Campus Market</h3>
+          <p class="text-ink-soft/70 dark:text-paper/55 leading-relaxed">A textbook and gadget marketplace with escrow built in — your money only releases once you've confirmed what you ordered showed up.</p>
+        </div>
+        <div class="paper-card p-9 group cursor-pointer scroll-reveal" onclick="window.toggleAuthModal('signup', true)">
+          <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-8 group-hover:-rotate-6 transition-all">
+            <i data-lucide="users" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-2xl font-display font-semibold mb-4">Study Rooms</h3>
+          <p class="text-ink-soft/70 dark:text-paper/55 leading-relaxed">Join a group grinding the same course, share notes, and find out about internships before they're posted anywhere public.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section id="books" class="py-28 px-6 sm:px-8 ruled-bg overflow-hidden">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
+      <div class="scroll-reveal order-2 lg:order-1">
+        <p class="slip-label text-mark-500 mb-5">Every textbook, in one place</p>
+        <h2 class="text-4xl sm:text-6xl font-display font-medium tracking-tight leading-[0.95] mb-6">A library that <span class="mark">travels<svg viewBox="0 0 240 20" preserveAspectRatio="none"><path d="M2 14 C 60 4, 180 18, 238 8"/></svg></span> with you.</h2>
+        <p class="text-ink-soft/70 dark:text-paper/60 text-lg leading-relaxed mb-8">
+          Upload your notes and past textbooks, or pull from what other students on your campus have already shared — searchable by course, uploader, and date, and available offline once you've downloaded it.
+        </p>
+        <div class="grid grid-cols-2 gap-5 mb-9">
+          <div class="paper-card p-6">
+            <i data-lucide="book-marked" class="w-6 h-6 text-mark-500 mb-3"></i>
+            <p class="font-bold text-sm mb-1">Course-tagged</p>
+            <p class="text-ink-soft/60 dark:text-paper/50 text-sm">Find what your coursemates already uploaded for this exact module.</p>
+          </div>
+          <div class="paper-card p-6">
+            <i data-lucide="download" class="w-6 h-6 text-pass-500 mb-3"></i>
+            <p class="font-bold text-sm mb-1">Offline-ready</p>
+            <p class="text-ink-soft/60 dark:text-paper/50 text-sm">Download once, keep studying even when data's expensive.</p>
+          </div>
+        </div>
+        <button onclick="window.toggleAuthModal('signup', true)" class="px-9 py-4 rounded-full btn-ink font-bold hover:opacity-90 active:scale-95 transition-all inline-flex items-center gap-2.5 text-base">
+          Browse the library
+          <i data-lucide="arrow-right" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="order-1 lg:order-2 scroll-reveal">
+        <div class="relative max-w-md mx-auto">
+          <div class="absolute -inset-4 bg-mark-500/10 rounded-[2rem] -rotate-2"></div>
+          <img src="book-cover.jpeg" alt="Geo-Books digital library" class="relative rounded-[1.75rem] border border-ink/10 dark:border-paper/15 shadow-2xl w-full rotate-2 hover:rotate-0 transition-transform duration-500">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARKETPLACE -->
+  <section id="marketplace" class="py-28 bg-paper-dim dark:bg-ink/40 border-y border-ink/10 dark:border-paper/10 px-6 sm:px-8">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-center justify-between mb-14 scroll-reveal">
+        <div>
+          <p class="slip-label text-pass-500 mb-4">Live on campus right now</p>
+          <h2 class="text-3xl sm:text-5xl font-display font-medium tracking-tight">What people are <span class="mark">trading<svg viewBox="0 0 200 20" preserveAspectRatio="none"><path d="M2 14 C 50 4, 150 18, 198 8"/></svg></span></h2>
+        </div>
+        <button onclick="window.toggleAuthModal('signup', true)" class="slip-label text-ink-soft/50 dark:text-paper/40 hover:text-mark-500 transition-colors hidden sm:block">View all →</button>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
+        <div class="paper-card p-4 group cursor-pointer scroll-reveal" onclick="window.toggleAuthModal('signup', true)">
+          <div class="aspect-square rounded-xl bg-ink/5 dark:bg-paper/10 mb-4 overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Engineering Math Vol 1">
+          </div>
+          <h4 class="font-bold text-sm mb-2 truncate">Engineering Math Vol 1</h4>
+          <div class="flex items-center justify-between">
+            <p class="font-mono font-bold text-pass-600 dark:text-pass-400 text-sm">₦4,500</p>
+            <span class="slip-label text-ink-soft/40 dark:text-paper/35">UNILAG</span>
+          </div>
+        </div>
+        <div class="paper-card p-4 group cursor-pointer scroll-reveal" onclick="window.toggleAuthModal('signup', true)">
+          <div class="aspect-square rounded-xl bg-ink/5 dark:bg-paper/10 mb-4 overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=400&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Scientific Calculator">
+          </div>
+          <h4 class="font-bold text-sm mb-2 truncate">Scientific Calculator</h4>
+          <div class="flex items-center justify-between">
+            <p class="font-mono font-bold text-pass-600 dark:text-pass-400 text-sm">₦12,000</p>
+            <span class="slip-label text-ink-soft/40 dark:text-paper/35">OAU</span>
+          </div>
+        </div>
+        <div class="paper-card p-4 group cursor-pointer scroll-reveal" onclick="window.toggleAuthModal('signup', true)">
+          <div class="aspect-square rounded-xl bg-ink/5 dark:bg-paper/10 mb-4 overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1517842645767-c639042777db?w=400&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Law Ethics Notes">
+          </div>
+          <h4 class="font-bold text-sm mb-2 truncate">Law Ethics Notes</h4>
+          <div class="flex items-center justify-between">
+            <p class="font-mono font-bold text-pass-600 dark:text-pass-400 text-sm">₦2,500</p>
+            <span class="slip-label text-ink-soft/40 dark:text-paper/35">UNN</span>
+          </div>
+        </div>
+        <div class="paper-card p-4 group cursor-pointer scroll-reveal" onclick="window.toggleAuthModal('signup', true)">
+          <div class="aspect-square rounded-xl bg-ink/5 dark:bg-paper/10 mb-4 overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=400&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Drafting Set">
+          </div>
+          <h4 class="font-bold text-sm mb-2 truncate">Drafting Set</h4>
+          <div class="flex items-center justify-between">
+            <p class="font-mono font-bold text-pass-600 dark:text-pass-400 text-sm">₦15,000</p>
+            <span class="slip-label text-ink-soft/40 dark:text-paper/35">ABU</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ELITE / AMBITIOUS SECTION -->
+  <section id="elite" class="py-28 bg-ink text-paper overflow-hidden relative px-6 sm:px-8">
+    <div class="max-w-7xl mx-auto relative z-10">
+      <div class="text-center mb-20 scroll-reveal">
+        <p class="slip-label text-mark-400 mb-6">If you're aiming higher</p>
+        <h2 class="text-4xl sm:text-6xl font-display font-medium tracking-tight leading-[0.95]">For students chasing<br>more than a degree.</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="rounded-[2rem] bg-paper/[0.04] p-10 sm:p-12 border border-paper/10 group cursor-pointer hover:border-pass-500/40 transition-all" onclick="window.toggleAuthModal('signup', true)">
+          <div class="w-16 h-16 rounded-2xl bg-pass-500/15 text-pass-400 flex items-center justify-center mb-10 group-hover:scale-105 transition-all">
+            <i data-lucide="plane-takeoff" class="w-8 h-8"></i>
+          </div>
+          <h3 class="text-3xl font-display font-semibold mb-5">Study Abroad Track</h3>
+          <p class="text-paper/60 text-lg leading-relaxed mb-10">WES document tracking, scholarship matching, and a clearer path to admission at universities abroad — without paying an agent to guess for you.</p>
+          <span class="inline-flex items-center gap-3 text-sm font-bold text-pass-400 group-hover:gap-4 transition-all">See what's involved →</span>
+        </div>
+
+        <div class="rounded-[2rem] bg-paper/[0.04] p-10 sm:p-12 border border-paper/10 group cursor-pointer hover:border-mark-500/40 transition-all" onclick="window.toggleAuthModal('signup', true)">
+          <div class="w-16 h-16 rounded-2xl bg-mark-500/15 text-mark-400 flex items-center justify-center mb-10 group-hover:scale-105 transition-all">
+            <i data-lucide="briefcase" class="w-8 h-8"></i>
+          </div>
+          <h3 class="text-3xl font-display font-semibold mb-5">Mentor Network</h3>
+          <p class="text-paper/60 text-lg leading-relaxed mb-10">Get matched with alumni working in tech, finance, and consulting who are willing to give you 30 honest minutes — and first word on internships.</p>
+          <span class="inline-flex items-center gap-3 text-sm font-bold text-mark-400 group-hover:gap-4 transition-all">Request a mentor →</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="py-28 px-6 sm:px-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="rounded-[2.5rem] bg-mark-500 p-12 sm:p-20 text-center relative overflow-hidden">
+        <div class="relative z-10">
+          <h2 class="text-4xl sm:text-7xl font-display font-medium text-white tracking-tight leading-[0.95] mb-10">Your next exam starts<br>with the next five minutes.</h2>
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button onclick="window.toggleAuthModal('signup', true)" class="px-10 py-[1.125rem] rounded-full bg-white text-ink font-bold text-base shadow-xl hover:scale-[1.03] active:scale-95 transition-all flex items-center gap-2.5">
+              Create free account <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            </button>
+            <button onclick="window.toggleAuthModal('login', true)" class="px-10 py-[1.125rem] rounded-full bg-white/15 text-white border-2 border-white/25 font-bold text-base hover:bg-white/25 transition-all">
+              Log in
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="py-16 px-6 sm:px-8 border-t border-ink/10 dark:border-paper/10">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-ink dark:bg-paper text-paper dark:text-ink flex items-center justify-center">
+          <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+        </div>
+        <span class="text-xl font-display font-bold tracking-tight">Geo-Books</span>
+      </div>
+
+      <div class="flex items-center gap-8 sm:gap-10 slip-label text-ink-soft/45 dark:text-paper/35">
+        <a href="#" class="hover:text-mark-500 transition-colors">Terms</a>
+        <a href="#" class="hover:text-mark-500 transition-colors">Privacy</a>
+        <a href="mailto:support@geo-books.ng" class="hover:text-mark-500 transition-colors">Contact</a>
+        <span>© 2026 Geo-Books NG</span>
+      </div>
+    </div>
+  </footer>
+</main>
+
+<!-- AUTH MODAL -->
+<div id="authModal" class="fixed inset-0 z-[200] bg-ink/70 backdrop-blur-md hidden items-center justify-center p-6 transition-all duration-300 opacity-0" onclick="if(event.target === this) window.toggleAuthModal(null, false)">
+  <div class="bg-paper dark:bg-ink rounded-[2rem] p-9 sm:p-11 max-w-md w-full border border-ink/10 dark:border-paper/15 shadow-2xl relative overflow-hidden">
+    <div class="absolute top-0 left-0 w-full h-1.5 bg-mark-500"></div>
+    <button onclick="window.toggleAuthModal(null, false)" class="absolute top-7 right-7 text-ink-soft/50 dark:text-paper/40 hover:text-ink dark:hover:text-paper transition-all">
+      <i data-lucide="x" class="w-6 h-6"></i>
+    </button>
+
+    <div class="mb-9 text-center">
+      <div class="w-16 h-16 rounded-2xl bg-mark-500/10 text-mark-500 flex items-center justify-center mx-auto mb-7">
+        <i id="authIcon" data-lucide="user-plus" class="w-8 h-8"></i>
+      </div>
+      <h3 id="authTitle" class="text-3xl font-display font-semibold tracking-tight mb-2.5">Create your account</h3>
+      <p id="authSubtitle" class="text-ink-soft/65 dark:text-paper/55 text-base">It takes about a minute.</p>
+    </div>
+
+    <form onsubmit="event.preventDefault(); window.handleAuthSubmit()" class="space-y-5">
+      <div id="authNameWrap" class="space-y-2">
+        <label class="text-xs font-bold uppercase tracking-wider text-ink-soft/50 dark:text-paper/40 ml-0.5">Full name</label>
+        <input type="text" id="authName" placeholder="Tunde Adebayo"
+          class="w-full px-5 py-4 rounded-xl border border-ink/10 dark:border-paper/15 bg-ink/[0.02] dark:bg-paper/[0.04] focus:ring-2 focus:ring-mark-500 outline-none transition-all font-medium text-base">
+      </div>
+      <div class="space-y-2">
+        <label class="text-xs font-bold uppercase tracking-wider text-ink-soft/50 dark:text-paper/40 ml-0.5">School email</label>
+        <input type="email" id="authEmail" placeholder="scholar@unilag.edu.ng" required
+          class="w-full px-5 py-4 rounded-xl border border-ink/10 dark:border-paper/15 bg-ink/[0.02] dark:bg-paper/[0.04] focus:ring-2 focus:ring-mark-500 outline-none transition-all font-medium text-base">
+      </div>
+      <div class="space-y-2">
+        <label class="text-xs font-bold uppercase tracking-wider text-ink-soft/50 dark:text-paper/40 ml-0.5">Password</label>
+        <input type="password" id="authPassword" placeholder="••••••••" required
+          class="w-full px-5 py-4 rounded-xl border border-ink/10 dark:border-paper/15 bg-ink/[0.02] dark:bg-paper/[0.04] focus:ring-2 focus:ring-mark-500 outline-none transition-all font-medium text-base">
+      </div>
+
+      <button type="submit" id="authSubmitBtn" class="w-full py-[1.125rem] btn-ink rounded-full font-bold hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-center gap-3 mt-3 text-base">
+        <span id="authSubmitText">Create account</span>
+        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+      </button>
+    </form>
+
+    <p class="mt-8 text-center text-sm font-medium text-ink-soft/60 dark:text-paper/50">
+      <span id="authToggleText">Already have an account?</span>
+      <button id="authToggleBtn" onclick="window.switchAuthMode()" class="text-mark-500 font-bold hover:underline">Log in</button>
+    </p>
+  </div>
+</div>
+
+<script type="module">
+  import { escapeHTML, getAppEntryUrl } from "./utils.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    onAuthStateChanged,
+    updateProfile as firebaseUpdateProfile,
+    setPersistence,
+    browserLocalPersistence
+  } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import {
+    getFirestore,
+    doc,
+    setDoc,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+  // Same project config used across app.js / main_admin.htm / seller.htm.
+  // Firebase web config values are not secret — access is controlled by
+  // Firestore/Storage security rules, not by hiding this object.
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1nVLSPFs30wG-PLaEyFqm_PEVhZdzISU",
+    authDomain: "geo-books-8411e.firebaseapp.com",
+    projectId: "geo-books-8411e",
+    storageBucket: "geo-books-8411e.firebasestorage.app",
+    messagingSenderId: "972887107793",
+    appId: "1:972887107793:web:7e0374bf81e6713fd0fdf0",
+    measurementId: "G-RY84V5DXPN"
+  };
+
+  const firebaseApp = initializeApp(firebaseConfig);
+  const auth = getAuth(firebaseApp);
+  const db = getFirestore(firebaseApp);
+  setPersistence(auth, browserLocalPersistence).catch((e) => console.warn('[auth] persistence setup failed:', e.message));
+
+  lucide.createIcons();
+
+  // Scroll reveal
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.scroll-reveal').forEach(el => revealObserver.observe(el));
+
+  // Theme toggle (persisted, respects system preference on first load)
+  const root = document.documentElement;
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    root.classList.add('dark');
+  }
+  const themeBtn = document.getElementById('themeToggle');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', () => {
+      const isDark = root.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+  }
+
+  // Reveal body once loaded
+  window.addEventListener('load', () => { document.body.classList.remove('opacity-0'); });
+  // Fallback in case 'load' already fired
+  if (document.readyState === 'complete') document.body.classList.remove('opacity-0');
+
+  // --- Nav auth state ---
+  // Toggles between the "Log in / Get started" buttons and the signed-in
+  // "Dashboard" link that was already present in the markup but never
+  // actually wired to a real auth state.
+  const authButtonsEl = document.getElementById('authButtons');
+  const userProfileEl = document.getElementById('userProfile');
+  const navDashboardTextEl = document.getElementById('navDashboardText');
+  const dashboardLinkEl = document.getElementById('dashboardLink');
+
+  // Route into the device-appropriate app shell (desktop vs phone/tablet)
+  // rather than hardcoding geo-books.htm.
+  if (dashboardLinkEl) dashboardLinkEl.href = getAppEntryUrl();
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      authButtonsEl?.classList.add('hidden');
+      userProfileEl?.classList.remove('hidden');
+      if (navDashboardTextEl) {
+        const firstName = (user.displayName || '').split(' ')[0];
+        navDashboardTextEl.textContent = firstName ? `Hi, ${firstName}` : 'Dashboard';
+      }
+      // Already signed in — this landing page is just the door, not the
+      // room. Send them straight into the right app shell (desktop vs
+      // phone/tablet) instead of making them click "Dashboard".
+      // replace() so the landing page doesn't sit in browser history
+      // between the app and the back button.
+      window.location.replace(getAppEntryUrl());
+    } else {
+      authButtonsEl?.classList.remove('hidden');
+      userProfileEl?.classList.add('hidden');
+    }
+  });
+
+  // --- Auth modal logic ---
+  let authMode = 'signup';
+
+  window.toggleAuthModal = function(mode, show) {
+    const modal = document.getElementById('authModal');
+    if (mode) authMode = mode;
+    if (show) {
+      updateAuthModalContent();
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      requestAnimationFrame(() => modal.classList.remove('opacity-0'));
+      document.body.style.overflow = 'hidden';
+    } else {
+      modal.classList.add('opacity-0');
+      document.body.style.overflow = '';
+      setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+    }
+  };
+
+  window.switchAuthMode = function() {
+    authMode = authMode === 'signup' ? 'login' : 'signup';
+    updateAuthModalContent();
+  };
+
+  function updateAuthModalContent() {
+    const isSignup = authMode === 'signup';
+    document.getElementById('authTitle').textContent = isSignup ? 'Create your account' : 'Welcome back';
+    document.getElementById('authSubtitle').textContent = isSignup ? 'It takes about a minute.' : 'Log in to keep going.';
+    document.getElementById('authIcon').setAttribute('data-lucide', isSignup ? 'user-plus' : 'log-in');
+    document.getElementById('authNameWrap').style.display = isSignup ? 'block' : 'none';
+    document.getElementById('authSubmitText').textContent = isSignup ? 'Create account' : 'Log in';
+    document.getElementById('authToggleText').textContent = isSignup ? 'Already have an account?' : "Don't have an account?";
+    document.getElementById('authToggleBtn').textContent = isSignup ? 'Log in' : 'Sign up';
+    lucide.createIcons();
+  }
+
+  // Real Firebase auth — mirrors the signup schema used in app.js's
+  // handleAuthSubmit so accounts created here behave identically once the
+  // person reaches geo-books.htm (same users/{uid} doc shape: xp, level,
+  // rank_title, role, etc.).
+  window.handleAuthSubmit = async function() {
+    const isLogin = authMode === 'login';
+    const email = document.getElementById('authEmail')?.value.trim();
+    const password = document.getElementById('authPassword')?.value;
+    const name = document.getElementById('authName')?.value.trim();
+    const btn = document.getElementById('authSubmitBtn');
+    const textSpan = document.getElementById('authSubmitText');
+    const originalText = textSpan?.textContent;
+
+    if (!email || !password) return showToast('Please enter your email and password.', 'error');
+    if (!isLogin && (!name || name.length < 2)) return showToast('Please enter your full name.', 'error');
+
+    if (btn) {
+      btn.disabled = true;
+      if (textSpan) textSpan.textContent = isLogin ? 'Logging in...' : 'Creating account...';
+    }
+
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await firebaseUpdateProfile(cred.user, { displayName: name });
+
+        const universityFallback = email.includes('.edu.ng')
+          ? email.split('@')[1].split('.')[0].toUpperCase()
+          : 'University Student';
+
+        await setDoc(doc(db, "users", cred.user.uid), {
+          displayName: name,
+          email,
+          xp: 0,
+          level: 1,
+          rank_title: 'Novice Scholar',
+          university: universityFallback,
+          createdAt: serverTimestamp(),
+          role: 'STUDENT',
+          subscriptionLevel: 'STANDARD',
+          activated: false
+        });
+      }
+
+      window.toggleAuthModal(null, false);
+      showToast(isLogin ? 'Welcome back!' : 'Account created. Taking you in...', 'success');
+      // No manual redirect needed here — onAuthStateChanged fires as soon
+      // as sign-in/sign-up completes and handles routing into the correct
+      // app shell (desktop vs phone/tablet) itself.
+    } catch (e) {
+      console.error('Auth error:', e);
+      let msg = isLogin ? 'Could not log in: ' : 'Could not create account: ';
+      if (e.code === 'auth/user-not-found') msg += 'No account found with that email.';
+      else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg += 'Incorrect email or password.';
+      else if (e.code === 'auth/email-already-in-use') msg += 'An account already exists with that email.';
+      else if (e.code === 'auth/weak-password') msg += 'Password should be at least 6 characters.';
+      else if (e.code === 'auth/invalid-email') msg += 'That email address looks invalid.';
+      else msg += e.message;
+      showToast(msg, 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        if (textSpan) textSpan.textContent = originalText || (isLogin ? 'Log in' : 'Create account');
+      }
+    }
+  };
+
+  function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toastEl = document.createElement('div');
+    const isError = type === 'error';
+    toastEl.className = `px-5 py-4 rounded-xl ${isError ? 'bg-rose-600 text-white' : 'bg-ink dark:bg-paper text-paper dark:text-ink'} font-semibold text-sm shadow-2xl flex items-center gap-3 translate-x-[120%] transition-transform duration-400`;
+    const iconName = isError ? 'alert-circle' : 'check-circle';
+    const iconColor = isError ? 'text-white' : 'text-pass-400';
+    toastEl.innerHTML = `<i data-lucide="${iconName}" class="w-5 h-5 ${iconColor}"></i><span>${escapeHTML(message)}</span>`;
+    container.appendChild(toastEl);
+    lucide.createIcons();
+    requestAnimationFrame(() => toastEl.classList.remove('translate-x-[120%]'));
+    setTimeout(() => {
+      toastEl.classList.add('translate-x-[120%]');
+      setTimeout(() => toastEl.remove(), 400);
+    }, 3800);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lecturer Dashboard — Geo-Books</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // This page only loads the Tailwind CDN runtime (no build step / no
+    // tailwind.config.js), so custom theme tokens have to be registered
+    // here or classes referencing them silently do nothing. Mirrors the
+    // project's shared tailwind.config.js so brand-*/shadow-glow etc.
+    // resolve the same way they do on pages that go through the real build.
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] },
+          colors: {
+            brand: {
+              50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
+              400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
+              800: '#5b21b6', 900: '#4c1d95', 950: '#2e1065'
+            }
+          },
+          borderRadius: { '4xl': '2rem', '5xl': '3rem' },
+          boxShadow: {
+            soft: '0 2px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -2px rgba(0,0,0,0.05)',
+            glow: '0 0 20px rgba(139, 92, 246, 0.15)',
+            premium: '0 25px 50px -12px rgba(0, 0, 0, 0.15)'
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .elite-gradient { background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #06B6D4 100%); }
+    .elite-text { background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #06B6D4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .premium-card { background: white; border-radius: 2.5rem; border: 1px solid #F1F5F9; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
+    .dropzone { transition: all 0.2s ease; }
+    .dropzone.drag-over { background: #F5F3FF; border-color: #7C3AED; transform: scale(1.01); }
+    .progress-bar-fill { transition: width 0.3s ease; }
+    /* Ambient background glow for the full-screen lecture uploader — same
+       token as the app's existing .zen-mode glow (input.css), reproduced
+       locally since this page doesn't link the compiled styles.css. */
+    @keyframes zen-pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 0.8; } }
+    .zen-glow {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.25;
+      background: radial-gradient(circle at center, #7c3aed 0%, transparent 70%);
+      animation: zen-pulse 10s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+  <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 items-end pointer-events-none"></div>
+
+  <!-- Gate -->
+  <div id="gateScreen" class="fixed inset-0 z-[999] bg-white flex items-center justify-center">
+    <div class="text-center px-6">
+      <div class="w-14 h-14 rounded-2xl elite-gradient mx-auto mb-4 flex items-center justify-center text-white">
+        <i data-lucide="presentation" class="w-7 h-7"></i>
+      </div>
+      <p id="gateMessage" class="text-sm font-bold text-slate-400">Checking lecturer access...</p>
+    </div>
+  </div>
+
+  <div id="app" class="hidden min-h-screen p-6 lg:p-12 max-w-6xl mx-auto">
+    <div class="flex items-start justify-between mb-8 flex-wrap gap-4">
+      <div>
+        <a href="geo-books.htm" class="text-xs font-black text-slate-400 hover:text-slate-600 flex items-center gap-2 mb-4"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Geo-Books</a>
+        <button onclick="window.openProfileModal(false)" class="flex items-center gap-4 group text-left" title="Edit your profile">
+          <div id="lecturerAvatarWrap" class="w-14 h-14 rounded-2xl elite-gradient flex items-center justify-center text-white font-black text-lg overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+            <span id="lecturerAvatarInitial">L</span>
+            <img id="lecturerAvatarImg" class="w-full h-full object-cover hidden" alt="">
+          </div>
+          <div>
+            <h1 class="text-3xl font-black tracking-tighter">Welcome, <span id="lecturerName" class="elite-text">Lecturer</span></h1>
+            <p id="lecturerMeta" class="text-slate-500 mt-1 text-sm"></p>
+          </div>
+        </button>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="window.openUploadLectureModal()" class="px-6 py-4 rounded-3xl elite-gradient text-white text-xs font-black uppercase tracking-widest shadow-xl flex items-center gap-2 hover:scale-105 transition-transform">
+          <i data-lucide="upload" class="w-4 h-4"></i> Upload Lecture
+        </button>
+        <button onclick="window.openUploadBookModal()" class="px-6 py-4 rounded-3xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest shadow-xl flex items-center gap-2 hover:scale-105 transition-transform">
+          <i data-lucide="book-plus" class="w-4 h-4"></i> Post Book
+        </button>
+        <button onclick="window.openAssessmentModal()" class="px-6 py-4 rounded-3xl bg-emerald-600 text-white text-xs font-black uppercase tracking-widest shadow-xl flex items-center gap-2 hover:scale-105 transition-transform">
+          <i data-lucide="clipboard-check" class="w-4 h-4"></i> Create Test
+        </button>
+        <button onclick="window.openTopicModal()" class="px-6 py-4 rounded-3xl bg-indigo-600 text-white text-xs font-black uppercase tracking-widest shadow-xl flex items-center gap-2 hover:scale-105 transition-transform">
+          <i data-lucide="layout-list" class="w-4 h-4"></i> Add Topic
+        </button>
+        <button onclick="window.openCourseLayoutModal()" class="px-6 py-4 rounded-3xl bg-white border-2 border-slate-200 text-slate-700 text-xs font-black uppercase tracking-widest shadow-xl flex items-center gap-2 hover:scale-105 hover:border-slate-300 transition-transform">
+          <i data-lucide="layout-template" class="w-4 h-4"></i> Course Layout
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div class="premium-card p-6 bg-violet-50/50 border-violet-100">
+        <p class="text-[10px] font-black text-violet-600 uppercase tracking-widest mb-1">Lectures</p>
+        <h3 class="text-3xl font-black" id="statMyLectures">—</h3>
+      </div>
+      <div class="premium-card p-6 bg-slate-50 border-slate-200">
+        <p class="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Books</p>
+        <h3 class="text-3xl font-black" id="statMyBooks">—</h3>
+      </div>
+      <div class="premium-card p-6 bg-emerald-50/50 border-emerald-100">
+        <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">This Month</p>
+        <h3 class="text-3xl font-black" id="statThisMonth">—</h3>
+      </div>
+      <div class="premium-card p-6 bg-brand-50/50 border-brand-100">
+        <p class="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-1">Courses Assigned</p>
+        <h3 class="text-3xl font-black" id="statCourses">—</h3>
+      </div>
+    </div>
+
+    <!-- My Lectures -->
+    <div class="premium-card overflow-hidden mb-8">
+      <div class="p-8 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+        <h3 class="text-lg font-black">My Lectures</h3>
+        <div class="flex gap-2">
+          <input id="lectureSearchInput" type="text" placeholder="Search my lectures..." oninput="window.renderMyLectures()" class="px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none w-56">
+          <select id="lectureCourseFilter" onchange="window.renderMyLectures()" class="px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-black uppercase outline-none">
+            <option value="ALL">All Courses</option>
+          </select>
+        </div>
+      </div>
+      <div id="myLecturesList" class="divide-y divide-slate-100"></div>
+    </div>
+
+    <!-- My Books -->
+    <div class="premium-card overflow-hidden mb-8">
+      <div class="p-8 border-b border-slate-100">
+        <h3 class="text-lg font-black">My Books</h3>
+      </div>
+      <div id="myBooksList" class="divide-y divide-slate-100"></div>
+    </div>
+
+    <!-- My Assessments -->
+    <div class="premium-card overflow-hidden mb-8">
+      <div class="p-8 border-b border-slate-100">
+        <h3 class="text-lg font-black">My Assessments</h3>
+      </div>
+      <div id="myAssessmentsList" class="divide-y divide-slate-100"></div>
+    </div>
+
+    <!-- My Topics -->
+    <div class="premium-card overflow-hidden">
+      <div class="p-8 border-b border-slate-100">
+        <h3 class="text-lg font-black">My Topics</h3>
+      </div>
+      <div id="myTopicsList" class="divide-y divide-slate-100"></div>
+    </div>
+  </div>
+
+  <!-- Upload Lecture — full-screen -->
+  <div id="uploadLectureModal" class="fixed inset-0 z-[900] hidden bg-slate-950 text-white overflow-y-auto">
+    <div class="zen-glow"></div>
+    <div class="relative min-h-screen flex flex-col max-w-2xl mx-auto px-6 py-10">
+      <div class="flex items-center justify-between mb-10 shrink-0">
+        <button onclick="window.closeUploadLectureModal()" class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+        <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">Upload Lecture</p>
+        <div class="w-10"></div>
+      </div>
+
+      <!-- Stage 1: details + file pick -->
+      <div id="lectureStagePick" class="flex-1 flex flex-col justify-center py-6">
+        <div class="space-y-4 mb-6">
+          <input id="lectureTitleInput" type="text" placeholder="Lecture title" class="w-full px-6 py-5 rounded-2xl bg-white/5 border border-white/10 text-sm font-bold outline-none focus:border-brand-500 placeholder:text-slate-500 transition-colors">
+          <select id="lectureCourseSelect" class="w-full px-6 py-5 rounded-2xl bg-white/5 border border-white/10 text-sm font-bold outline-none focus:border-brand-500 transition-colors"></select>
+        </div>
+
+        <div id="lectureDropzone" class="dropzone border-2 border-dashed border-white/10 rounded-3xl p-10 text-center cursor-pointer hover:border-brand-500/50 hover:bg-white/[0.02]" onclick="document.getElementById('lectureFileInput').click()">
+          <input id="lectureFileInput" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" class="hidden">
+          <div id="lecturePreviewWrap" class="hidden mb-4">
+            <video id="lecturePreviewVideo" class="max-h-44 mx-auto rounded-xl bg-black" muted playsinline></video>
+          </div>
+          <i id="lectureDropzoneIcon" data-lucide="film" class="w-9 h-9 mx-auto mb-3 text-slate-600"></i>
+          <p id="lectureDropzoneText" class="text-sm font-bold text-slate-400">Drag a video here, or click to browse</p>
+          <p id="lectureDropzoneSub" class="text-[10px] text-slate-600 font-bold mt-2">MP4, WebM, MOV, MKV — up to 500MB</p>
+        </div>
+
+        <button id="submitLectureBtn" onclick="window.submitLectureUpload()" class="w-full py-5 rounded-2xl elite-gradient text-white font-black uppercase tracking-widest text-xs disabled:opacity-40 mt-6 shadow-glow">
+          Start Upload
+        </button>
+      </div>
+
+      <!-- Stage 2: uploading -->
+      <div id="lectureStageProgress" class="hidden flex-1 flex flex-col justify-center items-center text-center py-6">
+        <div class="relative w-40 h-40 mb-8">
+          <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/>
+            <circle id="lectureProgressRing" cx="50" cy="50" r="44" fill="none" stroke="url(#lectureRingGrad)" stroke-width="8" stroke-linecap="round"
+              stroke-dasharray="276.46" stroke-dashoffset="276.46" style="transition: stroke-dashoffset 0.25s ease"/>
+            <defs>
+              <linearGradient id="lectureRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#7C3AED"/>
+                <stop offset="100%" stop-color="#06B6D4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span id="lectureProgressText" class="text-3xl font-black">0%</span>
+          </div>
+        </div>
+
+        <p id="lectureProgressLabel" class="text-sm font-bold text-slate-300 mb-2">Uploading...</p>
+        <div class="flex items-center gap-3 text-[11px] font-black text-slate-500 uppercase tracking-widest mb-8">
+          <span id="lectureSpeedText">-- MB/s</span>
+          <span class="text-slate-700">•</span>
+          <span id="lectureEtaText">calculating...</span>
+        </div>
+
+        <div id="lectureChunkGrid" class="flex flex-wrap gap-1.5 max-w-md justify-center mb-8"></div>
+
+        <button onclick="window.cancelLectureUpload()" class="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-rose-400 transition-colors">Cancel Upload</button>
+      </div>
+
+      <!-- Stage 3: done -->
+      <div id="lectureStageDone" class="hidden flex-1 flex flex-col justify-center items-center text-center py-6">
+        <div class="w-20 h-20 rounded-full elite-gradient flex items-center justify-center mb-6 shadow-glow">
+          <i data-lucide="check" class="w-10 h-10"></i>
+        </div>
+        <p class="text-xl font-black mb-2">Lecture uploaded</p>
+        <p id="lectureDoneMeta" class="text-xs font-bold text-slate-500 mb-8"></p>
+        <button onclick="window.closeUploadLectureModal()" class="px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black uppercase tracking-widest text-xs transition-colors">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Book Modal -->
+  <div id="uploadBookModal" class="fixed inset-0 z-[900] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-[2.5rem] max-w-md w-full p-10 relative">
+      <button onclick="window.closeUploadBookModal()" class="absolute top-8 right-8 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+      <h3 class="text-2xl font-black mb-6">Post a Book</h3>
+      <div class="space-y-4">
+        <input id="bookTitleInput" type="text" placeholder="Book / material title" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        <input id="bookAuthorInput" type="text" placeholder="Author (optional)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        <select id="bookCourseSelect" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none"></select>
+
+        <div id="bookDropzone" class="dropzone border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center cursor-pointer" onclick="document.getElementById('bookFileInput').click()">
+          <input id="bookFileInput" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" class="hidden">
+          <i data-lucide="file-text" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
+          <p id="bookDropzoneText" class="text-xs font-bold text-slate-400">Drag a PDF or image here, or click to browse</p>
+        </div>
+
+        <div id="bookProgressWrap" class="hidden">
+          <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div id="bookProgressBar" class="progress-bar-fill h-full bg-slate-900 rounded-full" style="width: 0%"></div>
+          </div>
+          <p id="bookProgressText" class="text-[10px] font-black text-slate-400 mt-2 text-center">0%</p>
+        </div>
+
+        <button id="submitBookBtn" onclick="window.submitBookUpload()" class="w-full py-4 rounded-2xl bg-slate-900 text-white font-black uppercase tracking-widest text-xs disabled:opacity-40">Post Book</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Assessment Modal -->
+  <div id="assessmentModal" class="fixed inset-0 z-[900] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-[2.5rem] max-w-2xl w-full p-10 relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <button onclick="window.closeAssessmentModal()" class="absolute top-8 right-8 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+      <h3 class="text-2xl font-black mb-6">Create Test</h3>
+      <div class="space-y-4">
+        <input id="assessmentTitleInput" type="text" placeholder="Test title (e.g. Midterm — Cell Biology)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        <select id="assessmentTypeInput" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+          <option value="practice">Practice Test</option>
+          <option value="past_question">Past Question</option>
+        </select>
+        <select id="assessmentCourseSelect" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none"></select>
+
+        <div id="assessmentQuestionsWrap" class="space-y-4"></div>
+
+        <button onclick="window.addAssessmentQuestion()" class="w-full py-4 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-black uppercase text-xs hover:border-emerald-300 hover:text-emerald-600 transition-colors flex items-center justify-center gap-2">
+          <i data-lucide="plus" class="w-4 h-4"></i> Add Question
+        </button>
+
+        <p id="assessmentStatus" class="text-xs font-bold text-slate-400"></p>
+        <button id="submitAssessmentBtn" onclick="window.submitAssessment()" class="w-full py-4 rounded-2xl bg-emerald-600 text-white font-black uppercase tracking-widest text-xs disabled:opacity-40">Publish Test</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Topic Modal -->
+  <div id="topicModal" class="fixed inset-0 z-[900] hidden flex-col bg-white">
+    <div class="flex items-center gap-4 px-6 lg:px-12 py-6 border-b border-slate-100 shrink-0">
+      <button onclick="window.closeTopicModal()" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 shrink-0"><i data-lucide="x" class="w-5 h-5"></i></button>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between mb-2 gap-2">
+          <p class="text-[10px] font-black uppercase text-slate-400" id="topicWizardStepLabel">Step 1 of 10</p>
+          <p class="text-[10px] font-black uppercase text-indigo-500 truncate" id="topicWizardStepName">Topic number</p>
+        </div>
+        <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div id="topicWizardProgressBar" class="h-full bg-indigo-600 rounded-full transition-all" style="width:10%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto custom-scrollbar px-6 lg:px-12 py-10">
+      <div class="max-w-xl mx-auto">
+
+        <div class="topic-step" data-step="0">
+          <h3 class="text-3xl font-black mb-2">What topic number is this?</h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">Students see topics in this order.</p>
+          <input id="topicNumberInput" type="number" min="1" placeholder="e.g. 1" class="w-full px-6 py-6 rounded-3xl bg-slate-50 text-2xl font-black outline-none text-center">
+        </div>
+
+        <div class="topic-step hidden" data-step="1">
+          <h3 class="text-3xl font-black mb-2">Give it a title.</h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">e.g. Homeostasis</p>
+          <input id="topicTitleInput" type="text" placeholder="Topic title" class="w-full px-6 py-6 rounded-3xl bg-slate-50 text-2xl font-black outline-none text-center">
+        </div>
+
+        <div class="topic-step hidden" data-step="2">
+          <h3 class="text-3xl font-black mb-2">Which course is this for?</h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">Only courses assigned to you appear here.</p>
+          <select id="topicCourseSelect" class="w-full px-6 py-6 rounded-3xl bg-slate-50 text-lg font-black outline-none text-center"></select>
+        </div>
+
+        <div class="topic-step hidden" data-step="3">
+          <h3 class="text-3xl font-black mb-2">Short description <span class="text-slate-300">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">A line or two students see before opening the topic.</p>
+          <textarea id="topicDescriptionInput" placeholder="Short topic description" rows="4" class="w-full px-6 py-5 rounded-3xl bg-slate-50 text-base font-bold outline-none resize-none"></textarea>
+        </div>
+
+        <div class="topic-step hidden" data-step="4">
+          <h3 class="text-3xl font-black mb-2">Mini-text <span class="text-slate-300 text-xl">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-6">Build a mini reading page — headings, paragraphs, tags.</p>
+          <input id="topicMiniTextKickerInput" type="text" placeholder="Section label (optional, e.g. Stability in a Changing Environment)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none mb-3">
+          <div id="miniTextBlocksList" class="space-y-3 mb-3"></div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="window.addMiniTextBlock('heading')" class="px-3 py-2 rounded-xl bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase hover:bg-indigo-100">+ Heading</button>
+            <button type="button" onclick="window.addMiniTextBlock('subheading')" class="px-3 py-2 rounded-xl bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase hover:bg-indigo-100">+ Subheading</button>
+            <button type="button" onclick="window.addMiniTextBlock('paragraph')" class="px-3 py-2 rounded-xl bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase hover:bg-indigo-100">+ Paragraph</button>
+            <button type="button" onclick="window.addMiniTextBlock('pills')" class="px-3 py-2 rounded-xl bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase hover:bg-indigo-100">+ Pill tags</button>
+            <button type="button" onclick="window.addMiniTextBlock('divider')" class="px-3 py-2 rounded-xl bg-slate-50 text-slate-400 text-[10px] font-black uppercase hover:bg-slate-100">+ Divider</button>
+          </div>
+        </div>
+
+        <div class="topic-step hidden" data-step="5">
+          <h3 class="text-3xl font-black mb-2">Voice note <span class="text-slate-300 text-xl">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">An audio walkthrough of this topic.</p>
+          <input id="topicVoiceFileInput" type="file" accept="audio/*" class="w-full text-sm font-bold">
+        </div>
+
+        <div class="topic-step hidden" data-step="6">
+          <h3 class="text-3xl font-black mb-2">Full lecture video <span class="text-slate-300 text-xl">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">Up to 500MB — MP4, WebM, MOV, or MKV.</p>
+          <input id="topicVideoFileInput" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" class="w-full text-sm font-bold">
+        </div>
+
+        <div class="topic-step hidden" data-step="7">
+          <h3 class="text-3xl font-black mb-2">Structured answer <span class="text-slate-300 text-xl">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">An exam-style structured answer for this topic.</p>
+          <textarea id="topicStructuredInput" placeholder="Exam-style structured answer..." rows="8" class="w-full px-6 py-5 rounded-3xl bg-slate-50 text-base font-bold outline-none resize-none"></textarea>
+        </div>
+
+        <div class="topic-step hidden" data-step="8">
+          <h3 class="text-3xl font-black mb-2">Quiz <span class="text-slate-300 text-xl">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">Pick from your published tests.</p>
+          <select id="topicQuizSelect" class="w-full px-6 py-6 rounded-3xl bg-slate-50 text-lg font-black outline-none text-center">
+            <option value="">No quiz</option>
+          </select>
+        </div>
+
+        <div class="topic-step hidden" data-step="9">
+          <h3 class="text-3xl font-black mb-2">Review &amp; save</h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">Anything left blank shows as "Coming soon" for students.</p>
+          <div id="topicReviewSummary" class="space-y-2 mb-6"></div>
+          <div id="topicProgressWrap" class="hidden pt-2 mb-4">
+            <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div id="topicProgressBar" class="h-full bg-indigo-600 rounded-full transition-all" style="width:0%"></div>
+            </div>
+            <p id="topicProgressText" class="text-[10px] font-black text-slate-400 mt-2 text-center">0%</p>
+          </div>
+          <p id="topicStatus" class="text-xs font-bold text-slate-400"></p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="border-t border-slate-100 px-6 lg:px-12 py-6 flex items-center justify-between gap-4 shrink-0">
+      <button id="topicWizardBackBtn" onclick="window.topicWizardBack()" class="px-6 py-4 rounded-2xl bg-slate-100 text-slate-600 font-black uppercase tracking-widest text-xs hover:bg-slate-200 disabled:opacity-30" disabled>Back</button>
+      <button id="topicWizardNextBtn" onclick="window.topicWizardNext()" class="px-8 py-4 rounded-2xl bg-indigo-600 text-white font-black uppercase tracking-widest text-xs hover:bg-indigo-700">Next</button>
+      <button id="submitTopicBtn" onclick="window.submitTopic()" class="hidden px-8 py-4 rounded-2xl bg-indigo-600 text-white font-black uppercase tracking-widest text-xs disabled:opacity-40">Save Topic</button>
+    </div>
+  </div>
+
+  <!-- Lecturer Profile Modal (first-time onboarding + later self-edits) -->
+  <div id="profileModal" class="fixed inset-0 z-[950] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-[2.5rem] max-w-md w-full p-10 relative">
+      <button id="profileModalCloseBtn" onclick="window.closeProfileModal()" class="absolute top-8 right-8 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 hidden">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+      <h3 id="profileModalTitle" class="text-2xl font-black mb-2">Set up your profile</h3>
+      <p id="profileModalCopy" class="text-xs text-slate-400 font-bold mb-6">Students will see this name and logo wherever your courses appear.</p>
+      <div class="space-y-4">
+        <div id="profileLogoDropzone" class="dropzone border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center cursor-pointer flex flex-col items-center gap-3">
+          <input id="profileLogoFileInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
+          <div class="w-16 h-16 rounded-2xl elite-gradient flex items-center justify-center text-white font-black text-xl overflow-hidden shrink-0">
+            <span id="profileLogoPreviewInitial">L</span>
+            <img id="profileLogoPreviewImg" class="w-full h-full object-cover hidden" alt="">
+          </div>
+          <p id="profileLogoDropzoneText" class="text-xs font-bold text-slate-400">Upload a logo or photo (optional) — JPG, PNG or WebP, up to 10MB</p>
+        </div>
+
+        <input id="profileNameInput" type="text" placeholder="Your name (e.g. Dr. Amaka Obi)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        <input id="profileDepartmentInput" type="text" placeholder="Department (e.g. Physiology)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        <input id="profileBioInput" type="text" placeholder="Short title (optional, e.g. Senior Lecturer)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+
+        <div id="profileProgressWrap" class="hidden">
+          <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div id="profileProgressBar" class="progress-bar-fill h-full elite-gradient rounded-full" style="width: 0%"></div>
+          </div>
+          <p id="profileProgressText" class="text-[10px] font-black text-slate-400 mt-2 text-center">0%</p>
+        </div>
+
+        <p id="profileStatus" class="text-xs font-bold text-slate-400"></p>
+        <button id="submitProfileBtn" onclick="window.submitProfile()" class="w-full py-4 rounded-2xl elite-gradient text-white font-black uppercase tracking-widest text-xs disabled:opacity-40">Save Profile</button>
+        <button id="skipProfileBtn" onclick="window.skipProfileOnboarding()" class="w-full py-2 text-slate-400 font-black uppercase tracking-widest text-[10px] hover:text-slate-600 hidden">Skip for now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Course Layout Modal — pick which course-lectures.htm design each of
+       this lecturer's own courses uses. Mirrors main_admin.htm's
+       Course Designs modal (courseSettings/{courseId}.template), scoped
+       down to just the courses this lecturer actually teaches instead of
+       admin's free-text any-course version. -->
+  <div id="courseLayoutModal" class="fixed inset-0 z-[950] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-[2.5rem] max-w-lg w-full p-10 relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <button onclick="window.closeCourseLayoutModal()" class="absolute top-8 right-8 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+      <h3 class="text-2xl font-black mb-2">Course Layout</h3>
+      <p class="text-xs text-slate-400 font-bold mb-6">Pick how each of your courses looks to students. Applies instantly, no re-upload needed.</p>
+
+      <div class="space-y-3 mb-6">
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+          <p class="text-xs font-black">Default</p>
+          <p class="text-[10px] text-slate-400 font-bold mt-0.5">Standard Geo-Books layout — matches the rest of the app.</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+          <p class="text-xs font-black">Dashboard</p>
+          <p class="text-[10px] text-slate-400 font-bold mt-0.5">Sidebar navigation — good for courses with many topics/lectures to browse.</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+          <p class="text-xs font-black">Classic</p>
+          <p class="text-[10px] text-slate-400 font-bold mt-0.5">Academic/print-style reading layout — good for text-heavy, lecture-note-driven courses.</p>
+        </div>
+      </div>
+
+      <div id="courseLayoutList" class="space-y-4"></div>
+      <p id="courseLayoutStatus" class="text-xs font-bold text-slate-400 mt-4"></p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+    import {
+      getFirestore, collection, query, where, orderBy, onSnapshot,
+      doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, serverTimestamp, documentId
+    } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1nVLSPFs30wG-PLaEyFqm_PEVhZdzISU",
+      authDomain: "geo-books-8411e.firebaseapp.com",
+      projectId: "geo-books-8411e",
+      storageBucket: "geo-books-8411e.firebasestorage.app",
+      messagingSenderId: "972887107793",
+      appId: "1:972887107793:web:7e0374bf81e6713fd0fdf0",
+      measurementId: "G-RY84V5DXPN"
+    };
+
+    function getFirebaseApp() {
+      return getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    }
+
+    const auth = getAuth(getFirebaseApp());
+    const db = getFirestore(getFirebaseApp());
+
+    const API_BASE_URL = window.GEO_BOOKS_API_URL ||
+      (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+        ? 'http://localhost:3007'
+        : '');
+
+    const escapeHTML = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    window.toast = (msg, type = 'info') => {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      const icons = { success: 'check-circle', error: 'alert-circle', info: 'info', brand: 'zap' };
+      const colors = { success: 'bg-emerald-500', error: 'bg-rose-500', info: 'bg-slate-900', brand: 'bg-brand-600' };
+      el.className = `${colors[type] || colors.info} text-white px-6 py-4 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-3 pointer-events-auto animate-in slide-in-from-right-full duration-300`;
+      el.innerHTML = `<i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0"></i><span>${escapeHTML(msg)}</span>`;
+      container.appendChild(el);
+      if (window.lucide) window.lucide.createIcons();
+      setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; el.style.transition = 'all 0.3s'; setTimeout(() => el.remove(), 300); }, 4500);
+    };
+
+    let currentUser = null;
+    let myGrant = null;
+    let myLectures = [];
+    let myBooks = [];
+
+    onAuthStateChanged(auth, async (user) => {
+      const gate = document.getElementById('gateScreen');
+      const gateMsg = document.getElementById('gateMessage');
+      if (!user) {
+        gateMsg.textContent = 'Please sign in.';
+        setTimeout(() => { window.location.href = 'geo-books.htm'; }, 1200);
+        return;
+      }
+      currentUser = user;
+      try {
+        const snap = await getDoc(doc(db, 'lecturers', user.uid));
+        myGrant = snap.exists() ? snap.data() : null;
+      } catch (e) {
+        console.error('Failed to load lecturer grant:', e);
+      }
+
+      if (!myGrant || myGrant.accessGranted !== true) {
+        gateMsg.textContent = "You don't have lecturer access. Contact an admin to be granted access.";
+        setTimeout(() => { window.location.href = 'geo-books.htm'; }, 2000);
+        return;
+      }
+
+      gate.classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      renderLecturerHeader();
+      document.getElementById('statCourses').textContent = (myGrant.courses || []).length;
+      populateCourseSelects();
+      watchMyCourseLayouts();
+      setupDropzones();
+      setupProfileLogoDropzone();
+      lucide.createIcons();
+      watchMyLectures();
+      watchMyBooks();
+      watchMyAssessments();
+      watchMyTopics();
+
+      // First-time setup: a lecturer only gets a /lecturers/{uid} doc once
+      // an admin grants access (main_admin.htm), so `name` at that point is
+      // whatever the admin typed in — the lecturer hasn't confirmed their
+      // own name/department/logo yet. onboardingCompletedAt is the one-time
+      // gate; skipping sets it too, so this never nags on every login.
+      if (!myGrant.onboardingCompletedAt) {
+        window.openProfileModal(true);
+      }
+    });
+
+    function renderLecturerHeader() {
+      document.getElementById('lecturerName').textContent = myGrant.name || currentUser.email || 'Lecturer';
+      document.getElementById('lecturerMeta').textContent =
+        `${myGrant.department ? myGrant.department + ' • ' : ''}${myGrant.institutionId || 'No institution set'} • ${(myGrant.courses || []).length} course${(myGrant.courses || []).length === 1 ? '' : 's'} assigned`;
+      renderAvatarInto('lecturerAvatarInitial', 'lecturerAvatarImg', myGrant.name, myGrant.logoUrl);
+    }
+
+    function renderAvatarInto(initialId, imgId, name, logoUrl) {
+      const initialEl = document.getElementById(initialId);
+      const imgEl = document.getElementById(imgId);
+      const initial = (name || currentUser?.email || 'L').trim().charAt(0).toUpperCase() || 'L';
+      initialEl.textContent = initial;
+      if (logoUrl) {
+        imgEl.src = logoUrl;
+        imgEl.classList.remove('hidden');
+        initialEl.classList.add('hidden');
+      } else {
+        imgEl.classList.add('hidden');
+        initialEl.classList.remove('hidden');
+      }
+    }
+
+    function populateCourseSelects() {
+      const courses = myGrant.courses || [];
+      const options = courses.length
+        ? courses.map((c) => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join('')
+        : `<option value="">No courses assigned — contact admin</option>`;
+      document.getElementById('lectureCourseSelect').innerHTML = options;
+      document.getElementById('bookCourseSelect').innerHTML = options;
+      document.getElementById('assessmentCourseSelect').innerHTML = options;
+      document.getElementById('topicCourseSelect').innerHTML = options;
+      document.getElementById('lectureCourseFilter').innerHTML =
+        `<option value="ALL">All Courses</option>` + courses.map((c) => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join('');
+    }
+
+    // --- Course Layout (courseSettings/{courseId}.template) ---
+    // Same collection/field main_admin.htm's Course Designs modal writes to
+    // (see its own comment there and firestore.rules) — scoped here to just
+    // the courses this lecturer teaches, with a friendlier picker than
+    // admin's free-text-courseId version. university.js's renderCoursePicker()
+    // reads courseSettings for ALL courses regardless of who set it, so a
+    // choice made here shows up for students exactly the same way an
+    // admin-set one would.
+    const COURSE_LAYOUT_LABELS = { '': 'Default', dashboard: 'Dashboard', classic: 'Classic' };
+    let myCourseLayouts = {}; // courseId -> template ('' | 'dashboard' | 'classic')
+    let courseLayoutsUnsub = null;
+
+    function watchMyCourseLayouts() {
+      if (courseLayoutsUnsub) return;
+      const courses = (myGrant.courses || []).slice(0, 30); // Firestore 'in' query cap
+      if (!courses.length) return;
+      courseLayoutsUnsub = onSnapshot(
+        query(collection(db, 'courseSettings'), where(documentId(), 'in', courses)),
+        (snap) => {
+          myCourseLayouts = {};
+          snap.docs.forEach((d) => { myCourseLayouts[d.id] = d.data().template || ''; });
+          renderCourseLayoutList();
+        },
+        (err) => console.error('Course layout listener error:', err)
+      );
+    }
+
+    function renderCourseLayoutList() {
+      const el = document.getElementById('courseLayoutList');
+      if (!el) return;
+      const courses = myGrant.courses || [];
+      if (!courses.length) {
+        el.innerHTML = `<p class="text-xs text-slate-300 font-bold text-center py-6">No courses assigned yet — contact an admin.</p>`;
+        return;
+      }
+      el.innerHTML = courses.map((courseId) => {
+        const current = myCourseLayouts[courseId] || '';
+        return `
+        <div class="p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-4">
+          <p class="text-sm font-black truncate">${escapeHTML(courseId)}</p>
+          <select onchange="window.saveCourseLayout('${escapeHTML(courseId)}', this.value)" class="px-4 py-2 rounded-xl bg-slate-50 text-xs font-black outline-none shrink-0">
+            <option value="" ${current === '' ? 'selected' : ''}>Default</option>
+            <option value="dashboard" ${current === 'dashboard' ? 'selected' : ''}>Dashboard</option>
+            <option value="classic" ${current === 'classic' ? 'selected' : ''}>Classic</option>
+          </select>
+        </div>`;
+      }).join('');
+    }
+
+    window.openCourseLayoutModal = () => {
+      document.getElementById('courseLayoutStatus').textContent = '';
+      renderCourseLayoutList();
+      document.getElementById('courseLayoutModal').classList.replace('hidden', 'flex');
+    };
+    window.closeCourseLayoutModal = () => document.getElementById('courseLayoutModal').classList.replace('flex', 'hidden');
+
+    window.saveCourseLayout = async (courseId, template) => {
+      const status = document.getElementById('courseLayoutStatus');
+      status.textContent = 'Saving...';
+      try {
+        if (!template) {
+          // "Default" means no override — remove the doc entirely, matching
+          // main_admin.htm's same convention, so an unset course and an
+          // explicitly-default course are the same state, not two states
+          // that happen to render the same.
+          await deleteDoc(doc(db, 'courseSettings', courseId));
+        } else {
+          await setDoc(doc(db, 'courseSettings', courseId), { template, updatedAt: serverTimestamp() }, { merge: true });
+        }
+        status.textContent = `${courseId} → ${COURSE_LAYOUT_LABELS[template] || template} saved.`;
+      } catch (e) {
+        console.error('Save course layout failed:', e);
+        status.textContent = e.message || 'Failed to save. Please try again.';
+      }
+    };
+
+    function describeLectureFile(f) {
+      document.getElementById('lectureDropzoneIcon').classList.add('hidden');
+      const wrap = document.getElementById('lecturePreviewWrap');
+      wrap.classList.remove('hidden');
+      const video = document.getElementById('lecturePreviewVideo');
+      if (video.dataset.objectUrl) URL.revokeObjectURL(video.dataset.objectUrl);
+      const url = URL.createObjectURL(f);
+      video.dataset.objectUrl = url;
+      video.src = url;
+      video.currentTime = 0.5; // grab a frame past a possible black first frame, as a lightweight poster
+      return `${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB)`;
+    }
+
+    function setupDropzones() {
+      wireDropzone('lectureDropzone', 'lectureFileInput', 'lectureDropzoneText', describeLectureFile);
+      wireDropzone('bookDropzone', 'bookFileInput', 'bookDropzoneText', (f) => f.name);
+    }
+
+    function wireDropzone(zoneId, inputId, textId, describe) {
+      const zone = document.getElementById(zoneId);
+      const input = document.getElementById(inputId);
+      const text = document.getElementById(textId);
+      ['dragenter', 'dragover'].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add('drag-over'); }));
+      ['dragleave', 'drop'].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove('drag-over'); }));
+      zone.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files.length) {
+          input.files = e.dataTransfer.files;
+          text.textContent = describe(e.dataTransfer.files[0]);
+        }
+      });
+      input.addEventListener('change', () => {
+        if (input.files.length) text.textContent = describe(input.files[0]);
+      });
+    }
+
+    function watchMyLectures() {
+      onSnapshot(
+        query(collection(db, 'lectures'), where('uploadedBy', '==', currentUser.uid), orderBy('createdAt', 'desc')),
+        (snap) => {
+          myLectures = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          document.getElementById('statMyLectures').textContent = myLectures.length;
+          document.getElementById('statThisMonth').textContent = countThisMonth(myLectures) + countThisMonth(myBooks);
+          window.renderMyLectures();
+        },
+        (err) => {
+          console.error('My lectures listener error:', err);
+          document.getElementById('myLecturesList').innerHTML = `<p class="p-12 text-center text-rose-500 font-bold">Failed to load your lectures.</p>`;
+        }
+      );
+    }
+
+    function countThisMonth(items) {
+      const now = new Date();
+      return items.filter((i) => {
+        const d = i.createdAt?.toDate ? i.createdAt.toDate() : null;
+        return d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }).length;
+    }
+
+    function timeAgo(date) {
+      if (!date) return '';
+      const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (secs < 60) return 'just now';
+      if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+      if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+      if (secs < 2592000) return `${Math.floor(secs / 86400)}d ago`;
+      return date.toLocaleDateString();
+    }
+
+    window.renderMyLectures = () => {
+      const searchTerm = (document.getElementById('lectureSearchInput')?.value || '').toLowerCase();
+      const courseFilter = document.getElementById('lectureCourseFilter')?.value || 'ALL';
+      const filtered = myLectures.filter((l) =>
+        (courseFilter === 'ALL' || l.courseId === courseFilter) &&
+        (!searchTerm || (l.title || '').toLowerCase().includes(searchTerm))
+      );
+
+      const list = document.getElementById('myLecturesList');
+      if (!myLectures.length) {
+        list.innerHTML = `
+          <div class="p-16 text-center">
+            <i data-lucide="film" class="w-10 h-10 mx-auto mb-3 text-slate-200"></i>
+            <p class="text-slate-400 font-bold">No lectures uploaded yet.</p>
+            <p class="text-xs text-slate-300 font-bold mt-1">Click "Upload Lecture" above to post your first one.</p>
+          </div>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+      }
+      if (!filtered.length) {
+        list.innerHTML = `<p class="p-12 text-center text-slate-400 font-bold">No lectures match your search.</p>`;
+        return;
+      }
+      list.innerHTML = filtered.map((l) => `
+        <div class="p-6 flex items-center justify-between gap-4 flex-wrap hover:bg-slate-50/50 transition-colors">
+          <div class="flex items-center gap-4 min-w-0">
+            <div class="w-11 h-11 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
+              <i data-lucide="film" class="w-5 h-5 text-violet-500"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="font-black truncate">${escapeHTML(l.title || 'Untitled lecture')}</p>
+              <p class="text-[10px] text-slate-400 font-bold">${escapeHTML(l.courseId || '')} • ${timeAgo(l.createdAt?.toDate ? l.createdAt.toDate() : null)}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            ${l.fileUrl ? `<a href="${escapeHTML(l.fileUrl)}" target="_blank" rel="noopener" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-[9px] font-black uppercase hover:bg-slate-200">View</a>` : ''}
+            <button onclick="window.deleteMyLecture('${l.id}')" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>`).join('');
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    window.deleteMyLecture = async (lectureId) => {
+      if (!confirm('Delete this lecture? This cannot be undone.')) return;
+      try {
+        await deleteDoc(doc(db, 'lectures', lectureId));
+        window.toast('Lecture deleted.', 'success');
+      } catch (e) {
+        window.toast(e.message || 'Failed to delete.', 'error');
+      }
+    };
+
+    function watchMyBooks() {
+      onSnapshot(
+        query(collection(db, 'books'), where('uploaderId', '==', currentUser.uid), orderBy('createdAt', 'desc')),
+        (snap) => {
+          myBooks = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          document.getElementById('statMyBooks').textContent = myBooks.length;
+          document.getElementById('statThisMonth').textContent = countThisMonth(myLectures) + countThisMonth(myBooks);
+          renderMyBooks();
+        },
+        (err) => {
+          console.error('My books listener error:', err);
+          document.getElementById('myBooksList').innerHTML = `<p class="p-12 text-center text-rose-500 font-bold">Failed to load your books.</p>`;
+        }
+      );
+    }
+
+    function renderMyBooks() {
+      const list = document.getElementById('myBooksList');
+      if (!myBooks.length) {
+        list.innerHTML = `
+          <div class="p-16 text-center">
+            <i data-lucide="book" class="w-10 h-10 mx-auto mb-3 text-slate-200"></i>
+            <p class="text-slate-400 font-bold">No books posted yet.</p>
+          </div>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+      }
+      list.innerHTML = myBooks.map((b) => `
+        <div class="p-6 flex items-center justify-between gap-4 flex-wrap hover:bg-slate-50/50 transition-colors">
+          <div class="flex items-center gap-4 min-w-0">
+            <div class="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+              <i data-lucide="file-text" class="w-5 h-5 text-slate-500"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="font-black truncate">${escapeHTML(b.title || 'Untitled')}</p>
+              <p class="text-[10px] text-slate-400 font-bold">${escapeHTML(b.author || 'Unknown author')} ${b.subject ? '• ' + escapeHTML(b.subject) : ''}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            ${b.fileUrl ? `<a href="${escapeHTML(b.fileUrl)}" target="_blank" rel="noopener" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-[9px] font-black uppercase hover:bg-slate-200">View</a>` : ''}
+            <button onclick="window.deleteMyBook('${b.id}')" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>`).join('');
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    window.deleteMyBook = async (bookId) => {
+      if (!confirm('Delete this book? This cannot be undone.')) return;
+      try {
+        await deleteDoc(doc(db, 'books', bookId));
+        window.toast('Book deleted.', 'success');
+      } catch (e) {
+        window.toast(e.message || 'Failed to delete.', 'error');
+      }
+    };
+
+    // --- My Assessments (manually-authored tests) ---
+    let myAssessments = [];
+    let questionCount = 0;
+
+    function watchMyAssessments() {
+      onSnapshot(
+        query(collection(db, 'assessments'), where('createdBy', '==', currentUser.uid), orderBy('createdAt', 'desc')),
+        (snap) => { myAssessments = snap.docs.map((d) => ({ id: d.id, ...d.data() })); renderMyAssessments(); },
+        (err) => {
+          console.error('My assessments listener error:', err);
+          document.getElementById('myAssessmentsList').innerHTML = `<p class="p-12 text-center text-rose-500 font-bold">Failed to load your tests.</p>`;
+        }
+      );
+    }
+
+    function renderMyAssessments() {
+      const list = document.getElementById('myAssessmentsList');
+      if (!myAssessments.length) {
+        list.innerHTML = `
+          <div class="p-16 text-center">
+            <i data-lucide="clipboard-check" class="w-10 h-10 mx-auto mb-3 text-slate-200"></i>
+            <p class="text-slate-400 font-bold">No tests created yet.</p>
+          </div>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+      }
+      list.innerHTML = myAssessments.map((a) => `
+        <div class="p-6 flex items-center justify-between gap-4 flex-wrap hover:bg-slate-50/50 transition-colors">
+          <div class="min-w-0">
+            <p class="font-black truncate">${escapeHTML(a.title || 'Untitled test')}</p>
+            <p class="text-[10px] text-slate-400 font-bold">${escapeHTML(a.courseId || '')} • ${(a.questions || []).length} questions</p>
+          </div>
+          <button onclick="window.deleteMyAssessment('${a.id}')" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>`).join('');
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    window.deleteMyAssessment = async (id) => {
+      if (!confirm('Delete this test? This cannot be undone.')) return;
+      try {
+        await deleteDoc(doc(db, 'assessments', id));
+        window.toast('Test deleted.', 'success');
+      } catch (e) {
+        window.toast(e.message || 'Failed to delete.', 'error');
+      }
+    };
+
+    // --- Question builder ---
+    window.openAssessmentModal = () => {
+      document.getElementById('assessmentTitleInput').value = '';
+      document.getElementById('assessmentTypeInput').value = 'practice';
+      document.getElementById('assessmentQuestionsWrap').innerHTML = '';
+      document.getElementById('assessmentStatus').textContent = '';
+      questionCount = 0;
+      window.addAssessmentQuestion();
+      window.addAssessmentQuestion();
+      window.addAssessmentQuestion();
+      document.getElementById('assessmentModal').classList.replace('hidden', 'flex');
+    };
+    window.closeAssessmentModal = () => document.getElementById('assessmentModal').classList.replace('flex', 'hidden');
+
+    window.addAssessmentQuestion = () => {
+      const idx = questionCount++;
+      const wrap = document.getElementById('assessmentQuestionsWrap');
+      const div = document.createElement('div');
+      div.className = 'p-5 rounded-2xl bg-slate-50 space-y-3';
+      div.dataset.qid = idx;
+      div.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-black uppercase text-slate-400">Question ${idx + 1}</span>
+          <button type="button" onclick="this.closest('[data-qid]').remove()" class="text-rose-400 hover:text-rose-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <textarea placeholder="Question text" class="q-text w-full px-4 py-3 rounded-xl bg-white text-sm font-bold outline-none resize-none" rows="2"></textarea>
+        ${[0, 1, 2, 3].map((i) => `
+          <div class="flex items-center gap-2">
+            <input type="radio" name="correct-${idx}" value="${i}" ${i === 0 ? 'checked' : ''} class="q-correct-radio shrink-0">
+            <input type="text" placeholder="Option ${i + 1}" class="q-option flex-1 px-4 py-2.5 rounded-xl bg-white text-sm font-bold outline-none">
+          </div>`).join('')}
+        <input type="text" placeholder="Explanation (optional)" class="q-explanation w-full px-4 py-2.5 rounded-xl bg-white text-xs font-bold outline-none">`;
+      wrap.appendChild(div);
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    function collectQuestionsFromBuilder() {
+      const blocks = document.querySelectorAll('#assessmentQuestionsWrap [data-qid]');
+      const questions = [];
+      for (const block of blocks) {
+        const qText = block.querySelector('.q-text').value.trim();
+        const opts = [...block.querySelectorAll('.q-option')].map((i) => i.value.trim());
+        const correctRadio = block.querySelector('.q-correct-radio:checked');
+        const exp = block.querySelector('.q-explanation').value.trim();
+        if (!qText || opts.some((o) => !o)) continue; // skip incomplete rows silently — validated as a whole below
+        questions.push({ q: qText, opts, correct: correctRadio ? Number(correctRadio.value) : 0, exp });
+      }
+      return { questions, totalBlocks: blocks.length };
+    }
+
+    window.submitAssessment = async () => {
+      const status = document.getElementById('assessmentStatus');
+      const title = document.getElementById('assessmentTitleInput').value.trim();
+      const courseId = document.getElementById('assessmentCourseSelect').value;
+      const { questions, totalBlocks } = collectQuestionsFromBuilder();
+
+      if (!title) return (status.textContent = 'Enter a test title.');
+      if (!courseId) return (status.textContent = 'No course assigned to publish against.');
+      if (!questions.length) return (status.textContent = 'Add at least one complete question (text + all 4 options).');
+      if (questions.length < totalBlocks) {
+        status.textContent = `${totalBlocks - questions.length} incomplete question(s) were skipped. Publishing the rest — go back and fix them if that's not intended.`;
+      }
+
+      const btn = document.getElementById('submitAssessmentBtn');
+      btn.disabled = true;
+      try {
+        await addDoc(collection(db, 'assessments'), {
+          title, courseId,
+          institutionId: myGrant.institutionId || '',
+          contentType: document.getElementById('assessmentTypeInput').value,
+          questions,
+          createdBy: currentUser.uid,
+          uploadedByRole: 'lecturer',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        window.toast(`Test published with ${questions.length} question(s).`, 'success');
+        window.closeAssessmentModal();
+      } catch (e) {
+        console.error('Publish test failed:', e);
+        status.textContent = e.message || 'Failed to publish.';
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    // --- My Topics ---
+    let myTopics = [];
+    let myAssessmentsForQuizPicker = []; // reuses myAssessments once loaded
+
+    function watchMyTopics() {
+      onSnapshot(
+        query(collection(db, 'courseTopics'), where('createdBy', '==', currentUser.uid), orderBy('createdAt', 'desc')),
+        (snap) => { myTopics = snap.docs.map((d) => ({ id: d.id, ...d.data() })); renderMyTopics(); },
+        (err) => {
+          console.error('My topics listener error:', err);
+          document.getElementById('myTopicsList').innerHTML = `<p class="p-12 text-center text-rose-500 font-bold">Failed to load your topics.</p>`;
+        }
+      );
+    }
+
+    function countTopicResources(t) {
+      return ['miniText', 'voiceNote', 'fullLecture', 'structuredAnswer', 'quizAssessmentId'].filter((k) => t[k]).length;
+    }
+
+    function renderMyTopics() {
+      const list = document.getElementById('myTopicsList');
+      if (!myTopics.length) {
+        list.innerHTML = `
+          <div class="p-16 text-center">
+            <i data-lucide="layout-list" class="w-10 h-10 mx-auto mb-3 text-slate-200"></i>
+            <p class="text-slate-400 font-bold">No topics added yet.</p>
+          </div>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+      }
+      list.innerHTML = myTopics.map((t) => `
+        <div class="p-6 flex items-center justify-between gap-4 flex-wrap hover:bg-slate-50/50 transition-colors">
+          <div class="min-w-0">
+            <p class="font-black truncate">Topic ${t.topicNumber ?? ''} — ${escapeHTML(t.title || 'Untitled')}</p>
+            <p class="text-[10px] text-slate-400 font-bold">${escapeHTML(t.courseId || '')} • ${countTopicResources(t)}/5 resources ready</p>
+          </div>
+          <button onclick="window.deleteMyTopic('${t.id}')" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>`).join('');
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    window.deleteMyTopic = async (id) => {
+      if (!confirm('Delete this topic? This cannot be undone.')) return;
+      try {
+        await deleteDoc(doc(db, 'courseTopics', id));
+        window.toast('Topic deleted.', 'success');
+      } catch (e) {
+        window.toast(e.message || 'Failed to delete.', 'error');
+      }
+    };
+
+    // --- Mini-text block editor ---
+    // topicMiniTextBlocks is the in-memory source of truth while the modal
+    // is open. Typing inside a block does NOT re-render the list (that
+    // would drop focus/cursor mid-keystroke) — only add/move/remove do.
+    // Text edits are written straight into the array via oninput.
+    let topicMiniTextBlocks = [];
+
+    const MINI_TEXT_BLOCK_LABELS = { heading: 'Heading', subheading: 'Subheading', paragraph: 'Paragraph', pills: 'Pill tags', divider: 'Divider' };
+
+    window.addMiniTextBlock = (type) => {
+      const block = type === 'pills' ? { type, raw: '' } : type === 'divider' ? { type } : { type, text: '' };
+      topicMiniTextBlocks.push(block);
+      renderMiniTextBlocksEditor();
+    };
+
+    window.moveMiniTextBlock = (idx, dir) => {
+      const target = idx + dir;
+      if (target < 0 || target >= topicMiniTextBlocks.length) return;
+      [topicMiniTextBlocks[idx], topicMiniTextBlocks[target]] = [topicMiniTextBlocks[target], topicMiniTextBlocks[idx]];
+      renderMiniTextBlocksEditor();
+    };
+
+    window.removeMiniTextBlock = (idx) => {
+      topicMiniTextBlocks.splice(idx, 1);
+      renderMiniTextBlocksEditor();
+    };
+
+    window.updateMiniTextBlockField = (idx, field, value) => {
+      if (topicMiniTextBlocks[idx]) topicMiniTextBlocks[idx][field] = value;
+    };
+
+    function renderMiniTextBlocksEditor() {
+      const list = document.getElementById('miniTextBlocksList');
+      if (!topicMiniTextBlocks.length) {
+        list.innerHTML = `<p class="text-[10px] text-slate-300 font-bold px-1">No blocks yet — add a heading, paragraph, or tag row below.</p>`;
+        return;
+      }
+      list.innerHTML = topicMiniTextBlocks.map((block, idx) => {
+        let fieldHTML = '';
+        if (block.type === 'divider') {
+          fieldHTML = `<p class="text-[10px] font-black uppercase text-slate-300 tracking-widest py-2">— divider —</p>`;
+        } else if (block.type === 'pills') {
+          fieldHTML = `<input type="text" value="${escapeHTML(block.raw || '')}" placeholder="Comma-separated tags, e.g. Blood pH, Blood glucose, Arterial pressure"
+            oninput="window.updateMiniTextBlockField(${idx}, 'raw', this.value)"
+            class="w-full px-4 py-3 rounded-xl bg-white text-xs font-bold outline-none">`;
+        } else if (block.type === 'paragraph') {
+          fieldHTML = `<textarea rows="2" placeholder="Paragraph text..."
+            oninput="window.updateMiniTextBlockField(${idx}, 'text', this.value)"
+            class="w-full px-4 py-3 rounded-xl bg-white text-xs font-bold outline-none resize-none">${escapeHTML(block.text || '')}</textarea>`;
+        } else {
+          fieldHTML = `<input type="text" value="${escapeHTML(block.text || '')}" placeholder="${block.type === 'heading' ? 'Heading text' : 'Subheading text'}"
+            oninput="window.updateMiniTextBlockField(${idx}, 'text', this.value)"
+            class="w-full px-4 py-3 rounded-xl bg-white text-xs font-bold outline-none">`;
+        }
+        return `
+        <div class="flex items-start gap-2 bg-slate-50 rounded-2xl p-3">
+          <div class="flex flex-col gap-1 pt-1 shrink-0">
+            <button type="button" onclick="window.moveMiniTextBlock(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="w-6 h-6 rounded-lg bg-white text-slate-400 hover:text-slate-700 flex items-center justify-center text-xs disabled:opacity-30">↑</button>
+            <button type="button" onclick="window.moveMiniTextBlock(${idx}, 1)" ${idx === topicMiniTextBlocks.length - 1 ? 'disabled' : ''} class="w-6 h-6 rounded-lg bg-white text-slate-400 hover:text-slate-700 flex items-center justify-center text-xs disabled:opacity-30">↓</button>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-[9px] font-black uppercase text-indigo-500 mb-1">${MINI_TEXT_BLOCK_LABELS[block.type] || block.type}</p>
+            ${fieldHTML}
+          </div>
+          <button type="button" onclick="window.removeMiniTextBlock(${idx})" class="text-rose-400 hover:text-rose-600 pt-1 shrink-0"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>`;
+      }).join('');
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    // Turns the editor's block state into what actually gets stored: a
+    // clean `miniTextBlocks` array for the rich reader in course-lectures.htm,
+    // plus a derived plain-text `miniText` fallback so nothing that already
+    // reads `miniText` as a flat string (countTopicResources() here,
+    // RESOURCE_DEFS' truthiness check and the old showResourceModal() path
+    // in course-lectures.htm, main_admin.htm's parallel topic tooling)
+    // needs to change.
+    function buildMiniTextPayload() {
+      const kicker = document.getElementById('topicMiniTextKickerInput').value.trim();
+      const blocks = [];
+      const flatLines = [];
+      for (const block of topicMiniTextBlocks) {
+        if (block.type === 'divider') { blocks.push({ type: 'divider' }); continue; }
+        if (block.type === 'pills') {
+          const items = String(block.raw || '').split(',').map((s) => s.trim()).filter(Boolean);
+          if (!items.length) continue;
+          blocks.push({ type: 'pills', items });
+          flatLines.push(items.join(', '));
+          continue;
+        }
+        const text = String(block.text || '').trim();
+        if (!text) continue;
+        blocks.push({ type: block.type, text });
+        flatLines.push(text);
+      }
+      const miniText = flatLines.join('\n\n');
+      return {
+        miniText: miniText || null,
+        miniTextBlocks: blocks.length ? blocks : null,
+        miniTextKicker: kicker || null
+      };
+    }
+
+    // --- Topic wizard (fullscreen, one field/group per screen) ---
+    const TOPIC_WIZARD_STEPS = [
+      { name: 'Topic number', required: () => document.getElementById('topicNumberInput').value !== '', message: 'Enter a topic number.' },
+      { name: 'Title', required: () => document.getElementById('topicTitleInput').value.trim() !== '', message: 'Enter a topic title.' },
+      { name: 'Course', required: () => document.getElementById('topicCourseSelect').value !== '', message: 'Pick a course.' },
+      { name: 'Description', required: () => true },
+      { name: 'Mini-text', required: () => true },
+      { name: 'Voice note', required: () => true },
+      { name: 'Full lecture', required: () => true },
+      { name: 'Structured answer', required: () => true },
+      { name: 'Quiz', required: () => true },
+      { name: 'Review & Save', required: () => true }
+    ];
+    let topicWizardStep = 0;
+
+    function renderTopicWizardStep() {
+      document.querySelectorAll('#topicModal .topic-step').forEach((el) => {
+        el.classList.toggle('hidden', Number(el.dataset.step) !== topicWizardStep);
+      });
+      const total = TOPIC_WIZARD_STEPS.length;
+      document.getElementById('topicWizardStepLabel').textContent = `Step ${topicWizardStep + 1} of ${total}`;
+      document.getElementById('topicWizardStepName').textContent = TOPIC_WIZARD_STEPS[topicWizardStep].name;
+      document.getElementById('topicWizardProgressBar').style.width = `${((topicWizardStep + 1) / total) * 100}%`;
+      document.getElementById('topicWizardBackBtn').disabled = topicWizardStep === 0;
+
+      const isLast = topicWizardStep === total - 1;
+      document.getElementById('topicWizardNextBtn').classList.toggle('hidden', isLast);
+      document.getElementById('submitTopicBtn').classList.toggle('hidden', !isLast);
+      if (isLast) renderTopicReviewSummary();
+
+      // Small UX nicety: focus the step's first text-ish field so a
+      // lecturer moving through the wizard can just type + hit Next.
+      const stepEl = document.querySelector(`#topicModal .topic-step[data-step="${topicWizardStep}"]`);
+      const firstField = stepEl?.querySelector('input:not([type="file"]), textarea, select');
+      if (firstField) setTimeout(() => firstField.focus(), 50);
+    }
+
+    function renderTopicReviewSummary() {
+      const el = document.getElementById('topicReviewSummary');
+      const voiceFile = document.getElementById('topicVoiceFileInput').files[0];
+      const videoFile = document.getElementById('topicVideoFileInput').files[0];
+      const quizSelect = document.getElementById('topicQuizSelect');
+      const rows = [
+        ['Topic number', document.getElementById('topicNumberInput').value || '—'],
+        ['Title', document.getElementById('topicTitleInput').value.trim() || '—'],
+        ['Course', document.getElementById('topicCourseSelect').value || '—'],
+        ['Description', document.getElementById('topicDescriptionInput').value.trim() ? 'Added' : 'Skipped'],
+        ['Mini-text', topicMiniTextBlocks.length ? `${topicMiniTextBlocks.length} block(s)` : 'Skipped'],
+        ['Voice note', voiceFile ? voiceFile.name : 'Skipped'],
+        ['Full lecture video', videoFile ? videoFile.name : 'Skipped'],
+        ['Structured answer', document.getElementById('topicStructuredInput').value.trim() ? 'Added' : 'Skipped'],
+        ['Quiz', quizSelect.value ? (quizSelect.selectedOptions[0]?.textContent || 'Selected') : 'Skipped']
+      ];
+      el.innerHTML = rows.map(([label, value]) => `
+        <div class="flex items-center justify-between gap-4 px-5 py-3 rounded-2xl bg-slate-50">
+          <span class="text-[10px] font-black text-slate-400 uppercase shrink-0">${escapeHTML(label)}</span>
+          <span class="text-sm font-black text-slate-900 truncate text-right">${escapeHTML(String(value))}</span>
+        </div>`).join('');
+    }
+
+    window.topicWizardNext = () => {
+      const step = TOPIC_WIZARD_STEPS[topicWizardStep];
+      if (!step.required()) {
+        window.toast(step.message || `Fill in ${step.name.toLowerCase()} before continuing.`, 'error');
+        return;
+      }
+      if (topicWizardStep < TOPIC_WIZARD_STEPS.length - 1) {
+        topicWizardStep++;
+        renderTopicWizardStep();
+      }
+    };
+
+    window.topicWizardBack = () => {
+      if (topicWizardStep > 0) {
+        topicWizardStep--;
+        renderTopicWizardStep();
+      }
+    };
+
+    window.openTopicModal = () => {
+      ['topicNumberInput', 'topicTitleInput', 'topicDescriptionInput', 'topicMiniTextKickerInput', 'topicStructuredInput'].forEach((id) => document.getElementById(id).value = '');
+      topicMiniTextBlocks = [];
+      renderMiniTextBlocksEditor();
+      document.getElementById('topicVoiceFileInput').value = '';
+      document.getElementById('topicVideoFileInput').value = '';
+      document.getElementById('topicProgressWrap').classList.add('hidden');
+      document.getElementById('topicProgressBar').style.width = '0%';
+      document.getElementById('topicStatus').textContent = '';
+      // Quiz picker — reuse whatever's currently in myAssessments (loaded by watchMyAssessments)
+      document.getElementById('topicQuizSelect').innerHTML =
+        `<option value="">No quiz</option>` + myAssessments.map((a) => `<option value="${a.id}">${escapeHTML(a.title || 'Untitled test')}</option>`).join('');
+      document.getElementById('submitTopicBtn').disabled = false;
+      document.getElementById('submitTopicBtn').textContent = 'Save Topic';
+      topicWizardStep = 0;
+      renderTopicWizardStep();
+      document.getElementById('topicModal').classList.replace('hidden', 'flex');
+      if (window.lucide) window.lucide.createIcons();
+    };
+    window.closeTopicModal = () => document.getElementById('topicModal').classList.replace('flex', 'hidden');
+
+
+    window.submitTopic = async () => {
+      const status = document.getElementById('topicStatus');
+      const topicNumber = Number(document.getElementById('topicNumberInput').value);
+      const title = document.getElementById('topicTitleInput').value.trim();
+      const courseId = document.getElementById('topicCourseSelect').value;
+      const description = document.getElementById('topicDescriptionInput').value.trim();
+      const { miniText, miniTextBlocks, miniTextKicker } = buildMiniTextPayload();
+      const structuredAnswer = document.getElementById('topicStructuredInput').value.trim();
+      const quizAssessmentId = document.getElementById('topicQuizSelect').value;
+      const voiceFile = document.getElementById('topicVoiceFileInput').files[0];
+      const videoFile = document.getElementById('topicVideoFileInput').files[0];
+
+      if (!topicNumber) return (status.textContent = 'Enter a topic number.');
+      if (!title) return (status.textContent = 'Enter a topic title.');
+      if (!courseId) return (status.textContent = 'No course assigned to publish against.');
+
+      const btn = document.getElementById('submitTopicBtn');
+      btn.disabled = true;
+      const progressWrap = document.getElementById('topicProgressWrap');
+      const progressBar = document.getElementById('topicProgressBar');
+      const progressText = document.getElementById('topicProgressText');
+
+      try {
+        let voiceNoteUrl = null, fullLectureUrl = null;
+
+        if (voiceFile || videoFile) progressWrap.classList.remove('hidden');
+
+        if (voiceFile) {
+          btn.textContent = 'Uploading voice note...';
+          voiceNoteUrl = await uploadFile(voiceFile, `topics/${currentUser.uid}/voice-${Date.now()}-${voiceFile.name}`, (p) => {
+            progressBar.style.width = `${p}%`; progressText.textContent = `Voice note: ${p}%`;
+          });
+        }
+        if (videoFile) {
+          btn.textContent = 'Uploading video...';
+          fullLectureUrl = await uploadFile(videoFile, `topics/${currentUser.uid}/video-${Date.now()}-${videoFile.name}`, (p) => {
+            progressBar.style.width = `${p}%`; progressText.textContent = `Video: ${p}%`;
+          });
+        }
+
+        btn.textContent = 'Saving...';
+        await addDoc(collection(db, 'courseTopics'), {
+          topicNumber, title, courseId, description,
+          institutionId: myGrant.institutionId || '',
+          miniText,
+          miniTextBlocks,
+          miniTextKicker,
+          voiceNote: voiceNoteUrl,
+          fullLecture: fullLectureUrl,
+          structuredAnswer: structuredAnswer || null,
+          quizAssessmentId: quizAssessmentId || null,
+          createdBy: currentUser.uid,
+          uploadedByRole: 'lecturer',
+          uploadedByName: myGrant.name || currentUser.email || 'Lecturer',
+          uploadedByLogoUrl: myGrant.logoUrl || null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+
+        window.toast('Topic saved.', 'success');
+        window.closeTopicModal();
+      } catch (e) {
+        console.error('Save topic failed:', e);
+        status.textContent = e.message || 'Failed to save.';
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    const CHUNK_SIZE = 10 * 1024 * 1024;
+    // R2 is HTTP/2 and doesn't multiplex-limit the way plain HTTP/1.1 does,
+    // so concurrency here is really bounded by the user's own uplink and
+    // device, not the browser's old 6-connections-per-host rule. 6 is a
+    // reasonable default; bumping it further mostly helps on fast fixed
+    // connections and does little (or can even hurt, via congestion) on
+    // slower mobile links — there's no "safe" universal higher number to
+    // set instead, since that number is a function of the network, not the
+    // code.
+    const MAX_CONCURRENT_PARTS = 6;
+    const MAX_PART_RETRIES = 4;
+    const MAX_LECTURE_BYTES = 500 * 1024 * 1024;
+
+    async function postJson(path, body, signal) {
+      const idToken = await currentUser.getIdToken();
+      let res;
+      try {
+        res = await fetch(`${API_BASE_URL}${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify(body),
+          signal
+        });
+      } catch (networkErr) {
+        if (networkErr.name === 'AbortError') throw networkErr;
+        // fetch() only throws for network-level failures (server
+        // unreachable, DNS failure, CORS preflight rejected, mixed
+        // content) — never for a real HTTP error status, which is handled
+        // below instead. Surfacing which URL we tried makes "is my backend
+        // even running / reachable at this address?" obvious at a glance,
+        // instead of a bare, unhelpful "Failed to fetch".
+        console.error('Network error calling', `${API_BASE_URL}${path}`, networkErr);
+        throw new Error(`Could not reach the upload server at "${API_BASE_URL || '(same origin)'}${path}". Make sure server.js is running and reachable, and check the browser console/Network tab for a CORS error.`);
+      }
+      if (!res.ok) {
+        let msg = `Request failed (${res.status})`;
+        try { msg = (await res.json()).error || msg; } catch (e) {}
+        throw new Error(msg);
+      }
+      return res.json();
+    }
+
+    function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+    // Retries transient failures (network blips, R2 5xx, a dropped
+    // connection mid-PUT) with exponential backoff + jitter. On a flaky
+    // mobile connection this is what actually stands between "the upload
+    // eventually finishes" and "one bad chunk means restarting a 500MB
+    // upload from zero" — restarting from scratch is the single biggest
+    // real-world speed killer, far more than chunk size or concurrency
+    // tuning.
+    async function withRetry(fn, { attempts = MAX_PART_RETRIES, label = 'request', signal } = {}) {
+      let lastErr;
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        try {
+          return await fn();
+        } catch (err) {
+          if (err.name === 'AbortError') throw err;
+          lastErr = err;
+          if (attempt < attempts) {
+            const backoffMs = Math.min(8000, 500 * 2 ** (attempt - 1)) + Math.random() * 300;
+            console.warn(`${label} failed (attempt ${attempt}/${attempts}), retrying in ${Math.round(backoffMs)}ms:`, err.message);
+            await sleep(backoffMs);
+          }
+        }
+      }
+      throw lastErr;
+    }
+
+    /**
+     * @param {File} file
+     * @param {string} destinationKey
+     * @param {(percent: number, meta: object) => void} [onProgress] - meta:
+     *   { uploadedBytes, totalBytes, speedBps, etaSeconds, totalParts, completedParts }
+     *   Existing single-arg callers keep working unmodified; meta is purely additive.
+     * @param {{ signal?: AbortSignal }} [opts]
+     */
+    async function uploadFile(file, destinationKey, onProgress, opts = {}) {
+      const { signal } = opts;
+      const startedAt = performance.now();
+      let lastTickBytes = 0;
+      let lastTickAt = startedAt;
+      let speedBps = 0;
+
+      function reportProgress(uploadedBytes, extra = {}) {
+        const now = performance.now();
+        const dt = (now - lastTickAt) / 1000;
+        if (dt > 0.2) { // smooth the speed reading rather than jittering every chunk
+          const instBps = (uploadedBytes - lastTickBytes) / dt;
+          speedBps = speedBps ? speedBps * 0.7 + instBps * 0.3 : instBps;
+          lastTickBytes = uploadedBytes;
+          lastTickAt = now;
+        }
+        const remaining = file.size - uploadedBytes;
+        const etaSeconds = speedBps > 0 ? remaining / speedBps : null;
+        const percent = Math.min(100, Math.round((uploadedBytes / file.size) * 100));
+        if (onProgress) {
+          onProgress(percent, { uploadedBytes, totalBytes: file.size, speedBps, etaSeconds, ...extra });
+        }
+      }
+
+      if (file.size <= CHUNK_SIZE) {
+        const { uploadUrl, fileUrl } = await postJson('/api/upload/signed-url', { destinationKey, contentType: file.type }, signal);
+        await withRetry(async () => {
+          const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file, signal });
+          if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);
+        }, { label: 'Upload', signal });
+        reportProgress(file.size, { totalParts: 1, completedParts: 1 });
+        return fileUrl;
+      }
+
+      const { uploadId, key } = await postJson('/api/upload/multipart/init', { destinationKey, contentType: file.type }, signal);
+      const totalParts = Math.ceil(file.size / CHUNK_SIZE);
+      const chunks = Array.from({ length: totalParts }, (_, i) => file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size)));
+      const parts = new Array(totalParts);
+      let uploadedBytes = 0;
+      let completedParts = 0;
+
+      // Announce the shape of the upload up front (percent 0, but with
+      // totalParts populated) so the UI can lay out a chunk-progress grid
+      // before any bytes have moved.
+      reportProgress(0, { totalParts, completedParts: 0 });
+
+      try {
+        // One request for every part URL instead of one-per-part: removes
+        // the round-trip pause before each PUT, and — just as importantly —
+        // keeps a large upload from burning through uploadLimiter's
+        // 30-requests/15min budget (a 500MB file at 10MB chunks used to be
+        // 50 separate part-url calls alone).
+        const { urls } = await postJson('/api/upload/multipart/part-urls', {
+          key, uploadId, partNumbers: Array.from({ length: totalParts }, (_, i) => i + 1)
+        }, signal);
+        const urlByPart = new Map(urls.map((u) => [u.partNumber, u.url]));
+
+        async function uploadOnePart(partNumber) {
+          const chunk = chunks[partNumber - 1];
+          const url = urlByPart.get(partNumber);
+          await withRetry(async () => {
+            const putRes = await fetch(url, { method: 'PUT', body: chunk, signal });
+            if (!putRes.ok) throw new Error(`Part ${partNumber} failed (${putRes.status})`);
+            parts[partNumber - 1] = { PartNumber: partNumber, ETag: putRes.headers.get('ETag') };
+          }, { label: `Part ${partNumber}`, signal });
+          uploadedBytes += chunk.size;
+          completedParts += 1;
+          reportProgress(uploadedBytes, { totalParts, completedParts, justCompletedPart: partNumber });
+        }
+
+        let nextPart = 1;
+        async function worker() {
+          while (nextPart <= totalParts) {
+            if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+            const partNumber = nextPart++;
+            await uploadOnePart(partNumber);
+          }
+        }
+        await Promise.all(Array.from({ length: Math.min(MAX_CONCURRENT_PARTS, totalParts) }, worker));
+      } catch (err) {
+        postJson('/api/upload/multipart/abort', { key, uploadId }).catch(() => {});
+        throw err;
+      }
+      const { url: fileUrl } = await postJson('/api/upload/multipart/complete', { key, uploadId, parts }, signal);
+      return fileUrl;
+    }
+
+    function setBusy(btnId, busy, busyLabel, idleLabel) {
+      const btn = document.getElementById(btnId);
+      btn.disabled = busy;
+      btn.textContent = busy ? busyLabel : idleLabel;
+    }
+
+    function formatBytes(n) {
+      if (n >= 1024 * 1024 * 1024) return `${(n / 1024 / 1024 / 1024).toFixed(1)}GB`;
+      return `${(n / 1024 / 1024).toFixed(1)}MB`;
+    }
+    function formatEta(seconds) {
+      if (seconds == null || !isFinite(seconds)) return 'calculating...';
+      if (seconds < 1) return 'almost done';
+      if (seconds < 60) return `${Math.ceil(seconds)}s left`;
+      return `${Math.ceil(seconds / 60)}m ${Math.round(seconds % 60)}s left`;
+    }
+
+    let lectureUploadAbortController = null;
+
+    function showLectureStage(stage) {
+      ['lectureStagePick', 'lectureStageProgress', 'lectureStageDone'].forEach((id) => {
+        document.getElementById(id).classList.toggle('hidden', id !== stage);
+      });
+    }
+
+    window.openUploadLectureModal = () => {
+      document.getElementById('lectureTitleInput').value = '';
+      document.getElementById('lectureFileInput').value = '';
+      document.getElementById('lectureDropzoneText').textContent = 'Drag a video here, or click to browse';
+      document.getElementById('lectureDropzoneIcon').classList.remove('hidden');
+      document.getElementById('lecturePreviewWrap').classList.add('hidden');
+      const video = document.getElementById('lecturePreviewVideo');
+      if (video.dataset.objectUrl) { URL.revokeObjectURL(video.dataset.objectUrl); video.removeAttribute('src'); delete video.dataset.objectUrl; }
+      setBusy('submitLectureBtn', false, '', 'Start Upload');
+      showLectureStage('lectureStagePick');
+      document.getElementById('uploadLectureModal').classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    };
+    window.closeUploadLectureModal = () => {
+      document.getElementById('uploadLectureModal').classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    };
+
+    window.cancelLectureUpload = () => {
+      if (lectureUploadAbortController) lectureUploadAbortController.abort();
+    };
+
+    function renderLectureChunkGrid(totalParts) {
+      const grid = document.getElementById('lectureChunkGrid');
+      // Cap rendered cells for very large part counts — a 500MB file at
+      // 10MB chunks is only 50 parts so this rarely kicks in, but it keeps
+      // the grid from becoming an unreadable wall of pixels if chunk size
+      // ever changes.
+      const cellCount = Math.min(totalParts, 120);
+      grid.innerHTML = Array.from({ length: cellCount }, (_, i) =>
+        `<div data-chunk="${i + 1}" class="w-3 h-3 rounded-[3px] bg-white/10 transition-colors duration-300"></div>`
+      ).join('');
+    }
+    function markLectureChunkDone(partNumber, totalParts) {
+      const grid = document.getElementById('lectureChunkGrid');
+      if (totalParts > 120) return; // grid wasn't rendered per-part at this scale
+      const cell = grid.querySelector(`[data-chunk="${partNumber}"]`);
+      if (cell) cell.className = 'w-3 h-3 rounded-[3px] bg-emerald-400 transition-colors duration-300';
+    }
+
+    window.submitLectureUpload = async () => {
+      const title = document.getElementById('lectureTitleInput').value.trim();
+      const courseId = document.getElementById('lectureCourseSelect').value;
+      const file = document.getElementById('lectureFileInput').files[0];
+
+      if (!title) return window.toast('Enter a title.', 'error');
+      if (!courseId) return window.toast('No course assigned to upload against.', 'error');
+      if (!file) return window.toast('Choose a video file.', 'error');
+      if (file.size > MAX_LECTURE_BYTES) return window.toast('File exceeds the 500MB limit.', 'error');
+
+      lectureUploadAbortController = new AbortController();
+      showLectureStage('lectureStageProgress');
+      const ring = document.getElementById('lectureProgressRing');
+      const ringCircumference = 276.46; // 2 * PI * r(44), matches the SVG circle above
+      const progressText = document.getElementById('lectureProgressText');
+      const speedText = document.getElementById('lectureSpeedText');
+      const etaText = document.getElementById('lectureEtaText');
+      let gridInitialized = false;
+
+      try {
+        const key = `lectures/${currentUser.uid}/${Date.now()}-${file.name}`;
+        const fileUrl = await uploadFile(file, key, (percent, meta) => {
+          ring.style.strokeDashoffset = String(ringCircumference * (1 - percent / 100));
+          progressText.textContent = `${percent}%`;
+          speedText.textContent = meta.speedBps > 0 ? `${(meta.speedBps / 1024 / 1024).toFixed(1)} MB/s` : '-- MB/s';
+          etaText.textContent = formatEta(meta.etaSeconds);
+          if (meta.totalParts > 1) {
+            if (!gridInitialized) { renderLectureChunkGrid(meta.totalParts); gridInitialized = true; }
+            if (meta.justCompletedPart) markLectureChunkDone(meta.justCompletedPart, meta.totalParts);
+          }
+        }, { signal: lectureUploadAbortController.signal });
+
+        await addDoc(collection(db, 'lectures'), {
+          title, courseId,
+          institutionId: myGrant.institutionId || '',
+          fileUrl,
+          uploadedBy: currentUser.uid,
+          uploadedByRole: 'lecturer',
+          uploadedByName: myGrant.name || currentUser.email || 'Lecturer',
+          uploadedByLogoUrl: myGrant.logoUrl || null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+
+        document.getElementById('lectureDoneMeta').textContent = `${title} • ${formatBytes(file.size)}`;
+        showLectureStage('lectureStageDone');
+        if (window.confetti) window.confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        window.toast('Lecture uploaded!', 'success');
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          window.toast('Upload cancelled.', 'info');
+          showLectureStage('lectureStagePick');
+        } else {
+          console.error('Lecture upload failed:', e);
+          window.toast(e.message || 'Upload failed.', 'error');
+          showLectureStage('lectureStagePick');
+        }
+      } finally {
+        lectureUploadAbortController = null;
+      }
+    };
+
+    window.openUploadBookModal = () => {
+      document.getElementById('bookTitleInput').value = '';
+      document.getElementById('bookAuthorInput').value = '';
+      document.getElementById('bookFileInput').value = '';
+      document.getElementById('bookDropzoneText').textContent = 'Drag a PDF or image here, or click to browse';
+      document.getElementById('bookProgressWrap').classList.add('hidden');
+      document.getElementById('bookProgressBar').style.width = '0%';
+      setBusy('submitBookBtn', false, '', 'Post Book');
+      document.getElementById('uploadBookModal').classList.replace('hidden', 'flex');
+    };
+    window.closeUploadBookModal = () => document.getElementById('uploadBookModal').classList.replace('flex', 'hidden');
+
+    window.submitBookUpload = async () => {
+      const title = document.getElementById('bookTitleInput').value.trim();
+      const author = document.getElementById('bookAuthorInput').value.trim();
+      const subject = document.getElementById('bookCourseSelect').value;
+      const file = document.getElementById('bookFileInput').files[0];
+
+      if (!title) return window.toast('Enter a title.', 'error');
+      if (!file) return window.toast('Choose a file.', 'error');
+
+      const progressWrap = document.getElementById('bookProgressWrap');
+      const progressBar = document.getElementById('bookProgressBar');
+      const progressText = document.getElementById('bookProgressText');
+      progressWrap.classList.remove('hidden');
+      setBusy('submitBookBtn', true, 'Uploading...', 'Post Book');
+
+      try {
+        const key = `books/${currentUser.uid}/${Date.now()}-${file.name}`;
+        const fileUrl = await uploadFile(file, key, (percent) => {
+          progressBar.style.width = `${percent}%`;
+          progressText.textContent = `${percent}%`;
+        });
+
+        await addDoc(collection(db, 'books'), {
+          title, author, subject, fileUrl,
+          uploaderId: currentUser.uid,
+          uploaderEmail: currentUser.email || '',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+
+        window.toast('Book posted!', 'success');
+        window.closeUploadBookModal();
+      } catch (e) {
+        console.error('Book upload failed:', e);
+        window.toast(e.message || 'Upload failed.', 'error');
+        setBusy('submitBookBtn', false, '', 'Post Book');
+      }
+    };
+
+    // --- Lecturer Profile (first-time onboarding + later self-edits) ---
+    let profileLogoFile = null; // newly-picked file pending upload, or null if unchanged
+    let profileIsOnboarding = false;
+
+    function setupProfileLogoDropzone() {
+      const zone = document.getElementById('profileLogoDropzone');
+      const input = document.getElementById('profileLogoFileInput');
+      zone.addEventListener('click', () => input.click());
+      ['dragenter', 'dragover'].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add('drag-over'); }));
+      ['dragleave', 'drop'].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove('drag-over'); }));
+      zone.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files.length) handleProfileLogoFile(e.dataTransfer.files[0]);
+      });
+      input.addEventListener('change', () => {
+        if (input.files.length) handleProfileLogoFile(input.files[0]);
+      });
+    }
+
+    function handleProfileLogoFile(file) {
+      if (!file.type.startsWith('image/')) return window.toast('Choose an image file.', 'error');
+      if (file.size > 10 * 1024 * 1024) return window.toast('Image exceeds the 10MB limit.', 'error');
+      profileLogoFile = file;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.getElementById('profileLogoPreviewImg').src = reader.result;
+        document.getElementById('profileLogoPreviewImg').classList.remove('hidden');
+        document.getElementById('profileLogoPreviewInitial').classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+      document.getElementById('profileLogoDropzoneText').textContent = file.name;
+    }
+
+    window.openProfileModal = (isOnboarding) => {
+      profileIsOnboarding = Boolean(isOnboarding);
+      profileLogoFile = null;
+
+      document.getElementById('profileModalTitle').textContent = profileIsOnboarding ? 'Welcome — set up your profile' : 'Edit your profile';
+      document.getElementById('profileModalCopy').textContent = profileIsOnboarding
+        ? 'One-time setup. Students will see this name and logo wherever your courses appear.'
+        : 'Students will see this name and logo wherever your courses appear.';
+      document.getElementById('profileModalCloseBtn').classList.toggle('hidden', profileIsOnboarding);
+      document.getElementById('skipProfileBtn').classList.toggle('hidden', !profileIsOnboarding);
+
+      document.getElementById('profileNameInput').value = myGrant.name || '';
+      document.getElementById('profileDepartmentInput').value = myGrant.department || '';
+      document.getElementById('profileBioInput').value = myGrant.bio || '';
+      document.getElementById('profileLogoFileInput').value = '';
+      document.getElementById('profileLogoDropzoneText').textContent = 'Upload a logo or photo (optional) — JPG, PNG or WebP, up to 10MB';
+      renderAvatarInto('profileLogoPreviewInitial', 'profileLogoPreviewImg', myGrant.name, myGrant.logoUrl);
+      document.getElementById('profileProgressWrap').classList.add('hidden');
+      document.getElementById('profileStatus').textContent = '';
+      setBusy('submitProfileBtn', false, '', 'Save Profile');
+
+      document.getElementById('profileModal').classList.replace('hidden', 'flex');
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    window.closeProfileModal = () => {
+      if (profileIsOnboarding) return; // non-dismissible during first-time setup — use Save or Skip
+      document.getElementById('profileModal').classList.replace('flex', 'hidden');
+    };
+
+    window.skipProfileOnboarding = async () => {
+      try {
+        await updateDoc(doc(db, 'lecturers', currentUser.uid), {
+          onboardingCompletedAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        myGrant.onboardingCompletedAt = new Date();
+      } catch (e) {
+        console.error('Failed to record onboarding skip:', e);
+        // Non-fatal — worst case the modal reappears next login, which is
+        // an annoyance, not a data-integrity problem, so still let them out.
+      }
+      profileIsOnboarding = false;
+      document.getElementById('profileModal').classList.replace('flex', 'hidden');
+    };
+
+    window.submitProfile = async () => {
+      const status = document.getElementById('profileStatus');
+      const name = document.getElementById('profileNameInput').value.trim();
+      const department = document.getElementById('profileDepartmentInput').value.trim();
+      const bio = document.getElementById('profileBioInput').value.trim();
+
+      if (!name) { status.textContent = 'Enter your name.'; return; }
+
+      setBusy('submitProfileBtn', true, 'Saving...', 'Save Profile');
+      status.textContent = '';
+
+      try {
+        let logoUrl = myGrant.logoUrl || null;
+
+        if (profileLogoFile) {
+          const progressWrap = document.getElementById('profileProgressWrap');
+          const progressBar = document.getElementById('profileProgressBar');
+          const progressText = document.getElementById('profileProgressText');
+          progressWrap.classList.remove('hidden');
+          const key = `lecturer-logos/${currentUser.uid}/${Date.now()}-${profileLogoFile.name}`;
+          logoUrl = await uploadFile(profileLogoFile, key, (p) => {
+            progressBar.style.width = `${p}%`;
+            progressText.textContent = `${p}%`;
+          });
+        }
+
+        const payload = {
+          name, department: department || null, bio: bio || null, logoUrl,
+          onboardingCompletedAt: myGrant.onboardingCompletedAt || serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+        await updateDoc(doc(db, 'lecturers', currentUser.uid), payload);
+
+        myGrant = { ...myGrant, ...payload, onboardingCompletedAt: myGrant.onboardingCompletedAt || new Date() };
+        renderLecturerHeader();
+        window.toast('Profile saved.', 'success');
+        profileIsOnboarding = false;
+        document.getElementById('profileModal').classList.replace('flex', 'hidden');
+      } catch (e) {
+        console.error('Failed to save profile:', e);
+        status.textContent = e.message || 'Failed to save. Please try again.';
+      } finally {
+        setBusy('submitProfileBtn', false, '', 'Save Profile');
+      }
+    };
+  </script>
+</body>
+</html>

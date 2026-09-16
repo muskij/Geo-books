@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutor Dashboard — Geo-Books</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Same local Tailwind config as lecturer.html — this page has no build
+    // step, so brand-*/shadow-glow tokens have to be registered here or
+    // classes referencing them silently do nothing.
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] },
+          colors: {
+            brand: {
+              50: '#fff7ed', 100: '#ffedd5', 200: '#fed7aa', 300: '#fdba74',
+              400: '#fb923c', 500: '#f97316', 600: '#ea580c', 700: '#c2410c',
+              800: '#9a3412', 900: '#7c2d12', 950: '#431407'
+            }
+          },
+          borderRadius: { '4xl': '2rem', '5xl': '3rem' },
+          boxShadow: {
+            soft: '0 2px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -2px rgba(0,0,0,0.05)',
+            glow: '0 0 20px rgba(249, 115, 22, 0.15)',
+            premium: '0 25px 50px -12px rgba(0, 0, 0, 0.15)'
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .elite-gradient { background: linear-gradient(135deg, #EA580C 0%, #DB2777 50%, #7C3AED 100%); }
+    .elite-text { background: linear-gradient(135deg, #EA580C 0%, #DB2777 50%, #7C3AED 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .premium-card { background: white; border-radius: 2.5rem; border: 1px solid #F1F5F9; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
+    .dropzone { transition: all 0.2s ease; }
+    .dropzone.drag-over { background: #FFF7ED; border-color: #EA580C; transform: scale(1.01); }
+    .progress-bar-fill { transition: width 0.3s ease; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+  <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 items-end pointer-events-none"></div>
+
+  <!-- Gate -->
+  <div id="gateScreen" class="fixed inset-0 z-[999] bg-white flex items-center justify-center">
+    <div class="text-center px-6">
+      <div class="w-14 h-14 rounded-2xl elite-gradient mx-auto mb-4 flex items-center justify-center text-white">
+        <i data-lucide="graduation-cap" class="w-7 h-7"></i>
+      </div>
+      <p id="gateMessage" class="text-sm font-bold text-slate-400">Checking tutor access...</p>
+    </div>
+  </div>
+
+  <!-- Apply screen — shown when the signed-in user has no /tutors/{uid} doc yet -->
+  <div id="applyScreen" class="hidden min-h-screen flex items-center justify-center px-6 py-16">
+    <div class="premium-card p-10 max-w-md w-full">
+      <a href="geo-books.htm" class="text-xs font-black text-slate-400 hover:text-slate-600 flex items-center gap-2 mb-6"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Geo-Books</a>
+      <div class="w-14 h-14 rounded-2xl elite-gradient flex items-center justify-center text-white mb-5"><i data-lucide="graduation-cap" class="w-7 h-7"></i></div>
+      <h1 class="text-2xl font-black mb-2">Become a Tutor</h1>
+      <p class="text-xs text-slate-400 font-bold mb-6">Upload your own paid courses under Study Tools — open to any subject, not tied to a specific university. You keep 70% of every sale.</p>
+      <div class="space-y-4">
+        <input id="applyNameInput" type="text" placeholder="Your name (e.g. Amaka Obi)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        <input id="applySubjectsInput" type="text" placeholder="Subjects, comma-separated (e.g. Chemistry, JAMB Physics)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        <textarea id="applyBioInput" placeholder="A couple lines about your teaching background" rows="3" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none resize-none"></textarea>
+        <p id="applyStatus" class="text-xs font-bold text-slate-400"></p>
+        <button id="submitApplyBtn" onclick="window.submitTutorApplication()" class="w-full py-4 rounded-2xl elite-gradient text-white font-black uppercase tracking-widest text-xs disabled:opacity-40">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending / revoked screen -->
+  <div id="pendingScreen" class="hidden min-h-screen flex items-center justify-center px-6 py-16">
+    <div class="premium-card p-10 max-w-md w-full text-center">
+      <div id="pendingIconWrap" class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-5"><i data-lucide="clock" class="w-7 h-7 text-slate-400"></i></div>
+      <h1 id="pendingTitle" class="text-2xl font-black mb-2">Application pending</h1>
+      <p id="pendingCopy" class="text-xs text-slate-400 font-bold mb-6">We'll review your application soon. This page will update automatically once you're approved.</p>
+      <a href="geo-books.htm" class="inline-block px-6 py-3 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest">Back to Geo-Books</a>
+    </div>
+  </div>
+
+  <div id="app" class="hidden min-h-screen p-6 lg:p-12 max-w-6xl mx-auto">
+    <div class="flex items-start justify-between mb-8 flex-wrap gap-4">
+      <div>
+        <a href="geo-books.htm" class="text-xs font-black text-slate-400 hover:text-slate-600 flex items-center gap-2 mb-4"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Geo-Books</a>
+        <button onclick="window.openProfileModal(false)" class="flex items-center gap-4 group text-left" title="Edit your profile">
+          <div id="tutorAvatarWrap" class="w-14 h-14 rounded-2xl elite-gradient flex items-center justify-center text-white font-black text-lg overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+            <span id="tutorAvatarInitial">T</span>
+            <img id="tutorAvatarImg" class="w-full h-full object-cover hidden" alt="">
+          </div>
+          <div>
+            <h1 class="text-3xl font-black tracking-tighter">Welcome, <span id="tutorName" class="elite-text">Tutor</span></h1>
+            <p id="tutorMeta" class="text-slate-500 mt-1 text-sm"></p>
+          </div>
+        </button>
+      </div>
+      <div class="flex gap-3 flex-wrap">
+        <button onclick="window.openCourseModal()" class="px-6 py-4 rounded-3xl elite-gradient text-white text-xs font-black uppercase tracking-widest shadow-xl flex items-center gap-2 hover:scale-105 transition-transform">
+          <i data-lucide="folder-plus" class="w-4 h-4"></i> New Course
+        </button>
+        <button onclick="window.openTopicModal()" class="px-6 py-4 rounded-3xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest shadow-xl flex items-center gap-2 hover:scale-105 transition-transform">
+          <i data-lucide="layout-list" class="w-4 h-4"></i> Add Topic
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+      <div class="premium-card p-6 bg-orange-50/50 border-orange-100">
+        <p class="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Courses</p>
+        <h3 class="text-3xl font-black" id="statMyCourses">—</h3>
+      </div>
+      <div class="premium-card p-6 bg-slate-50 border-slate-200">
+        <p class="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Topics</p>
+        <h3 class="text-3xl font-black" id="statMyTopics">—</h3>
+      </div>
+      <div class="premium-card p-6 bg-emerald-50/50 border-emerald-100">
+        <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">You Keep</p>
+        <h3 class="text-3xl font-black">70%</h3>
+        <p class="text-[10px] text-emerald-600/70 font-bold mt-0.5">per sale · Peak Flow takes 30%</p>
+      </div>
+    </div>
+
+    <!-- My Courses -->
+    <div class="premium-card overflow-hidden mb-8">
+      <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="text-lg font-black">My Courses</h3>
+      </div>
+      <div id="myCoursesList" class="divide-y divide-slate-100">
+        <p class="p-12 text-center text-slate-300 font-bold">Loading...</p>
+      </div>
+    </div>
+
+    <!-- My Topics -->
+    <div class="premium-card overflow-hidden">
+      <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="text-lg font-black">My Topics</h3>
+      </div>
+      <div id="myTopicsList" class="divide-y divide-slate-100">
+        <p class="p-12 text-center text-slate-300 font-bold">Loading...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Course Modal -->
+  <div id="courseModal" class="fixed inset-0 z-[900] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-[2.5rem] max-w-md w-full p-10 relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <button onclick="window.closeCourseModal()" class="absolute top-8 right-8 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+      <h3 class="text-2xl font-black mb-6">New Course</h3>
+      <div class="space-y-4">
+        <input id="courseTitleInput" type="text" placeholder="Course title (e.g. WAEC Chemistry Crash Course)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        <input id="courseSubjectInput" type="text" placeholder="Subject (e.g. Chemistry)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        <div class="relative">
+          <span class="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">₦</span>
+          <input id="coursePriceInput" type="number" min="0" step="50" placeholder="Price" class="w-full pl-9 pr-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        </div>
+        <textarea id="courseDescriptionInput" placeholder="What will students get from this course?" rows="3" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none resize-none"></textarea>
+
+        <div id="courseCoverDropzone" class="dropzone border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center cursor-pointer" onclick="document.getElementById('courseCoverFileInput').click()">
+          <input id="courseCoverFileInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
+          <i data-lucide="image" class="w-7 h-7 mx-auto mb-2 text-slate-300"></i>
+          <p id="courseCoverDropzoneText" class="text-xs font-bold text-slate-400">Cover image (optional) — JPG, PNG or WebP</p>
+        </div>
+
+        <div id="coursePriceSplit" class="hidden p-4 rounded-2xl bg-orange-50 text-[11px] font-bold text-orange-700"></div>
+
+        <p id="courseStatus" class="text-xs font-bold text-slate-400"></p>
+        <button id="submitCourseBtn" onclick="window.submitCourse()" class="w-full py-4 rounded-2xl elite-gradient text-white font-black uppercase tracking-widest text-xs disabled:opacity-40">Publish Course</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Topic Wizard Modal (same shape/step order as lecturer.html's, scoped to a tutor's own courses) -->
+  <div id="topicModal" class="fixed inset-0 z-[900] hidden flex-col bg-white">
+    <div class="flex items-center gap-4 px-6 lg:px-12 py-6 border-b border-slate-100 shrink-0">
+      <button onclick="window.closeTopicModal()" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 shrink-0"><i data-lucide="x" class="w-5 h-5"></i></button>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between mb-2 gap-2">
+          <p class="text-[10px] font-black uppercase text-slate-400" id="topicWizardStepLabel">Step 1 of 10</p>
+          <p class="text-[10px] font-black uppercase text-orange-500 truncate" id="topicWizardStepName">Topic number</p>
+        </div>
+        <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div id="topicWizardProgressBar" class="h-full bg-orange-600 rounded-full transition-all" style="width:10%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto custom-scrollbar px-6 lg:px-12 py-10">
+      <div class="max-w-xl mx-auto">
+
+        <div class="topic-step" data-step="0">
+          <h3 class="text-3xl font-black mb-2">What topic number is this?</h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">Students see topics in this order.</p>
+          <input id="topicNumberInput" type="number" min="1" placeholder="e.g. 1" class="w-full px-6 py-6 rounded-3xl bg-slate-50 text-2xl font-black outline-none text-center">
+        </div>
+
+        <div class="topic-step hidden" data-step="1">
+          <h3 class="text-3xl font-black mb-2">Give it a title.</h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">e.g. Balancing Redox Equations</p>
+          <input id="topicTitleInput" type="text" placeholder="Topic title" class="w-full px-6 py-6 rounded-3xl bg-slate-50 text-2xl font-black outline-none text-center">
+        </div>
+
+        <div class="topic-step hidden" data-step="2">
+          <h3 class="text-3xl font-black mb-2">Which of your courses is this for?</h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">Only courses you've created appear here.</p>
+          <select id="topicCourseSelect" class="w-full px-6 py-6 rounded-3xl bg-slate-50 text-lg font-black outline-none text-center"></select>
+        </div>
+
+        <div class="topic-step hidden" data-step="3">
+          <h3 class="text-3xl font-black mb-2">Short description <span class="text-slate-300">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">A line or two students see before opening the topic.</p>
+          <textarea id="topicDescriptionInput" placeholder="Short topic description" rows="4" class="w-full px-6 py-5 rounded-3xl bg-slate-50 text-base font-bold outline-none resize-none"></textarea>
+        </div>
+
+        <div class="topic-step hidden" data-step="4">
+          <h3 class="text-3xl font-black mb-2">Mini-text <span class="text-slate-300 text-xl">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-6">Build a mini reading page — headings, paragraphs, tags.</p>
+          <input id="topicMiniTextKickerInput" type="text" placeholder="Section label (optional, e.g. Why Electrons Move)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none mb-3">
+          <div id="miniTextBlocksList" class="space-y-3 mb-3"></div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="window.addMiniTextBlock('heading')" class="px-3 py-2 rounded-xl bg-orange-50 text-orange-600 text-[10px] font-black uppercase hover:bg-orange-100">+ Heading</button>
+            <button type="button" onclick="window.addMiniTextBlock('subheading')" class="px-3 py-2 rounded-xl bg-orange-50 text-orange-600 text-[10px] font-black uppercase hover:bg-orange-100">+ Subheading</button>
+            <button type="button" onclick="window.addMiniTextBlock('paragraph')" class="px-3 py-2 rounded-xl bg-orange-50 text-orange-600 text-[10px] font-black uppercase hover:bg-orange-100">+ Paragraph</button>
+            <button type="button" onclick="window.addMiniTextBlock('pills')" class="px-3 py-2 rounded-xl bg-orange-50 text-orange-600 text-[10px] font-black uppercase hover:bg-orange-100">+ Pill tags</button>
+            <button type="button" onclick="window.addMiniTextBlock('divider')" class="px-3 py-2 rounded-xl bg-slate-50 text-slate-400 text-[10px] font-black uppercase hover:bg-slate-100">+ Divider</button>
+          </div>
+        </div>
+
+        <div class="topic-step hidden" data-step="5">
+          <h3 class="text-3xl font-black mb-2">Voice note <span class="text-slate-300 text-xl">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">An audio walkthrough of this topic.</p>
+          <input id="topicVoiceFileInput" type="file" accept="audio/*" class="w-full text-sm font-bold">
+        </div>
+
+        <div class="topic-step hidden" data-step="6">
+          <h3 class="text-3xl font-black mb-2">Full lecture video <span class="text-slate-300 text-xl">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">Up to 500MB — MP4, WebM, MOV, or MKV.</p>
+          <input id="topicVideoFileInput" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" class="w-full text-sm font-bold">
+        </div>
+
+        <div class="topic-step hidden" data-step="7">
+          <h3 class="text-3xl font-black mb-2">Structured answer <span class="text-slate-300 text-xl">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">An exam-style structured answer for this topic.</p>
+          <textarea id="topicStructuredInput" placeholder="Exam-style structured answer..." rows="8" class="w-full px-6 py-5 rounded-3xl bg-slate-50 text-base font-bold outline-none resize-none"></textarea>
+        </div>
+
+        <div class="topic-step hidden" data-step="8">
+          <h3 class="text-3xl font-black mb-2">Quiz <span class="text-slate-300 text-xl">(optional)</span></h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">Link a quiz assessment ID if you already created one elsewhere.</p>
+          <input id="topicQuizInput" type="text" placeholder="Assessment ID (optional)" class="w-full px-6 py-6 rounded-3xl bg-slate-50 text-lg font-black outline-none text-center">
+        </div>
+
+        <div class="topic-step hidden" data-step="9">
+          <h3 class="text-3xl font-black mb-2">Review &amp; save</h3>
+          <p class="text-sm text-slate-400 font-bold mb-8">Anything left blank shows as "Coming soon" for students.</p>
+          <div id="topicReviewSummary" class="space-y-2 mb-6"></div>
+          <div id="topicProgressWrap" class="hidden pt-2 mb-4">
+            <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div id="topicProgressBar" class="h-full bg-orange-600 rounded-full transition-all" style="width:0%"></div>
+            </div>
+            <p id="topicProgressText" class="text-[10px] font-black text-slate-400 mt-2 text-center">0%</p>
+          </div>
+          <p id="topicStatus" class="text-xs font-bold text-slate-400"></p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="border-t border-slate-100 px-6 lg:px-12 py-6 flex items-center justify-between gap-4 shrink-0">
+      <button id="topicWizardBackBtn" onclick="window.topicWizardBack()" class="px-6 py-4 rounded-2xl bg-slate-100 text-slate-600 font-black uppercase tracking-widest text-xs hover:bg-slate-200 disabled:opacity-30" disabled>Back</button>
+      <button id="topicWizardNextBtn" onclick="window.topicWizardNext()" class="px-8 py-4 rounded-2xl bg-orange-600 text-white font-black uppercase tracking-widest text-xs hover:bg-orange-700">Next</button>
+      <button id="submitTopicBtn" onclick="window.submitTopic()" class="hidden px-8 py-4 rounded-2xl bg-orange-600 text-white font-black uppercase tracking-widest text-xs disabled:opacity-40">Save Topic</button>
+    </div>
+  </div>
+
+  <!-- Tutor Profile Modal -->
+  <div id="profileModal" class="fixed inset-0 z-[950] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-[2.5rem] max-w-md w-full p-10 relative">
+      <button onclick="window.closeProfileModal()" class="absolute top-8 right-8 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+      <h3 class="text-2xl font-black mb-2">Edit your profile</h3>
+      <p class="text-xs text-slate-400 font-bold mb-6">Students see this name and logo wherever your courses appear.</p>
+      <div class="space-y-4">
+        <div id="profileLogoDropzone" class="dropzone border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center cursor-pointer flex flex-col items-center gap-3">
+          <input id="profileLogoFileInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
+          <div class="w-16 h-16 rounded-2xl elite-gradient flex items-center justify-center text-white font-black text-xl overflow-hidden shrink-0">
+            <span id="profileLogoPreviewInitial">T</span>
+            <img id="profileLogoPreviewImg" class="w-full h-full object-cover hidden" alt="">
+          </div>
+          <p id="profileLogoDropzoneText" class="text-xs font-bold text-slate-400">Upload a logo or photo (optional) — JPG, PNG or WebP, up to 10MB</p>
+        </div>
+        <input id="profileNameInput" type="text" placeholder="Your name" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        <input id="profileSubjectsInput" type="text" placeholder="Subjects, comma-separated" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
+        <textarea id="profileBioInput" placeholder="Short bio" rows="3" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none resize-none"></textarea>
+        <div id="profileProgressWrap" class="hidden">
+          <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div id="profileProgressBar" class="progress-bar-fill h-full bg-slate-900 rounded-full" style="width: 0%"></div>
+          </div>
+          <p id="profileProgressText" class="text-[10px] font-black text-slate-400 mt-2 text-center">0%</p>
+        </div>
+        <p id="profileStatus" class="text-xs font-bold text-slate-400"></p>
+        <button id="submitProfileBtn" onclick="window.submitProfile()" class="w-full py-4 rounded-2xl elite-gradient text-white font-black uppercase tracking-widest text-xs disabled:opacity-40">Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+    import {
+      getFirestore, collection, query, where, orderBy, onSnapshot,
+      doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1nVLSPFs30wG-PLaEyFqm_PEVhZdzISU",
+      authDomain: "geo-books-8411e.firebaseapp.com",
+      projectId: "geo-books-8411e",
+      storageBucket: "geo-books-8411e.firebasestorage.app",
+      messagingSenderId: "972887107793",
+      appId: "1:972887107793:web:7e0374bf81e6713fd0fdf0",
+      measurementId: "G-RY84V5DXPN"
+    };
+
+    function getFirebaseApp() { return getApps().length ? getApps()[0] : initializeApp(firebaseConfig); }
+    const auth = getAuth(getFirebaseApp());
+    const db = getFirestore(getFirebaseApp());
+
+    const API_BASE_URL = window.GEO_BOOKS_API_URL ||
+      (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:3007' : '');
+
+    const escapeHTML = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const PLATFORM_CUT_PCT = 30;
+
+    window.toast = (msg, type = 'info') => {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      const icons = { success: 'check-circle', error: 'alert-circle', info: 'info', brand: 'zap' };
+      const colors = { success: 'bg-emerald-500', error: 'bg-rose-500', info: 'bg-slate-900', brand: 'bg-orange-600' };
+      el.className = `${colors[type] || colors.info} text-white px-6 py-4 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-3 pointer-events-auto`;
+      el.innerHTML = `<i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0"></i><span>${escapeHTML(msg)}</span>`;
+      container.appendChild(el);
+      if (window.lucide) window.lucide.createIcons();
+      setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; el.style.transition = 'all 0.3s'; setTimeout(() => el.remove(), 300); }, 4500);
+    };
+
+    function setBusy(btnId, busy, busyLabel, idleLabel) {
+      const btn = document.getElementById(btnId);
+      btn.disabled = busy;
+      btn.textContent = busy ? busyLabel : idleLabel;
+    }
+
+    let currentUser = null;
+    let myGrant = null; // tutors/{uid} doc
+    let myCourses = [];
+    let myTopics = [];
+
+    onAuthStateChanged(auth, async (user) => {
+      const gate = document.getElementById('gateScreen');
+      const gateMsg = document.getElementById('gateMessage');
+      if (!user) {
+        gateMsg.textContent = 'Please sign in.';
+        setTimeout(() => { window.location.href = 'geo-books.htm'; }, 1200);
+        return;
+      }
+      currentUser = user;
+      try {
+        const snap = await getDoc(doc(db, 'tutors', user.uid));
+        myGrant = snap.exists() ? snap.data() : null;
+      } catch (e) {
+        console.error('Failed to load tutor grant:', e);
+      }
+
+      gate.classList.add('hidden');
+
+      if (!myGrant) {
+        document.getElementById('applyScreen').classList.remove('hidden');
+        lucide.createIcons();
+        return;
+      }
+
+      if (myGrant.accessGranted !== true) {
+        const revoked = !!myGrant.revokedAt;
+        document.getElementById('pendingTitle').textContent = revoked ? 'Tutor access revoked' : 'Application pending';
+        document.getElementById('pendingCopy').textContent = revoked
+          ? "Your tutor access was revoked. Contact an admin if you think this is a mistake."
+          : "We'll review your application soon. Once approved, this page will show your dashboard.";
+        document.getElementById('pendingScreen').classList.remove('hidden');
+        lucide.createIcons();
+        return;
+      }
+
+      document.getElementById('app').classList.remove('hidden');
+      renderTutorHeader();
+      setupProfileLogoDropzone();
+      setupCourseCoverDropzone();
+      wireCoursePriceSplit();
+      lucide.createIcons();
+      watchMyCourses();
+      watchMyTopics();
+    });
+
+    // --- Apply flow (no /tutors/{uid} doc yet) ---
+    window.submitTutorApplication = async () => {
+      const name = document.getElementById('applyNameInput').value.trim();
+      const subjects = document.getElementById('applySubjectsInput').value.trim();
+      const bio = document.getElementById('applyBioInput').value.trim();
+      const status = document.getElementById('applyStatus');
+
+      if (!name) { status.textContent = 'Enter your name.'; return; }
+
+      setBusy('submitApplyBtn', true, 'Submitting...', 'Apply');
+      try {
+        await setDoc(doc(db, 'tutors', currentUser.uid), {
+          name,
+          subjects: subjects ? subjects.split(',').map((s) => s.trim()).filter(Boolean) : [],
+          bio: bio || null,
+          accessGranted: false,
+          appliedAt: serverTimestamp()
+        });
+        document.getElementById('applyScreen').classList.add('hidden');
+        document.getElementById('pendingTitle').textContent = 'Application submitted';
+        document.getElementById('pendingCopy').textContent = "We'll review your application soon. Once approved, this page will show your dashboard.";
+        document.getElementById('pendingScreen').classList.remove('hidden');
+        lucide.createIcons();
+      } catch (e) {
+        console.error('Tutor application failed:', e);
+        status.textContent = e.message || 'Failed to submit. Please try again.';
+      } finally {
+        setBusy('submitApplyBtn', false, '', 'Apply');
+      }
+    };
+
+    function renderTutorHeader() {
+      document.getElementById('tutorName').textContent = myGrant.name || currentUser.email || 'Tutor';
+      const subjects = (myGrant.subjects || []).join(', ');
+      document.getElementById('tutorMeta').textContent = subjects ? `${subjects} · 70% revenue share` : '70% revenue share';
+      renderAvatarInto('tutorAvatarInitial', 'tutorAvatarImg', myGrant.name, myGrant.logoUrl);
+    }
+
+    function renderAvatarInto(initialId, imgId, name, logoUrl) {
+      const initialEl = document.getElementById(initialId);
+      const imgEl = document.getElementById(imgId);
+      const initial = (name || currentUser?.email || 'T').trim().charAt(0).toUpperCase() || 'T';
+      initialEl.textContent = initial;
+      if (logoUrl) {
+        imgEl.src = logoUrl;
+        imgEl.classList.remove('hidden');
+        initialEl.classList.add('hidden');
+      } else {
+        imgEl.classList.add('hidden');
+        initialEl.classList.remove('hidden');
+      }
+    }
+
+    // --- My Courses ---
+    function watchMyCourses() {
+      onSnapshot(
+        query(collection(db, 'tutorCourses'), where('tutorId', '==', currentUser.uid), orderBy('createdAt', 'desc')),
+        (snap) => {
+          myCourses = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          document.getElementById('statMyCourses').textContent = myCourses.length;
+          populateCourseSelect();
+          renderMyCourses();
+        },
+        (err) => {
+          console.error('My courses listener error:', err);
+          document.getElementById('myCoursesList').innerHTML = `<p class="p-12 text-center text-rose-500 font-bold">Failed to load your courses.</p>`;
+        }
+      );
+    }
+
+    function populateCourseSelect() {
+      const select = document.getElementById('topicCourseSelect');
+      select.innerHTML = myCourses.length
+        ? myCourses.map((c) => `<option value="${c.id}">${escapeHTML(c.title || 'Untitled course')}</option>`).join('')
+        : `<option value="">Create a course first</option>`;
+    }
+
+    function renderMyCourses() {
+      const list = document.getElementById('myCoursesList');
+      if (!myCourses.length) {
+        list.innerHTML = `
+          <div class="p-16 text-center">
+            <i data-lucide="folder-plus" class="w-10 h-10 mx-auto mb-3 text-slate-200"></i>
+            <p class="text-slate-400 font-bold">No courses yet. Create one to start adding topics.</p>
+          </div>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+      }
+      list.innerHTML = myCourses.map((c) => {
+        const topicCount = myTopics.filter((t) => t.tutorCourseId === c.id).length;
+        const link = `${location.origin}${location.pathname.replace(/tutor\.html$/, '')}tutor-courses.htm?course=${c.id}`;
+        return `
+        <div class="p-6 flex items-center justify-between gap-4 flex-wrap hover:bg-slate-50/50 transition-colors">
+          <div class="min-w-0">
+            <p class="font-black truncate">${escapeHTML(c.title || 'Untitled course')}</p>
+            <p class="text-[10px] text-slate-400 font-bold">${escapeHTML(c.subject || '')} · ₦${Number(c.price || 0).toLocaleString()} · ${topicCount} topic${topicCount === 1 ? '' : 's'}</p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="navigator.clipboard.writeText('${link}').then(() => window.toast('Link copied.', 'success'))" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-slate-700 hover:bg-slate-100 transition-colors"><i data-lucide="link" class="w-4 h-4"></i></button>
+            <button onclick="window.deleteMyCourse('${c.id}')" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>`;
+      }).join('');
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    window.deleteMyCourse = async (id) => {
+      if (!confirm('Delete this course? Its topics will stay orphaned unless you delete them too.')) return;
+      try {
+        await deleteDoc(doc(db, 'tutorCourses', id));
+        window.toast('Course deleted.', 'success');
+      } catch (e) {
+        window.toast(e.message || 'Failed to delete.', 'error');
+      }
+    };
+
+    // --- My Topics ---
+    function watchMyTopics() {
+      onSnapshot(
+        query(collection(db, 'tutorTopics'), where('createdBy', '==', currentUser.uid), orderBy('createdAt', 'desc')),
+        (snap) => {
+          myTopics = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          document.getElementById('statMyTopics').textContent = myTopics.length;
+          renderMyCourses();
+          renderMyTopics();
+        },
+        (err) => {
+          console.error('My topics listener error:', err);
+          document.getElementById('myTopicsList').innerHTML = `<p class="p-12 text-center text-rose-500 font-bold">Failed to load your topics.</p>`;
+        }
+      );
+    }
+
+    function courseTitleFor(id) { return (myCourses.find((c) => c.id === id) || {}).title || 'Unknown course'; }
+    function countTopicResources(t) { return ['miniText', 'voiceNote', 'fullLecture', 'structuredAnswer', 'quizAssessmentId'].filter((k) => t[k]).length; }
+
+    function renderMyTopics() {
+      const list = document.getElementById('myTopicsList');
+      if (!myTopics.length) {
+        list.innerHTML = `
+          <div class="p-16 text-center">
+            <i data-lucide="layout-list" class="w-10 h-10 mx-auto mb-3 text-slate-200"></i>
+            <p class="text-slate-400 font-bold">No topics added yet.</p>
+          </div>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+      }
+      list.innerHTML = myTopics.map((t) => `
+        <div class="p-6 flex items-center justify-between gap-4 flex-wrap hover:bg-slate-50/50 transition-colors">
+          <div class="min-w-0">
+            <p class="font-black truncate">Topic ${t.topicNumber ?? ''} — ${escapeHTML(t.title || 'Untitled')}</p>
+            <p class="text-[10px] text-slate-400 font-bold">${escapeHTML(courseTitleFor(t.tutorCourseId))} · ${countTopicResources(t)}/5 resources ready</p>
+          </div>
+          <button onclick="window.deleteMyTopic('${t.id}')" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>`).join('');
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    window.deleteMyTopic = async (id) => {
+      if (!confirm('Delete this topic? This cannot be undone.')) return;
+      try {
+        await deleteDoc(doc(db, 'tutorTopics', id));
+        window.toast('Topic deleted.', 'success');
+      } catch (e) {
+        window.toast(e.message || 'Failed to delete.', 'error');
+      }
+    };
+
+    // --- New Course modal ---
+    let courseCoverFile = null;
+
+    function setupCourseCoverDropzone() {
+      const zone = document.getElementById('courseCoverDropzone');
+      const input = document.getElementById('courseCoverFileInput');
+      ['dragenter', 'dragover'].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add('drag-over'); }));
+      ['dragleave', 'drop'].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove('drag-over'); }));
+      zone.addEventListener('drop', (e) => { if (e.dataTransfer.files.length) handleCourseCoverFile(e.dataTransfer.files[0]); });
+      input.addEventListener('change', () => { if (input.files.length) handleCourseCoverFile(input.files[0]); });
+    }
+
+    function handleCourseCoverFile(file) {
+      if (!file.type.startsWith('image/')) return window.toast('Choose an image file.', 'error');
+      courseCoverFile = file;
+      document.getElementById('courseCoverDropzoneText').textContent = file.name;
+    }
+
+    function wireCoursePriceSplit() {
+      document.getElementById('coursePriceInput').addEventListener('input', (e) => {
+        const price = Math.max(0, Number(e.target.value) || 0);
+        const wrap = document.getElementById('coursePriceSplit');
+        if (!price) { wrap.classList.add('hidden'); return; }
+        const platformCut = Math.round(price * (PLATFORM_CUT_PCT / 100));
+        const tutorCut = price - platformCut;
+        wrap.classList.remove('hidden');
+        wrap.textContent = `You keep ₦${tutorCut.toLocaleString()} · Peak Flow takes ₦${platformCut.toLocaleString()} (${PLATFORM_CUT_PCT}%) per sale`;
+      });
+    }
+
+    window.openCourseModal = () => {
+      ['courseTitleInput', 'courseSubjectInput', 'coursePriceInput', 'courseDescriptionInput'].forEach((id) => document.getElementById(id).value = '');
+      courseCoverFile = null;
+      document.getElementById('courseCoverFileInput').value = '';
+      document.getElementById('courseCoverDropzoneText').textContent = 'Cover image (optional) — JPG, PNG or WebP';
+      document.getElementById('coursePriceSplit').classList.add('hidden');
+      document.getElementById('courseStatus').textContent = '';
+      setBusy('submitCourseBtn', false, '', 'Publish Course');
+      document.getElementById('courseModal').classList.replace('hidden', 'flex');
+      if (window.lucide) window.lucide.createIcons();
+    };
+    window.closeCourseModal = () => document.getElementById('courseModal').classList.replace('flex', 'hidden');
+
+    window.submitCourse = async () => {
+      const status = document.getElementById('courseStatus');
+      const title = document.getElementById('courseTitleInput').value.trim();
+      const subject = document.getElementById('courseSubjectInput').value.trim();
+      const price = Math.floor(Number(document.getElementById('coursePriceInput').value) || 0);
+      const description = document.getElementById('courseDescriptionInput').value.trim();
+
+      if (!title) { status.textContent = 'Enter a course title.'; return; }
+      if (!price || price <= 0) { status.textContent = 'Enter a price above ₦0.'; return; }
+
+      setBusy('submitCourseBtn', true, 'Publishing...', 'Publish Course');
+      status.textContent = '';
+      try {
+        let coverUrl = null;
+        if (courseCoverFile) {
+          const key = `tutor-course-covers/${currentUser.uid}/${Date.now()}-${courseCoverFile.name}`;
+          coverUrl = await uploadFile(courseCoverFile, key);
+        }
+        await addDoc(collection(db, 'tutorCourses'), {
+          title, subject: subject || null, price, description: description || null,
+          coverUrl,
+          tutorId: currentUser.uid,
+          tutorName: myGrant.name || currentUser.email || 'Tutor',
+          tutorLogoUrl: myGrant.logoUrl || null,
+          status: 'published',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        window.toast('Course published.', 'success');
+        window.closeCourseModal();
+      } catch (e) {
+        console.error('Publish course failed:', e);
+        status.textContent = e.message || 'Failed to publish.';
+      } finally {
+        setBusy('submitCourseBtn', false, '', 'Publish Course');
+      }
+    };
+
+    // --- Mini-text block editor (same shape as lecturer.html's) ---
+    let topicMiniTextBlocks = [];
+    const MINI_TEXT_BLOCK_LABELS = { heading: 'Heading', subheading: 'Subheading', paragraph: 'Paragraph', pills: 'Pill tags', divider: 'Divider' };
+
+    window.addMiniTextBlock = (type) => {
+      const block = type === 'pills' ? { type, raw: '' } : type === 'divider' ? { type } : { type, text: '' };
+      topicMiniTextBlocks.push(block);
+      renderMiniTextBlocksEditor();
+    };
+    window.moveMiniTextBlock = (idx, dir) => {
+      const target = idx + dir;
+      if (target < 0 || target >= topicMiniTextBlocks.length) return;
+      [topicMiniTextBlocks[idx], topicMiniTextBlocks[target]] = [topicMiniTextBlocks[target], topicMiniTextBlocks[idx]];
+      renderMiniTextBlocksEditor();
+    };
+    window.removeMiniTextBlock = (idx) => { topicMiniTextBlocks.splice(idx, 1); renderMiniTextBlocksEditor(); };
+    window.updateMiniTextBlockField = (idx, field, value) => { if (topicMiniTextBlocks[idx]) topicMiniTextBlocks[idx][field] = value; };
+
+    function renderMiniTextBlocksEditor() {
+      const list = document.getElementById('miniTextBlocksList');
+      if (!topicMiniTextBlocks.length) {
+        list.innerHTML = `<p class="text-[10px] text-slate-300 font-bold px-1">No blocks yet — add a heading, paragraph, or tag row below.</p>`;
+        return;
+      }
+      list.innerHTML = topicMiniTextBlocks.map((block, idx) => {
+        let fieldHTML = '';
+        if (block.type === 'divider') {
+          fieldHTML = `<p class="text-[10px] font-black uppercase text-slate-300 tracking-widest py-2">— divider —</p>`;
+        } else if (block.type === 'pills') {
+          fieldHTML = `<input type="text" value="${escapeHTML(block.raw || '')}" placeholder="Comma-separated tags"
+            oninput="window.updateMiniTextBlockField(${idx}, 'raw', this.value)"
+            class="w-full px-4 py-3 rounded-xl bg-white text-xs font-bold outline-none">`;
+        } else if (block.type === 'paragraph') {
+          fieldHTML = `<textarea rows="2" placeholder="Paragraph text..."
+            oninput="window.updateMiniTextBlockField(${idx}, 'text', this.value)"
+            class="w-full px-4 py-3 rounded-xl bg-white text-xs font-bold outline-none resize-none">${escapeHTML(block.text || '')}</textarea>`;
+        } else {
+          fieldHTML = `<input type="text" value="${escapeHTML(block.text || '')}" placeholder="${block.type === 'heading' ? 'Heading text' : 'Subheading text'}"
+            oninput="window.updateMiniTextBlockField(${idx}, 'text', this.value)"
+            class="w-full px-4 py-3 rounded-xl bg-white text-xs font-bold outline-none">`;
+        }
+        return `
+        <div class="flex items-start gap-2 bg-slate-50 rounded-2xl p-3">
+          <div class="flex flex-col gap-1 pt-1 shrink-0">
+            <button type="button" onclick="window.moveMiniTextBlock(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="w-6 h-6 rounded-lg bg-white text-slate-400 hover:text-slate-700 flex items-center justify-center text-xs disabled:opacity-30">↑</button>
+            <button type="button" onclick="window.moveMiniTextBlock(${idx}, 1)" ${idx === topicMiniTextBlocks.length - 1 ? 'disabled' : ''} class="w-6 h-6 rounded-lg bg-white text-slate-400 hover:text-slate-700 flex items-center justify-center text-xs disabled:opacity-30">↓</button>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-[9px] font-black uppercase text-orange-500 mb-1">${MINI_TEXT_BLOCK_LABELS[block.type] || block.type}</p>
+            ${fieldHTML}
+          </div>
+          <button type="button" onclick="window.removeMiniTextBlock(${idx})" class="text-rose-400 hover:text-rose-600 pt-1 shrink-0"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>`;
+      }).join('');
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function buildMiniTextPayload() {
+      const kicker = document.getElementById('topicMiniTextKickerInput').value.trim();
+      const blocks = [];
+      const flatLines = [];
+      for (const block of topicMiniTextBlocks) {
+        if (block.type === 'divider') { blocks.push({ type: 'divider' }); continue; }
+        if (block.type === 'pills') {
+          const items = String(block.raw || '').split(',').map((s) => s.trim()).filter(Boolean);
+          if (!items.length) continue;
+          blocks.push({ type: 'pills', items });
+          flatLines.push(items.join(', '));
+          continue;
+        }
+        const text = String(block.text || '').trim();
+        if (!text) continue;
+        blocks.push({ type: block.type, text });
+        flatLines.push(text);
+      }
+      const miniText = flatLines.join('\n\n');
+      return { miniText: miniText || null, miniTextBlocks: blocks.length ? blocks : null, miniTextKicker: kicker || null };
+    }
+
+    // --- Topic wizard ---
+    const TOPIC_WIZARD_STEPS = [
+      { name: 'Topic number', required: () => document.getElementById('topicNumberInput').value !== '', message: 'Enter a topic number.' },
+      { name: 'Title', required: () => document.getElementById('topicTitleInput').value.trim() !== '', message: 'Enter a topic title.' },
+      { name: 'Course', required: () => document.getElementById('topicCourseSelect').value !== '', message: 'Pick a course.' },
+      { name: 'Description', required: () => true },
+      { name: 'Mini-text', required: () => true },
+      { name: 'Voice note', required: () => true },
+      { name: 'Full lecture', required: () => true },
+      { name: 'Structured answer', required: () => true },
+      { name: 'Quiz', required: () => true },
+      { name: 'Review & Save', required: () => true }
+    ];
+    let topicWizardStep = 0;
+
+    function renderTopicWizardStep() {
+      document.querySelectorAll('#topicModal .topic-step').forEach((el) => {
+        el.classList.toggle('hidden', Number(el.dataset.step) !== topicWizardStep);
+      });
+      const total = TOPIC_WIZARD_STEPS.length;
+      document.getElementById('topicWizardStepLabel').textContent = `Step ${topicWizardStep + 1} of ${total}`;
+      document.getElementById('topicWizardStepName').textContent = TOPIC_WIZARD_STEPS[topicWizardStep].name;
+      document.getElementById('topicWizardProgressBar').style.width = `${((topicWizardStep + 1) / total) * 100}%`;
+      document.getElementById('topicWizardBackBtn').disabled = topicWizardStep === 0;
+
+      const isLast = topicWizardStep === total - 1;
+      document.getElementById('topicWizardNextBtn').classList.toggle('hidden', isLast);
+      document.getElementById('submitTopicBtn').classList.toggle('hidden', !isLast);
+      if (isLast) renderTopicReviewSummary();
+
+      const stepEl = document.querySelector(`#topicModal .topic-step[data-step="${topicWizardStep}"]`);
+      const firstField = stepEl?.querySelector('input:not([type="file"]), textarea, select');
+      if (firstField) setTimeout(() => firstField.focus(), 50);
+    }
+
+    function renderTopicReviewSummary() {
+      const el = document.getElementById('topicReviewSummary');
+      const voiceFile = document.getElementById('topicVoiceFileInput').files[0];
+      const videoFile = document.getElementById('topicVideoFileInput').files[0];
+      const courseSelect = document.getElementById('topicCourseSelect');
+      const rows = [
+        ['Topic number', document.getElementById('topicNumberInput').value || '—'],
+        ['Title', document.getElementById('topicTitleInput').value.trim() || '—'],
+        ['Course', courseSelect.selectedOptions[0]?.textContent || '—'],
+        ['Description', document.getElementById('topicDescriptionInput').value.trim() ? 'Added' : 'Skipped'],
+        ['Mini-text', topicMiniTextBlocks.length ? `${topicMiniTextBlocks.length} block(s)` : 'Skipped'],
+        ['Voice note', voiceFile ? voiceFile.name : 'Skipped'],
+        ['Full lecture video', videoFile ? videoFile.name : 'Skipped'],
+        ['Structured answer', document.getElementById('topicStructuredInput').value.trim() ? 'Added' : 'Skipped'],
+        ['Quiz', document.getElementById('topicQuizInput').value.trim() ? 'Linked' : 'Skipped']
+      ];
+      el.innerHTML = rows.map(([label, value]) => `
+        <div class="flex items-center justify-between gap-4 px-5 py-3 rounded-2xl bg-slate-50">
+          <span class="text-[10px] font-black text-slate-400 uppercase shrink-0">${escapeHTML(label)}</span>
+          <span class="text-sm font-black text-slate-900 truncate text-right">${escapeHTML(String(value))}</span>
+        </div>`).join('');
+    }
+
+    window.topicWizardNext = () => {
+      const step = TOPIC_WIZARD_STEPS[topicWizardStep];
+      if (!step.required()) { window.toast(step.message || `Fill in ${step.name.toLowerCase()} before continuing.`, 'error'); return; }
+      if (topicWizardStep < TOPIC_WIZARD_STEPS.length - 1) { topicWizardStep++; renderTopicWizardStep(); }
+    };
+    window.topicWizardBack = () => { if (topicWizardStep > 0) { topicWizardStep--; renderTopicWizardStep(); } };
+
+    window.openTopicModal = () => {
+      if (!myCourses.length) { window.toast('Create a course first.', 'error'); return; }
+      ['topicNumberInput', 'topicTitleInput', 'topicDescriptionInput', 'topicMiniTextKickerInput', 'topicStructuredInput', 'topicQuizInput'].forEach((id) => document.getElementById(id).value = '');
+      topicMiniTextBlocks = [];
+      renderMiniTextBlocksEditor();
+      document.getElementById('topicVoiceFileInput').value = '';
+      document.getElementById('topicVideoFileInput').value = '';
+      document.getElementById('topicProgressWrap').classList.add('hidden');
+      document.getElementById('topicProgressBar').style.width = '0%';
+      document.getElementById('topicStatus').textContent = '';
+      populateCourseSelect();
+      document.getElementById('submitTopicBtn').disabled = false;
+      document.getElementById('submitTopicBtn').textContent = 'Save Topic';
+      topicWizardStep = 0;
+      renderTopicWizardStep();
+      document.getElementById('topicModal').classList.replace('hidden', 'flex');
+      if (window.lucide) window.lucide.createIcons();
+    };
+    window.closeTopicModal = () => document.getElementById('topicModal').classList.replace('flex', 'hidden');
+
+    window.submitTopic = async () => {
+      const status = document.getElementById('topicStatus');
+      const topicNumber = Number(document.getElementById('topicNumberInput').value);
+      const title = document.getElementById('topicTitleInput').value.trim();
+      const tutorCourseId = document.getElementById('topicCourseSelect').value;
+      const description = document.getElementById('topicDescriptionInput').value.trim();
+      const { miniText, miniTextBlocks, miniTextKicker } = buildMiniTextPayload();
+      const structuredAnswer = document.getElementById('topicStructuredInput').value.trim();
+      const quizAssessmentId = document.getElementById('topicQuizInput').value.trim();
+      const voiceFile = document.getElementById('topicVoiceFileInput').files[0];
+      const videoFile = document.getElementById('topicVideoFileInput').files[0];
+
+      if (!topicNumber) return (status.textContent = 'Enter a topic number.');
+      if (!title) return (status.textContent = 'Enter a topic title.');
+      if (!tutorCourseId) return (status.textContent = 'Pick a course.');
+
+      const btn = document.getElementById('submitTopicBtn');
+      btn.disabled = true;
+      const progressWrap = document.getElementById('topicProgressWrap');
+      const progressBar = document.getElementById('topicProgressBar');
+      const progressText = document.getElementById('topicProgressText');
+
+      try {
+        let voiceNoteUrl = null, fullLectureUrl = null;
+        if (voiceFile || videoFile) progressWrap.classList.remove('hidden');
+
+        if (voiceFile) {
+          btn.textContent = 'Uploading voice note...';
+          voiceNoteUrl = await uploadFile(voiceFile, `tutor-topics/${currentUser.uid}/voice-${Date.now()}-${voiceFile.name}`, (p) => {
+            progressBar.style.width = `${p}%`; progressText.textContent = `Voice note: ${p}%`;
+          });
+        }
+        if (videoFile) {
+          btn.textContent = 'Uploading video...';
+          fullLectureUrl = await uploadFile(videoFile, `tutor-topics/${currentUser.uid}/video-${Date.now()}-${videoFile.name}`, (p) => {
+            progressBar.style.width = `${p}%`; progressText.textContent = `Video: ${p}%`;
+          });
+        }
+
+        btn.textContent = 'Saving...';
+        await addDoc(collection(db, 'tutorTopics'), {
+          topicNumber, title, tutorCourseId, description,
+          miniText, miniTextBlocks, miniTextKicker,
+          voiceNote: voiceNoteUrl,
+          fullLecture: fullLectureUrl,
+          structuredAnswer: structuredAnswer || null,
+          quizAssessmentId: quizAssessmentId || null,
+          createdBy: currentUser.uid,
+          uploadedByRole: 'tutor',
+          uploadedByName: myGrant.name || currentUser.email || 'Tutor',
+          uploadedByLogoUrl: myGrant.logoUrl || null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+
+        window.toast('Topic saved.', 'success');
+        window.closeTopicModal();
+      } catch (e) {
+        console.error('Save topic failed:', e);
+        status.textContent = e.message || 'Failed to save.';
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    // --- Generic chunked upload helper (identical contract to lecturer.html's,
+    // reused as-is against the same /api/upload/* endpoints in server.js) ---
+    const CHUNK_SIZE = 10 * 1024 * 1024;
+    const MAX_CONCURRENT_PARTS = 6;
+    const MAX_PART_RETRIES = 4;
+
+    async function postJson(path, body, signal) {
+      const idToken = await currentUser.getIdToken();
+      let res;
+      try {
+        res = await fetch(`${API_BASE_URL}${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify(body),
+          signal
+        });
+      } catch (networkErr) {
+        if (networkErr.name === 'AbortError') throw networkErr;
+        console.error('Network error calling', `${API_BASE_URL}${path}`, networkErr);
+        throw new Error(`Could not reach the upload server at "${API_BASE_URL || '(same origin)'}${path}". Make sure server.js is running and reachable.`);
+      }
+      if (!res.ok) {
+        let msg = `Request failed (${res.status})`;
+        try { msg = (await res.json()).error || msg; } catch (e) {}
+        throw new Error(msg);
+      }
+      return res.json();
+    }
+
+    function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+    async function withRetry(fn, { attempts = MAX_PART_RETRIES, label = 'request', signal } = {}) {
+      let lastErr;
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        try {
+          return await fn();
+        } catch (err) {
+          if (err.name === 'AbortError') throw err;
+          lastErr = err;
+          if (attempt < attempts) {
+            const backoffMs = Math.min(8000, 500 * 2 ** (attempt - 1)) + Math.random() * 300;
+            await sleep(backoffMs);
+          }
+        }
+      }
+      throw lastErr;
+    }
+
+    async function uploadFile(file, destinationKey, onProgress, opts = {}) {
+      const { signal } = opts;
+      if (file.size <= CHUNK_SIZE) {
+        const { uploadUrl, fileUrl } = await postJson('/api/upload/signed-url', { destinationKey, contentType: file.type }, signal);
+        await withRetry(async () => {
+          const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file, signal });
+          if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);
+        }, { label: 'Upload', signal });
+        if (onProgress) onProgress(100, { totalParts: 1, completedParts: 1 });
+        return fileUrl;
+      }
+
+      const { uploadId, key } = await postJson('/api/upload/multipart/init', { destinationKey, contentType: file.type }, signal);
+      const totalParts = Math.ceil(file.size / CHUNK_SIZE);
+      const chunks = Array.from({ length: totalParts }, (_, i) => file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size)));
+      const parts = new Array(totalParts);
+      let uploadedBytes = 0, completedParts = 0;
+
+      try {
+        const { urls } = await postJson('/api/upload/multipart/part-urls', {
+          key, uploadId, partNumbers: Array.from({ length: totalParts }, (_, i) => i + 1)
+        }, signal);
+        const urlByPart = new Map(urls.map((u) => [u.partNumber, u.url]));
+
+        async function uploadOnePart(partNumber) {
+          const chunk = chunks[partNumber - 1];
+          const url = urlByPart.get(partNumber);
+          await withRetry(async () => {
+            const putRes = await fetch(url, { method: 'PUT', body: chunk, signal });
+            if (!putRes.ok) throw new Error(`Part ${partNumber} failed (${putRes.status})`);
+            parts[partNumber - 1] = { PartNumber: partNumber, ETag: putRes.headers.get('ETag') };
+          }, { label: `Part ${partNumber}`, signal });
+          uploadedBytes += chunk.size;
+          completedParts += 1;
+          if (onProgress) onProgress(Math.round((uploadedBytes / file.size) * 100), { totalParts, completedParts });
+        }
+
+        let nextPart = 1;
+        async function worker() {
+          while (nextPart <= totalParts) {
+            if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+            const partNumber = nextPart++;
+            await uploadOnePart(partNumber);
+          }
+        }
+        await Promise.all(Array.from({ length: Math.min(MAX_CONCURRENT_PARTS, totalParts) }, worker));
+      } catch (err) {
+        postJson('/api/upload/multipart/abort', { key, uploadId }).catch(() => {});
+        throw err;
+      }
+      const { url: fileUrl } = await postJson('/api/upload/multipart/complete', { key, uploadId, parts }, signal);
+      return fileUrl;
+    }
+
+    // --- Profile modal ---
+    let profileLogoFile = null;
+
+    function setupProfileLogoDropzone() {
+      const zone = document.getElementById('profileLogoDropzone');
+      const input = document.getElementById('profileLogoFileInput');
+      zone.addEventListener('click', () => input.click());
+      ['dragenter', 'dragover'].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add('drag-over'); }));
+      ['dragleave', 'drop'].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove('drag-over'); }));
+      zone.addEventListener('drop', (e) => { if (e.dataTransfer.files.length) handleProfileLogoFile(e.dataTransfer.files[0]); });
+      input.addEventListener('change', () => { if (input.files.length) handleProfileLogoFile(input.files[0]); });
+    }
+
+    function handleProfileLogoFile(file) {
+      if (!file.type.startsWith('image/')) return window.toast('Choose an image file.', 'error');
+      if (file.size > 10 * 1024 * 1024) return window.toast('Image exceeds the 10MB limit.', 'error');
+      profileLogoFile = file;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.getElementById('profileLogoPreviewImg').src = reader.result;
+        document.getElementById('profileLogoPreviewImg').classList.remove('hidden');
+        document.getElementById('profileLogoPreviewInitial').classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+      document.getElementById('profileLogoDropzoneText').textContent = file.name;
+    }
+
+    window.openProfileModal = () => {
+      profileLogoFile = null;
+      document.getElementById('profileNameInput').value = myGrant.name || '';
+      document.getElementById('profileSubjectsInput').value = (myGrant.subjects || []).join(', ');
+      document.getElementById('profileBioInput').value = myGrant.bio || '';
+      document.getElementById('profileLogoFileInput').value = '';
+      document.getElementById('profileLogoDropzoneText').textContent = 'Upload a logo or photo (optional) — JPG, PNG or WebP, up to 10MB';
+      renderAvatarInto('profileLogoPreviewInitial', 'profileLogoPreviewImg', myGrant.name, myGrant.logoUrl);
+      document.getElementById('profileProgressWrap').classList.add('hidden');
+      document.getElementById('profileStatus').textContent = '';
+      setBusy('submitProfileBtn', false, '', 'Save Profile');
+      document.getElementById('profileModal').classList.replace('hidden', 'flex');
+      if (window.lucide) window.lucide.createIcons();
+    };
+    window.closeProfileModal = () => document.getElementById('profileModal').classList.replace('flex', 'hidden');
+
+    window.submitProfile = async () => {
+      const status = document.getElementById('profileStatus');
+      const name = document.getElementById('profileNameInput').value.trim();
+      const subjects = document.getElementById('profileSubjectsInput').value.trim();
+      const bio = document.getElementById('profileBioInput').value.trim();
+      if (!name) { status.textContent = 'Enter your name.'; return; }
+
+      setBusy('submitProfileBtn', true, 'Saving...', 'Save Profile');
+      status.textContent = '';
+      try {
+        let logoUrl = myGrant.logoUrl || null;
+        if (profileLogoFile) {
+          const progressWrap = document.getElementById('profileProgressWrap');
+          const progressBar = document.getElementById('profileProgressBar');
+          const progressText = document.getElementById('profileProgressText');
+          progressWrap.classList.remove('hidden');
+          const key = `tutor-logos/${currentUser.uid}/${Date.now()}-${profileLogoFile.name}`;
+          logoUrl = await uploadFile(profileLogoFile, key, (p) => { progressBar.style.width = `${p}%`; progressText.textContent = `${p}%`; });
+        }
+
+        const payload = {
+          name,
+          subjects: subjects ? subjects.split(',').map((s) => s.trim()).filter(Boolean) : [],
+          bio: bio || null, logoUrl,
+          onboardingCompletedAt: myGrant.onboardingCompletedAt || serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+        await updateDoc(doc(db, 'tutors', currentUser.uid), payload);
+
+        myGrant = { ...myGrant, ...payload };
+        renderTutorHeader();
+        window.toast('Profile saved.', 'success');
+        document.getElementById('profileModal').classList.replace('flex', 'hidden');
+      } catch (e) {
+        console.error('Failed to save profile:', e);
+        status.textContent = e.message || 'Failed to save. Please try again.';
+      } finally {
+        setBusy('submitProfileBtn', false, '', 'Save Profile');
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tutor Courses — Geo-Books</title>
+<link rel="icon" href="data:,">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: { brand: { 50:'#fff7ed',100:'#ffedd5',200:'#fed7aa',300:'#fdba74',400:'#fb923c',500:'#f97316',600:'#ea580c',700:'#c2410c',800:'#9a3412',900:'#7c2d12' } } } }
+  };
+</script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  body{font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+  ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:99px}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+<div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 items-end pointer-events-none"></div>
+
+<header class="bg-white border-b border-slate-100 sticky top-0 z-20">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+    <a href="geo-books.htm" class="flex items-center gap-2 text-xs font-black text-slate-400 hover:text-slate-600">
+      <span>←</span> Back to Geo-Books
+    </a>
+    <a href="tutor.html" class="px-5 py-2.5 rounded-2xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+      <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Become a Tutor
+    </a>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-6 py-10">
+  <div class="mb-8">
+    <p class="text-[10px] font-black uppercase tracking-widest text-brand-600 mb-1">Study Tools</p>
+    <h1 class="text-3xl font-black tracking-tight">Tutor Courses</h1>
+    <p class="text-slate-400 font-bold text-sm mt-1">Paid courses from independent tutors — not tied to a specific university.</p>
+  </div>
+
+  <div id="coursesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <p class="col-span-full text-center py-24 text-slate-300 font-bold">Loading courses...</p>
+  </div>
+</main>
+
+<!-- Course detail / purchase modal -->
+<div id="courseDetailModal" class="fixed inset-0 z-[900] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-white rounded-[2.5rem] max-w-md w-full p-10 relative max-h-[90vh] overflow-y-auto">
+    <button onclick="window.closeCourseDetail()" class="absolute top-8 right-8 w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+    <div id="courseDetailBody"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1nVLSPFs30wG-PLaEyFqm_PEVhZdzISU",
+    authDomain: "geo-books-8411e.firebaseapp.com",
+    projectId: "geo-books-8411e",
+    storageBucket: "geo-books-8411e.firebasestorage.app",
+    messagingSenderId: "972887107793",
+    appId: "1:972887107793:web:7e0374bf81e6713fd0fdf0",
+    measurementId: "G-RY84V5DXPN"
+  };
+  function getFirebaseApp() { return getApps().length ? getApps()[0] : initializeApp(firebaseConfig); }
+  const auth = getAuth(getFirebaseApp());
+  const db = getFirestore(getFirebaseApp());
+
+  const API_BASE_URL = window.GEO_BOOKS_API_URL ||
+    (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:3007' : '');
+
+  const escapeHTML = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  window.toast = (msg, type = 'info') => {
+    const container = document.getElementById('toast-container');
+    const el = document.createElement('div');
+    const colors = { success: 'bg-emerald-500', error: 'bg-rose-500', info: 'bg-slate-900' };
+    el.className = `${colors[type] || colors.info} text-white px-6 py-4 rounded-2xl font-black text-xs shadow-2xl pointer-events-auto`;
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 4500);
+  };
+
+  let currentUser = null;
+  let allCourses = [];
+  let myPurchases = {}; // tutorCourseId -> purchase doc
+
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    await loadCourses();
+    if (user) await loadMyPurchases();
+    renderGrid();
+
+    const wantedCourse = new URLSearchParams(location.search).get('course');
+    if (wantedCourse) {
+      const c = allCourses.find((c) => c.id === wantedCourse);
+      if (c) openCourseDetail(c);
+    }
+  });
+
+  async function loadCourses() {
+    try {
+      const snap = await getDocs(query(collection(db, 'tutorCourses'), where('status', '==', 'published'), orderBy('createdAt', 'desc')));
+      allCourses = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+      console.error('Failed to load tutor courses:', e);
+    }
+  }
+
+  async function loadMyPurchases() {
+    try {
+      const snap = await getDocs(query(collection(db, 'tutorPurchases'), where('buyerId', '==', currentUser.uid)));
+      myPurchases = {};
+      snap.docs.forEach((d) => { myPurchases[d.data().tutorCourseId] = { id: d.id, ...d.data() }; });
+    } catch (e) {
+      console.error('Failed to load purchases:', e);
+    }
+  }
+
+  function ownershipBadge(courseId) {
+    const p = myPurchases[courseId];
+    if (!p) return null;
+    if (p.status === 'verified') return { label: 'Owned', cls: 'bg-emerald-50 text-emerald-600' };
+    return { label: 'Payment pending review', cls: 'bg-amber-50 text-amber-600' };
+  }
+
+  function renderGrid() {
+    const grid = document.getElementById('coursesGrid');
+    if (!allCourses.length) {
+      grid.innerHTML = `<p class="col-span-full text-center py-24 text-slate-300 font-bold">No tutor courses published yet — check back soon.</p>`;
+      return;
+    }
+    grid.innerHTML = allCourses.map((c) => {
+      const badge = ownershipBadge(c.id);
+      return `
+      <button data-course-id="${c.id}" class="course-card text-left bg-white rounded-3xl border border-slate-100 overflow-hidden hover:border-brand-300 transition-colors">
+        <div class="h-32 bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center">
+          ${c.coverUrl ? `<img src="${escapeHTML(c.coverUrl)}" class="w-full h-full object-cover" alt="">` : `<i data-lucide="graduation-cap" class="w-8 h-8 text-brand-400"></i>`}
+        </div>
+        <div class="p-5">
+          ${c.subject ? `<p class="text-[9px] font-black uppercase tracking-widest text-brand-600 mb-1">${escapeHTML(c.subject)}</p>` : ''}
+          <h3 class="font-black text-sm mb-1 truncate">${escapeHTML(c.title || 'Untitled course')}</h3>
+          <p class="text-[10px] text-slate-400 font-bold mb-3 truncate">By ${escapeHTML(c.tutorName || 'Tutor')}</p>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm font-black">₦${Number(c.price || 0).toLocaleString()}</span>
+            ${badge ? `<span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-full ${badge.cls}">${badge.label}</span>` : `<span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-full bg-slate-50 text-slate-400">Enroll</span>`}
+          </div>
+        </div>
+      </button>`;
+    }).join('');
+    grid.querySelectorAll('.course-card').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const c = allCourses.find((c) => c.id === btn.dataset.courseId);
+        if (c) openCourseDetail(c);
+      });
+    });
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function openCourseDetail(c) {
+    const body = document.getElementById('courseDetailBody');
+    const badge = ownershipBadge(c.id);
+    body.innerHTML = `
+      <p class="text-[10px] font-black uppercase tracking-widest text-brand-600 mb-1">${escapeHTML(c.subject || 'Tutor Course')}</p>
+      <h2 class="text-2xl font-black mb-2">${escapeHTML(c.title || 'Untitled course')}</h2>
+      <p class="text-slate-400 font-bold text-sm mb-1">By ${escapeHTML(c.tutorName || 'Tutor')}</p>
+      ${c.description ? `<p class="text-slate-500 text-sm mt-4 mb-6 leading-relaxed">${escapeHTML(c.description)}</p>` : '<div class="mb-6"></div>'}
+      <div class="flex items-center justify-between p-5 rounded-2xl bg-slate-50 mb-6">
+        <span class="text-2xl font-black">₦${Number(c.price || 0).toLocaleString()}</span>
+        ${badge ? `<span class="text-[10px] font-black uppercase px-3 py-1.5 rounded-full ${badge.cls}">${badge.label}</span>` : ''}
+      </div>
+      <p id="purchaseStatus" class="text-xs font-bold text-slate-400 mb-3"></p>
+      <button id="purchaseBtn" class="w-full py-4 rounded-2xl bg-brand-600 text-white font-black uppercase tracking-widest text-xs disabled:opacity-40">
+        ${badge?.label === 'Owned' ? 'Open Course' : 'Enroll'}
+      </button>`;
+    document.getElementById('courseDetailModal').classList.replace('hidden', 'flex');
+
+    document.getElementById('purchaseBtn').onclick = () => {
+      if (badge?.label === 'Owned') { window.location.href = `tutor-course-viewer.html?course=${c.id}`; return; }
+      startPurchase(c);
+    };
+  }
+
+  window.closeCourseDetail = () => document.getElementById('courseDetailModal').classList.replace('flex', 'hidden');
+
+  async function startPurchase(c) {
+    if (!currentUser) { window.location.href = 'geo-books.htm'; return; }
+    const status = document.getElementById('purchaseStatus');
+    const btn = document.getElementById('purchaseBtn');
+    btn.disabled = true;
+    status.textContent = 'Recording your enrollment...';
+    try {
+      const idToken = await currentUser.getIdToken();
+      const res = await fetch(`${API_BASE_URL}/api/tutor-courses/${c.id}/purchase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ price: c.price })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { status.textContent = data.error || 'Could not record your enrollment.'; btn.disabled = false; return; }
+
+      if (data.alreadyOwned) {
+        window.location.href = `tutor-course-viewer.html?course=${c.id}`;
+        return;
+      }
+
+      status.textContent = 'Enrollment recorded — pending payment verification by an admin.';
+      window.toast('Enrollment recorded. Complete payment as instructed and an admin will verify it shortly.', 'success');
+      await loadMyPurchases();
+      openCourseDetail(c);
+    } catch (e) {
+      console.error('Purchase failed:', e);
+      status.textContent = 'Something went wrong. Please try again.';
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imperial Registry | Admin Access</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&family=Plus+Jakarta+Sans:wght@200;400;600;700;800&display=swap">
+    <link rel="stylesheet" href="tailwind.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f1113;
+            --accent: #c5a059;
+            --accent-light: #e2c285;
+            --accent-dark: #8e6d2d;
+            --bg-dark: #0f1113;
+            --bg-card: #1a1d20;
+            --bg-soft: #f3f4f6;
+            --white: #ffffff;
+            --text-gray: #d1d5db;
+            --transition-smooth: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: var(--text-gray); 
+            overflow-x: hidden; 
+        }
+
+        .serif-heading { font-family: 'Cinzel', serif; }
+        .gold-border { border: 1px solid var(--accent); }
+        .gold-text { color: var(--accent); }
+        .gold-bg { background-color: var(--accent); }
+
+        .glass { 
+            background: rgba(26, 29, 32, 0.85); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(197, 160, 89, 0.1); 
+        }
+
+        .sidebar { 
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+            background: #16181b; 
+            border-right: 1px solid rgba(197, 160, 89, 0.1); 
+            box-shadow: 10px 0 30px rgba(0,0,0,0.2);
+        }
+
+        .active-tab { 
+            background: rgba(197, 160, 89, 0.15); 
+            color: var(--accent); 
+            border-left: 5px solid var(--accent); 
+            box-shadow: inset 5px 0 15px rgba(197, 160, 89, 0.05);
+        }
+        
+        .imperial-card { 
+            background: var(--bg-card); 
+            border: 1px solid rgba(197, 160, 89, 0.1); 
+            border-radius: 20px; 
+            transition: var(--transition-smooth); 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .imperial-card:hover { 
+            border-color: var(--accent); 
+            box-shadow: 0 20px 50px rgba(197, 160, 89, 0.08); 
+            transform: translateY(-5px);
+        }
+        
+        .imperial-input { 
+            background: #0f1113; 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            border-radius: 12px; 
+            color: white; 
+            transition: var(--transition-smooth); 
+        }
+        .imperial-input:focus { 
+            border-color: var(--accent); 
+            outline: none; 
+            box-shadow: 0 0 0 4px rgba(197, 160, 89, 0.1); 
+            background: #1a1d20;
+        }
+        
+        .imperial-btn-primary { 
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark)); 
+            color: #0f1113; 
+            font-weight: 900; 
+            text-transform: uppercase; 
+            letter-spacing: 0.15em; 
+            border-radius: 12px; 
+            transition: var(--transition-smooth); 
+            box-shadow: 0 10px 20px rgba(197, 160, 89, 0.2);
+        }
+        .imperial-btn-primary:hover { 
+            background: linear-gradient(135deg, var(--accent-light), var(--accent)); 
+            transform: translateY(-3px); 
+            box-shadow: 0 15px 30px rgba(197, 160, 89, 0.3); 
+        }
+        
+        /* Button Shimmer Effect */
+        .btn-shimmer {
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-shimmer::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+        .btn-shimmer:hover::before {
+            left: 100%;
+        }
+
+        /* Custom Toast Styling */
+        #toast {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 16px 24px;
+            border-radius: 16px;
+            background: var(--accent);
+            color: #0f1113;
+            font-weight: 800;
+            font-size: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 9999;
+            transition: var(--transition-smooth);
+            opacity: 0;
+            transform: translateX(20px);
+            pointer-events: none;
+        }
+        #toast.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        #toast.error {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Stats Trend Colors */
+        .trend-up { color: #10b981; }
+        .trend-down { color: #ef4444; }
+
+        /* Chart Placeholder */
+        .chart-container {
+            height: 200px;
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            padding: 20px 0;
+        }
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(to top, var(--accent), var(--accent-light));
+            border-radius: 4px 4px 0 0;
+            transition: height 1s ease-out;
+            position: relative;
+        }
+        .chart-bar:hover {
+            filter: brightness(1.2);
+            box-shadow: 0 0 15px var(--accent);
+        }
+        .chart-bar::after {
+            content: attr(data-value);
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            font-weight: 900;
+            color: var(--accent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .chart-bar:hover::after { opacity: 1; }
+
+        /* Activity Item */
+        .activity-item {
+            position: relative;
+            padding-left: 24px;
+            border-left: 2px solid rgba(197, 160, 89, 0.1);
+        }
+        .activity-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 0;
+            width: 10px;
+            height: 10px;
+            background: var(--bg-card);
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+        }
+
+        /* Quick Action Card */
+        .quick-action-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed rgba(197, 160, 89, 0.2);
+            transition: var(--transition-smooth);
+        }
+        .quick-action-card:hover {
+            background: rgba(197, 160, 89, 0.05);
+            border-style: solid;
+            border-color: var(--accent);
+            transform: scale(1.02);
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            border: 2px dashed rgba(197, 160, 89, 0.2);
+            border-radius: 20px;
+            transition: var(--transition-smooth);
+            cursor: pointer;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(197, 160, 89, 0.05);
+        }
+
+        /* Inventory List */
+        .inventory-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(197, 160, 89, 0.05);
+            transition: var(--transition-smooth);
+        }
+        .inventory-card:hover {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.04);
+            transform: translateY(-4px);
+        }
+
+        /* Article Editor */
+        .article-composer {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(197, 160, 89, 0.1);
+        }
+        .composition-area {
+            min-height: 400px;
+            font-family: 'Lora', serif;
+            line-height: 1.8;
+        }
+
+        /* Registry Styles */
+        .registry-filter-btn {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-gray);
+        }
+        .registry-filter-btn.active {
+            background: var(--accent);
+            color: #0f1113;
+            border-color: var(--accent);
+            box-shadow: 0 5px 15px rgba(197, 160, 89, 0.2);
+        }
+        .registry-row {
+            transition: var(--transition-smooth);
+        }
+        .registry-row:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+
+        /* Mobile Enhancements */
+        @media (max-width: 768px) {
+            .sidebar { 
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                width: 280px;
+                transform: translateX(-100%);
+                background: #16181b;
+                box-shadow: 20px 0 60px rgba(0,0,0,0.6);
+                border-right: 1px solid rgba(197, 160, 89, 0.2);
+            }
+            .sidebar.active { transform: translateX(0); }
+            
+            main { padding: 20px !important; }
+            .text-4xl { font-size: 2rem !important; }
+            .grid { gap: 20px !important; }
+            .imperial-card { padding: 24px !important; border-radius: 20px !important; }
+            
+            /* Form Optimization */
+            input, textarea, select { font-size: 14px !important; padding: 14px 18px !important; border-radius: 14px !important; }
+            
+            /* Table Optimization */
+            table { display: block; overflow-x: auto; white-space: nowrap; }
+            
+            /* Modal Optimization */
+            #article-modal .max-w-2xl { width: 95% !important; margin: 10px; border-radius: 24px !important; }
+            #article-modal .p-8 { padding: 24px !important; }
+            
+            /* Dashboard Stats */
+            #stat-products, #stat-valuation, #stat-users, #stat-articles { font-size: 2.5rem !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row">
+
+    <!-- Admin Login Gate: blocks all access until an authenticated admin is confirmed -->
+    <div id="admin-login-gate" class="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f1113] p-6">
+        <div class="w-full max-w-sm glass rounded-2xl p-8 space-y-6">
+            <div class="flex items-center gap-3 justify-center mb-2">
+                <div class="w-10 h-10 border-2 border-[#c5a059] rotate-45 flex items-center justify-center bg-[#c5a059]/5">
+                    <span class="rotate-[-45deg] font-black text-[#c5a059] serif-heading text-lg">N</span>
+                </div>
+                <h1 class="text-lg font-black tracking-widest uppercase text-white">Imperial <span class="text-[#c5a059]">Registry</span></h1>
+            </div>
+            <p class="text-center text-[11px] text-zinc-500 uppercase tracking-widest font-bold">Admin access only</p>
+
+            <div id="admin-gate-error" class="hidden text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-center"></div>
+
+            <div class="space-y-4">
+                <input id="admin-gate-email" type="email" autocomplete="username" placeholder="Email" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#c5a059] transition-all">
+                <input id="admin-gate-pass" type="password" autocomplete="current-password" placeholder="Password" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#c5a059] transition-all">
+                <button id="admin-gate-submit" onclick="adminGateLogin()" class="w-full imperial-btn-primary py-4 rounded-xl font-black uppercase tracking-widest text-xs">Sign In</button>
+            </div>
+            <p class="text-center text-[10px] text-zinc-600">This panel checks your account against the admin registry. Non-admin accounts are signed out automatically.</p>
+        </div>
+    </div>
+
+    <!-- Auth Wall Redesign -->
+    <!-- Mobile Header -->
+    <header class="md:hidden glass border-b border-white/5 p-4 flex justify-between items-center sticky top-0 z-[60]">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 border border-[#c5a059] rotate-45 flex items-center justify-center">
+                <span class="rotate-[-45deg] font-bold text-[#c5a059] serif-heading text-xs">E</span>
+            </div>
+            <h1 class="text-sm font-black uppercase tracking-widest text-white">Nova <span class="text-[#c5a059]">Admin</span></h1>
+        </div>
+        <button onclick="toggleSidebar()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5">
+            <i class="fa-solid fa-bars-staggered text-[#c5a059]"></i>
+        </button>
+    </header>
+
+    <!-- Sidebar -->
+    <!-- Sidebar -->
+    <aside class="w-full md:w-80 sidebar flex flex-col p-8 space-y-12 z-50">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 border-2 border-[#c5a059] rotate-45 flex items-center justify-center shadow-2xl shadow-[#c5a059]/20 bg-[#c5a059]/5">
+                <span class="rotate-[-45deg] font-black text-[#c5a059] serif-heading text-xl">N</span>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-widest uppercase text-white leading-none">Nova <span class="text-[#c5a059]">Empire</span></h1>
+                <p class="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-600 mt-1">Command Hub</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 space-y-3">
+            <div class="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-700 mb-4 ml-4">Imperial Core</div>
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="w-full flex items-center justify-between group px-6 py-4 rounded-[20px] text-xs font-black uppercase tracking-widest transition-all hover:bg-white/5 active-tab">
+                <div class="flex items-center gap-4">
+                    <i class="fa-solid fa-gauge-high text-zinc-600 group-hover:text-[#c5a059] transition-colors"></i> <span>Overview</span>
+                </div>
+                <i class="fa-solid fa-chevron-right text-[8px] opacity-0 group-hover:opacity-100 transition-all"></i>
+            </button>
+            <button onclick="switchTab('inventory')" id="tab-inventory" class="w-full flex items-center justify-between group px-6 py-4 rounded-[20px] text-xs font-black uppercase tracking-widest transition-all hover:bg-white/5">
+                <div class="flex items-center gap-4">
+                    <i class="fa-solid fa-plus-minus text-zinc-600 group-hover:text-[#c5a059] transition-colors"></i> <span>Assets</span>
+                </div>
+                <i class="fa-solid fa-chevron-right text-[8px] opacity-0 group-hover:opacity-100 transition-all"></i>
+            </button>
+            <button onclick="switchTab('allproducts')" id="tab-allproducts" class="w-full flex items-center justify-between group px-6 py-4 rounded-[20px] text-xs font-black uppercase tracking-widest transition-all hover:bg-white/5">
+                <div class="flex items-center gap-4">
+                    <i class="fa-solid fa-list text-zinc-600 group-hover:text-[#c5a059] transition-colors"></i> <span>Registry</span>
+                </div>
+                <i class="fa-solid fa-chevron-right text-[8px] opacity-0 group-hover:opacity-100 transition-all"></i>
+            </button>
+            <button onclick="switchTab('articles')" id="tab-articles" class="w-full flex items-center justify-between group px-6 py-4 rounded-[20px] text-xs font-black uppercase tracking-widest transition-all hover:bg-white/5">
+                <div class="flex items-center gap-4">
+                    <i class="fa-solid fa-feather-pointed text-zinc-600 group-hover:text-[#c5a059] transition-colors"></i> <span>Chronicles</span>
+                </div>
+                <i class="fa-solid fa-chevron-right text-[8px] opacity-0 group-hover:opacity-100 transition-all"></i>
+            </button>
+
+            <div class="pt-8 text-[9px] font-black uppercase tracking-[0.3em] text-zinc-700 mb-4 ml-4">Logistics</div>
+            <button onclick="switchTab('payments')" id="tab-payments" class="w-full flex items-center justify-between group px-6 py-4 rounded-[20px] text-xs font-black uppercase tracking-widest transition-all hover:bg-white/5">
+                <div class="flex items-center gap-4">
+                    <i class="fa-solid fa-receipt text-zinc-600 group-hover:text-[#c5a059] transition-colors"></i> <span>Transfers</span>
+                </div>
+                <span class="w-2 h-2 bg-[#c5a059] rounded-full shadow-lg shadow-[#c5a059]/50 animate-pulse"></span>
+            </button>
+            <button onclick="switchTab('users')" id="tab-users" class="w-full flex items-center justify-between group px-6 py-4 rounded-[20px] text-xs font-black uppercase tracking-widest transition-all hover:bg-white/5">
+                <div class="flex items-center gap-4">
+                    <i class="fa-solid fa-fingerprint text-zinc-600 group-hover:text-[#c5a059] transition-colors"></i> <span>Activity</span>
+                </div>
+            </button>
+
+            <div class="pt-8 text-[9px] font-black uppercase tracking-[0.3em] text-zinc-700 mb-4 ml-4">Configuration</div>
+            <button onclick="switchTab('settings')" id="tab-settings" class="w-full flex items-center justify-between group px-6 py-4 rounded-[20px] text-xs font-black uppercase tracking-widest transition-all hover:bg-white/5">
+                <div class="flex items-center gap-4">
+                    <i class="fa-solid fa-sliders text-zinc-600 group-hover:text-[#c5a059] transition-colors"></i> <span>Imperial Site</span>
+                </div>
+            </button>
+        </nav>
+
+        <div class="pt-6 border-t border-white/5 space-y-4">
+            <button onclick="toggleTheme()" class="w-full flex items-center gap-4 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-all">
+                <i class="fa-solid fa-circle-half-stroke"></i> <span>Phase Switch</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8 md:p-12 overflow-y-auto">
+        <!-- Global Header -->
+        <header class="hidden md:flex justify-between items-center mb-12">
+            <div class="flex items-center bg-white/5 rounded-[20px] px-8 py-4 border border-white/5 w-full max-w-xl group focus-within:border-[#c5a059] transition-all">
+                <i class="fa-solid fa-magnifying-glass text-zinc-600 mr-4 group-focus-within:text-[#c5a059]"></i>
+                <input type="text" oninput="handleGlobalSearch(this.value)" placeholder="Search products, articles, curators..." class="bg-transparent border-none text-xs font-bold text-white outline-none w-full">
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="text-right">
+                    <p class="text-xs font-black text-white uppercase tracking-widest">Master Curator</p>
+                    <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest">Imperial Clearance</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-[#c5a059] shadow-xl">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Dashboard Tab -->
+        <div id="view-dashboard" class="space-y-12">
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <h2 class="text-4xl font-black tracking-widest uppercase serif-heading">Command <span class="text-[#c5a059]">Overview</span></h2>
+                    <p class="text-zinc-500 font-medium">Real-time status of the Nova Empire ecosystem.</p>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="switchTab('inventory')" class="imperial-btn-primary px-6 py-3 text-[10px] btn-shimmer">
+                        <i class="fa-solid fa-plus mr-2"></i> Add Asset
+                    </button>
+                    <button onclick="openArticleModal()" class="bg-white/5 border border-white/10 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">
+                        <i class="fa-solid fa-newspaper mr-2"></i> New Story
+                    </button>
+                </div>
+            </header>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="imperial-card p-8 space-y-4">
+                    <div class="flex justify-between items-start">
+                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Total Products</p>
+                        <i class="fa-solid fa-boxes-stacked text-[#c5a059] opacity-30"></i>
+                    </div>
+                    <div class="flex items-baseline gap-3">
+                        <h2 id="stat-products" class="text-5xl font-black text-white">0</h2>
+                        <span class="text-[10px] font-bold trend-up"><i class="fa-solid fa-arrow-up mr-1"></i> 12%</span>
+                    </div>
+                </div>
+                <div class="imperial-card p-8 space-y-4">
+                    <div class="flex justify-between items-start">
+                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Vault Value</p>
+                        <i class="fa-solid fa-vault text-[#c5a059] opacity-30"></i>
+                    </div>
+                    <div class="flex items-baseline gap-3">
+                        <h2 id="stat-valuation" class="text-3xl font-black text-[#c5a059]">₦0</h2>
+                    </div>
+                </div>
+                <div class="imperial-card p-8 space-y-4">
+                    <div class="flex justify-between items-start">
+                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Active Curators</p>
+                        <i class="fa-solid fa-users text-[#c5a059] opacity-30"></i>
+                    </div>
+                    <div class="flex items-baseline gap-3">
+                        <h2 id="stat-users" class="text-5xl font-black text-emerald-500">1</h2>
+                        <span class="text-[10px] font-bold trend-up"><i class="fa-solid fa-arrow-up mr-1"></i> 5%</span>
+                    </div>
+                </div>
+                <div class="imperial-card p-8 space-y-4">
+                    <div class="flex justify-between items-start">
+                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Live Chronicles</p>
+                        <i class="fa-solid fa-newspaper text-[#c5a059] opacity-30"></i>
+                    </div>
+                    <div class="flex items-baseline gap-3">
+                        <h2 id="stat-articles" class="text-5xl font-black text-[#c5a059]">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Performance Chart -->
+                <div class="lg:col-span-8 space-y-6">
+                    <div class="imperial-card p-8">
+                        <div class="flex justify-between items-center mb-8">
+                            <h3 class="text-xl font-black uppercase tracking-widest serif-heading">Registry <span class="text-[#c5a059]">Growth</span></h3>
+                            <select class="bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg text-zinc-400 outline-none">
+                                <option>Last 7 Cycles</option>
+                                <option>Last 30 Cycles</option>
+                            </select>
+                        </div>
+                        <div class="chart-container" id="performance-chart">
+                            <!-- Bars will be injected by JS -->
+                        </div>
+                        <div class="flex justify-between mt-4 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">
+                            <span>Cycle 1</span>
+                            <span>Cycle 2</span>
+                            <span>Cycle 3</span>
+                            <span>Cycle 4</span>
+                            <span>Cycle 5</span>
+                            <span>Cycle 6</span>
+                            <span>Cycle 7</span>
+                        </div>
+                    </div>
+
+                    <!-- System Health & Status -->
+                    <div class="imperial-card p-10 relative overflow-hidden">
+                        <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
+                            <div class="space-y-4">
+                                <h3 class="text-3xl font-black uppercase tracking-widest serif-heading">System Health</h3>
+                                <p class="text-zinc-400 max-w-md font-medium">All core modules are operational. Global logistics and payment gateways are synchronized.</p>
+                                <div class="flex items-center gap-6">
+                                    <span class="flex items-center gap-2 text-emerald-500 font-bold text-xs uppercase tracking-widest">
+                                        <span class="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span> ONLINE
+                                    </span>
+                                    <span class="text-zinc-500 text-[10px] font-bold uppercase">Uptime: 99.99%</span>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-shield-halved text-[10rem] text-[#c5a059]/5 absolute -right-10 -bottom-10 rotate-12"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Feed -->
+                <div class="lg:col-span-4 space-y-6">
+                    <div class="imperial-card p-8 h-full flex flex-col">
+                        <h3 class="text-xl font-black uppercase tracking-widest serif-heading mb-8">Imperial <span class="text-[#c5a059]">Feed</span></h3>
+                        <div id="activity-feed" class="flex-1 space-y-8">
+                            <!-- Activity items will be injected here -->
+                            <div class="flex justify-center py-20">
+                                <i class="fa-solid fa-circle-notch fa-spin text-[#c5a059] text-2xl"></i>
+                            </div>
+                        </div>
+                        <button onclick="switchTab('users')" class="mt-8 w-full py-4 rounded-xl border border-white/5 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white hover:bg-white/5 transition-all">View All Activity</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Tab -->
+        <!-- Inventory Tab -->
+        <div id="view-inventory" class="hidden space-y-12">
+            <header class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-4xl font-black tracking-widest uppercase serif-heading">Asset <span class="text-[#c5a059]">Management</span></h2>
+                    <p class="text-zinc-500 font-medium">Add or refine luxury assets in the imperial catalog.</p>
+                </div>
+                <button onclick="clearForm()" class="text-zinc-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest">
+                    <i class="fa-solid fa-rotate-right mr-2"></i> Reset Form
+                </button>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                <!-- Entry Form -->
+                <div class="lg:col-span-7 space-y-8">
+                    <div class="imperial-card p-10 space-y-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Asset Nomenclature</label>
+                                <input type="text" id="pName" placeholder="e.g., Celestial Chronograph" class="w-full imperial-input px-6 py-4">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Classification</label>
+                                <input type="text" id="pCategory" list="category-list" placeholder="e.g., Phones" class="w-full imperial-input px-6 py-4">
+                                <datalist id="category-list">
+                                    <option value="Aesthetics">
+                                    <option value="Corporate shoes">
+                                    <option value="Sneakers and crocs">
+                                    <option value="Slides and pams">
+                                    <option value="Scarves, Sleeves and pins">
+                                    <option value="Clothes">
+                                    <option value="Gadgets">
+                                    <option value="Appliances and household essentials">
+                                    <option value="Perfumes">
+                                    <option value="Lip gloss, lip stain, lip liner">
+                                </datalist>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Imperial Price (₦)</label>
+                                <input type="number" id="pPrice" oninput="calculateDiscount()" placeholder="0" class="w-full imperial-input px-6 py-4">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Old Value (₦)</label>
+                                <input type="number" id="pOld" oninput="calculateDiscount()" placeholder="0" class="w-full imperial-input px-6 py-4">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Discount</label>
+                                <div id="pDiscountLabel" class="w-full bg-[#c5a059]/10 text-[#c5a059] px-6 py-4 rounded-xl font-black text-center border border-[#c5a059]/20">0%</div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Asset Manifest (Description)</label>
+                            <textarea id="pDesc" rows="4" placeholder="Describe the lineage and features of this asset..." class="w-full imperial-input px-6 py-4 resize-none"></textarea>
+                        </div>
+
+                        <div class="space-y-4">
+                            <label class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Visual Documentation (URLs)</label>
+                            <textarea id="pImage" rows="3" placeholder="Asset URLs will appear here after upload..." class="w-full imperial-input px-6 py-4 resize-none text-[10px] bg-black/20" readonly></textarea>
+                            
+                            <div class="flex items-center gap-4">
+                                <label class="flex-1 drop-zone p-8 flex flex-col items-center justify-center gap-3 hover:border-[#c5a059] transition-all group">
+                                    <input type="file" multiple accept="image/*" class="hidden" onchange="handleUploadFile(event)">
+                                    <i class="fa-solid fa-cloud-arrow-up text-3xl text-zinc-700 group-hover:text-[#c5a059] transition-all"></i>
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-white transition-all">Transmit New Visuals</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Vault Stock</label>
+                                <input type="number" id="pStock" placeholder="0" class="w-full imperial-input px-6 py-4">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="saveProduct()" id="addBtn" class="w-full imperial-btn-primary py-5 btn-shimmer">Initialize Asset</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview & Enhancement -->
+                <div class="lg:col-span-5 space-y-8">
+                    <div id="pPreviewWrap" class="imperial-card p-8 space-y-6 hidden sticky top-8">
+                        <h3 class="text-xl font-black uppercase tracking-widest serif-heading">Asset <span class="text-[#c5a059]">Preview</span></h3>
+                        <div class="aspect-square rounded-[32px] overflow-hidden bg-black/40 border border-white/5 group relative">
+                            <img id="pPreview" src="" alt="Product preview" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-8 flex flex-col justify-end">
+                                <p id="preview-name" class="text-white font-black uppercase tracking-widest text-lg mb-2"></p>
+                                <p id="preview-price" class="text-[#c5a059] font-black text-xl"></p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4 pt-4 border-t border-white/5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Imperial Enhancement</span>
+                                <span class="text-[8px] font-black px-2 py-1 bg-indigo-500/10 text-indigo-500 rounded uppercase">AI Assisted</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <button onclick="enhanceImage()" class="py-3 rounded-xl border border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all">Enhance Visual</button>
+                                <button onclick="useEnhanced()" class="py-3 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600/30 transition-all">Store Enhanced</button>
+                            </div>
+                            <canvas id="pCanvas" class="hidden"></canvas>
+                        </div>
+                    </div>
+
+                    <div id="no-preview" class="imperial-card p-20 flex flex-col items-center justify-center text-center gap-6 opacity-40 sticky top-8">
+                        <i class="fa-solid fa-image text-6xl text-zinc-700"></i>
+                        <p class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Waiting for asset data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                <!-- Right: Asset Directory -->
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="imperial-card p-8">
+                        <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
+                            <h3 class="text-xl font-black uppercase tracking-widest serif-heading">Asset <span class="text-[#c5a059]">Directory</span></h3>
+                            <div class="relative w-full md:w-64">
+                                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                                <input type="text" oninput="filterInventory(this.value)" placeholder="Search catalog..." class="w-full imperial-input pl-11 pr-6 py-3 text-xs font-bold">
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500 border-b border-white/5">
+                                    <tr>
+                                        <th class="pb-6">Asset</th>
+                                        <th class="pb-6">Price</th>
+                                        <th class="pb-6">Stock</th>
+                                        <th class="pb-6 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventory-list" class="divide-y divide-white/5">
+                                    <!-- Inventory items will be injected here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- All Products Tab -->
+        <!-- Asset Registry Tab -->
+        <div id="view-allproducts" class="hidden space-y-12">
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <h2 class="text-4xl font-black tracking-widest uppercase serif-heading">Asset <span class="text-[#c5a059]">Directory</span></h2>
+                    <p class="text-zinc-500 font-medium">The complete ledger of all imperial assets and luxury goods.</p>
+                </div>
+                <div class="flex items-center gap-4 w-full md:w-auto">
+                    <div class="relative flex-1 md:w-80 group">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-[#c5a059] transition-colors"></i>
+                        <input type="text" id="registry-search" oninput="renderAllProducts(this.value)" placeholder="Search the archives..." class="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-6 py-4 text-xs font-bold text-white outline-none focus:border-[#c5a059] transition-all">
+                    </div>
+                    <button onclick="switchTab('inventory'); clearForm();" class="w-14 h-14 rounded-2xl bg-[#c5a059] text-[#0f1113] flex items-center justify-center shadow-xl shadow-[#c5a059]/20 hover:scale-105 transition-all">
+                        <i class="fa-solid fa-plus text-lg"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Filter Bar -->
+            <div class="flex flex-wrap items-center gap-6 py-6 border-y border-white/5">
+                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">Quick Filters:</span>
+                <button onclick="filterRegistry('all')" class="registry-filter-btn active text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border border-white/5 hover:border-[#c5a059] transition-all">All Assets</button>
+                <button onclick="filterRegistry('low')" class="registry-filter-btn text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border border-white/5 hover:border-amber-500 transition-all">Low Stock</button>
+                <button onclick="filterRegistry('Shoes')" class="registry-filter-btn text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border border-white/5 hover:border-[#c5a059] transition-all">Shoes</button>
+                <button onclick="filterRegistry('Gadgets')" class="registry-filter-btn text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border border-white/5 hover:border-[#c5a059] transition-all">Gadgets</button>
+            </div>
+
+            <div class="imperial-card overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-black/20 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                            <tr>
+                                <th class="p-8">Asset Visual & Name</th>
+                                <th class="p-8">Classification</th>
+                                <th class="p-8">Imperial Price</th>
+                                <th class="p-8">Vault Stock</th>
+                                <th class="p-8 text-right">Command</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registry-list" class="divide-y divide-white/5">
+                            <!-- Rows will be injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Footer Stats -->
+            <div class="flex justify-between items-center text-zinc-600">
+                <p class="text-[10px] font-black uppercase tracking-widest">Showing <span id="registry-count" class="text-white">0</span> active assets</p>
+                <div class="flex gap-4">
+                    <button class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center hover:text-white transition-all"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                    <button class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center hover:text-white transition-all"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Articles Tab -->
+        <!-- Articles Tab -->
+        <div id="view-articles" class="hidden space-y-12">
+            <header class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-4xl font-black tracking-widest uppercase serif-heading">Empire <span class="text-[#c5a059]">Stories</span></h2>
+                    <p class="text-zinc-500 font-medium">Compose and curate the chronicles of the Nova Empire.</p>
+                </div>
+                <button onclick="openArticleModal()" class="imperial-btn-primary px-8 py-3 text-xs btn-shimmer">New Article</button>
+            </header>
+
+            <div id="article-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="view-users" class="hidden space-y-8">
+            <h2 class="text-4xl font-black tracking-widest uppercase serif-heading">Global <span class="text-emerald-500">Activity</span></h2>
+            <div class="imperial-card overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                        <tr>
+                            <th class="p-6">Curator Identity</th>
+                            <th class="p-6">Access Time</th>
+                            <th class="p-6">Status</th>
+                            <th class="p-6 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-list" class="divide-y divide-white/5">
+                        <tr class="hover:bg-white/5 transition-all">
+                            <td class="p-6">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">A</div>
+                                    <div>
+                                        <div class="font-bold text-sm text-white">admin@novaempire.com</div>
+                                        <div class="text-[10px] text-zinc-500 uppercase">Master Admin</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-6 text-sm font-medium text-zinc-400">Just Now</td>
+                            <td class="p-6">
+                                <span class="text-[8px] font-black px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-md uppercase">Active Now</span>
+                            </td>
+                            <td class="p-6 text-right"><button class="text-zinc-600 hover:text-white"><i class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Payments Tab -->
+        <div id="view-payments" class="hidden space-y-8">
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                <div>
+                    <h2 class="text-4xl font-black tracking-widest uppercase serif-heading">Transfer <span class="text-[#c5a059]">Confirmations</span></h2>
+                    <p class="text-zinc-500 font-medium">Review customer transfers, items purchased, and totals.</p>
+                </div>
+                <button onclick="clearPayments()" class="px-6 py-3 rounded-2xl bg-red-500/10 text-red-500 font-bold text-xs uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Clear History</button>
+            </header>
+
+            <div class="imperial-card overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                            <tr>
+                                <th class="p-6">Buyer</th>
+                                <th class="p-6">Transfer</th>
+                                <th class="p-6">Items</th>
+                                <th class="p-6">Drop-off</th>
+                                <th class="p-6">Phone</th>
+                                <th class="p-6">Total</th>
+                                <th class="p-6">Time</th>
+                                <th class="p-6">Status</th>
+                                <th class="p-6 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payment-list" class="divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="view-settings" class="hidden space-y-12">
+            <header>
+                <h2 class="text-4xl font-black tracking-widest uppercase serif-heading">Site <span class="text-[#c5a059]">Configuration</span></h2>
+                <p class="text-zinc-500 font-medium">Control the visual elements of the Nova Empire storefront.</p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <!-- Hero Slider Settings -->
+                <div class="space-y-6">
+                    <h3 class="text-2xl font-black uppercase tracking-widest serif-heading">Hero <span class="text-[#c5a059]">Slider</span></h3>
+                    <div id="hero-settings-list" class="space-y-4">
+                        <!-- Hero slides will be injected here -->
+                    </div>
+                    <button onclick="addHeroSlide()" class="w-full py-4 rounded-2xl border-2 border-dashed border-white/10 text-zinc-500 font-bold text-xs uppercase tracking-widest hover:border-[#c5a059]/50 hover:text-white transition-all">Add New Slide</button>
+                </div>
+
+                <!-- Quick Access Settings -->
+                <div class="space-y-6">
+                    <h3 class="text-2xl font-black uppercase tracking-widest serif-heading">Quick <span class="text-[#c5a059]">Access</span></h3>
+                    <div id="quick-settings-list" class="space-y-4">
+                        <!-- Quick access items will be injected here -->
+                    </div>
+                    <button onclick="addQuickItem()" class="w-full py-4 rounded-2xl border-2 border-dashed border-white/10 text-zinc-500 font-bold text-xs uppercase tracking-widest hover:border-[#c5a059]/50 hover:text-white transition-all">Add Quick Item</button>
+                </div>
+
+                <!-- Department Navigation Settings -->
+                <div class="space-y-6 lg:col-span-2">
+                    <h3 class="text-2xl font-black uppercase tracking-widest serif-heading">Department <span class="text-[#c5a059]">Navigation</span></h3>
+                    <div id="dept-settings-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Department items will be injected here -->
+                    </div>
+                    <button onclick="addDeptItem()" class="w-full py-4 rounded-2xl border-2 border-dashed border-white/10 text-zinc-500 font-bold text-xs uppercase tracking-widest hover:border-[#c5a059]/50 hover:text-white transition-all">Add Department</button>
+                </div>
+            </div>
+
+            <div class="pt-12 border-t border-white/5 flex justify-end">
+                <button onclick="saveSettings()" class="imperial-btn-primary px-12 py-5">Synchronize Storefront</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Article Modal -->
+    <!-- Article Composer Modal -->
+    <div id="article-modal" class="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[100] hidden overflow-y-auto">
+        <div class="min-h-screen flex items-center justify-center p-8">
+            <div class="w-full max-w-6xl bg-[#16181b] rounded-[40px] border border-white/5 overflow-hidden shadow-2xl relative">
+                <button onclick="closeArticleModal()" class="absolute top-8 right-8 w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-zinc-500 hover:text-white transition-all z-20"><i class="fa-solid fa-xmark"></i></button>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2">
+                    <!-- Preview Side -->
+                    <div class="p-12 bg-black/40 border-r border-white/5 space-y-8">
+                        <h3 class="text-3xl font-black uppercase tracking-widest serif-heading">Chronicling <span class="text-[#c5a059]">History</span></h3>
+                        <div class="aspect-[4/5] rounded-[32px] overflow-hidden bg-white/5 relative group shadow-2xl">
+                            <img id="art-preview-img" src="" alt="Article preview" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 opacity-60">
+                            <div class="absolute inset-0 p-12 flex flex-col justify-end gap-6 bg-gradient-to-t from-black via-black/20 to-transparent">
+                                <span id="art-preview-cat" class="text-[10px] font-black uppercase tracking-[0.3em] text-[#c5a059]">Classification</span>
+                                <h4 id="art-preview-title" class="text-4xl font-black text-white leading-tight">Your Story Title Here</h4>
+                                <div class="flex items-center gap-6">
+                                    <span id="art-preview-read" class="text-[10px] font-black uppercase tracking-widest text-zinc-500">5 MIN READ</span>
+                                    <span class="w-1 h-1 bg-[#c5a059] rounded-full"></span>
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-zinc-500">IMPERIAL JOURNAL</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Side -->
+                    <div class="p-12 space-y-8">
+                        <div class="space-y-6">
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Chronicle Title</label>
+                                <input type="text" id="art-title" oninput="updateArticlePreview()" placeholder="The Rise of the Celestial Guard" class="w-full bg-transparent border-b border-white/10 py-4 text-2xl font-black text-white outline-none focus:border-[#c5a059] transition-all">
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-8">
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Classification</label>
+                                    <input type="text" id="art-cat" list="journal-cats" oninput="updateArticlePreview()" placeholder="EMPIRE NEWS" class="w-full bg-transparent border-b border-white/10 py-4 text-sm font-bold text-white outline-none focus:border-[#c5a059] transition-all">
+                                    <datalist id="journal-cats">
+                                        <option value="Legacy">
+                                        <option value="Art & Style">
+                                        <option value="Grand Tour">
+                                        <option value="Philosophy">
+                                    </datalist>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Reading Duration</label>
+                                    <input type="text" id="art-read" oninput="updateArticlePreview()" placeholder="5 MIN READ" class="w-full bg-transparent border-b border-white/10 py-4 text-sm font-bold text-white outline-none focus:border-[#c5a059] transition-all">
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Visual Archive (URL)</label>
+                                <div class="flex gap-4">
+                                    <input type="text" id="art-img" oninput="updateArticlePreview()" placeholder="https://..." class="flex-1 bg-transparent border-b border-white/10 py-4 text-sm font-bold text-white outline-none focus:border-[#c5a059] transition-all">
+                                    <label class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-all">
+                                        <i class="fa-solid fa-cloud-arrow-up text-zinc-500"></i>
+                                        <input type="file" id="artUpload" accept="image/*" class="hidden" onchange="handleArticleUpload(event)">
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-black uppercase tracking-widest text-zinc-500">The Chronicle (Content)</label>
+                                <textarea id="art-desc" rows="10" placeholder="Type your imperial story here..." class="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-6 text-sm font-medium text-zinc-400 leading-relaxed outline-none focus:border-[#c5a059] transition-all resize-none"></textarea>
+                            </div>
+                        </div>
+
+                        <button onclick="saveArticle()" class="w-full imperial-btn-primary py-5 btn-shimmer">Publish to Archives</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <!-- Notification Toast -->
+    <div id="toast"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc, updateDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-storage.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-analytics.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC7C6KL1U74MeMHlNu3cJ-TzOtfrZqpfUU",
+            authDomain: "nova-empire-f7992.firebaseapp.com",
+            projectId: "nova-empire-f7992",
+            storageBucket: "nova-empire-f7992.firebasestorage.app",
+            messagingSenderId: "196201929613",
+            appId: "1:196201929613:web:11bd4e885aa9a6a2c87bc4",
+            measurementId: "G-76YH7NW47E"
+        }; 
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        // Expose Firebase globally for other scripts
+        window.novaFB = { 
+            auth, db, storage,
+            login: signInWithEmailAndPassword, 
+            signup: createUserWithEmailAndPassword,
+            onAuth: onAuthStateChanged, 
+            logout: signOut, 
+            resetPassword: sendPasswordResetEmail,
+            doc, setDoc, getDoc, collection, getDocs, deleteDoc, updateDoc, serverTimestamp, query, orderBy, limit, firestoreLimit: limit, onSnapshot,
+            ref, uploadBytes, getDownloadURL
+        };
+
+        // --- Admin Gate: only unlock the panel for a signed-in user who has
+        // a matching doc in the /admins collection. Everyone else is signed
+        // out and shown an error. This is the client-side UX layer; the real
+        // enforcement is in firestore.rules / storage.rules, which independently
+        // reject any request from a non-admin regardless of what this page does. ---
+        function showGateError(msg) {
+            const el = document.getElementById('admin-gate-error');
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+        function hideGateError() {
+            const el = document.getElementById('admin-gate-error');
+            if (el) el.classList.add('hidden');
+        }
+
+        window.adminGateLogin = async function() {
+            hideGateError();
+            const email = document.getElementById('admin-gate-email').value.trim();
+            const pass = document.getElementById('admin-gate-pass').value;
+            if (!email || !pass) return showGateError('Email and password are required.');
+            const btn = document.getElementById('admin-gate-submit');
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                // onAuthStateChanged below handles the admin-doc check + unlock
+            } catch (err) {
+                console.error(err);
+                showGateError(err.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'Sign-in failed: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Sign In';
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            const gate = document.getElementById('admin-login-gate');
+            const btn = document.getElementById('admin-gate-submit');
+            if (!user) {
+                gate.style.display = 'flex';
+                if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+                return;
+            }
+            try {
+                const adminDoc = await getDoc(doc(db, "admins", user.uid));
+                if (adminDoc.exists()) {
+                    gate.style.display = 'none';
+                    window.initAdmin();
+                } else {
+                    showGateError('This account does not have admin access.');
+                    await signOut(auth);
+                }
+            } catch (err) {
+                console.error(err);
+                showGateError('Could not verify admin access. Try again.');
+                await signOut(auth);
+            }
+        });
+    </script>
+
+    <script>
+        let inventory = [];
+        let articles = [];
+        let payments = [];
+        let users = [];
+        let currentTab = 'dashboard';
+        let _uploadImgEl = null;
+
+        // Escapes user-controllable text before it's inserted via innerHTML
+        // (e.g. customer names/emails in the Users tab).
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-triangle-exclamation'}"></i> ${msg}`;
+            toast.className = ''; // Reset classes
+            if (type === 'error') toast.classList.add('error');
+            
+            toast.classList.add('visible');
+            setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 3500);
+        }
+
+        function initAdmin() {
+            init();
+        }
+
+        // --- DATA SYNC WITH FIREBASE ---
+        let activity = [];
+
+        async function syncWithFirebase() {
+            if (!window.novaFB) return;
+            const { db, collection, onSnapshot, query, orderBy, doc, getDoc, firestoreLimit } = window.novaFB;
+
+            // Step 1: Load from localStorage for instant dashboard display
+            (function loadFromCache() {
+                try {
+                    const cachedProducts = localStorage.getItem('nova_admin_products_cache');
+                    if (cachedProducts) {
+                        inventory = JSON.parse(cachedProducts);
+                        updateStats();
+                        if (currentTab === 'inventory') renderInventory();
+                        if (currentTab === 'allproducts') renderAllProducts();
+                    }
+                    const cachedArticles = localStorage.getItem('nova_admin_articles_cache');
+                    if (cachedArticles) {
+                        articles = JSON.parse(cachedArticles);
+                        if (currentTab === 'articles') renderArticles();
+                    }
+                } catch (e) { console.warn("Cache recovery failed"); }
+            })();
+
+            try {
+                const settingsDoc = await getDoc(doc(db, "settings", "storefront"));
+                if (settingsDoc.exists()) {
+                    siteSettings = settingsDoc.data();
+                    renderSettings();
+                }
+            } catch (err) {
+                console.warn("Permission issue or missing settings:", err.message);
+            }
+
+            try {
+                onSnapshot(collection(db, "products"), (snapshot) => {
+                    inventory = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+                    localStorage.setItem('nova_admin_products_cache', JSON.stringify(inventory));
+                    if (currentTab === 'inventory') renderInventory();
+                    if (currentTab === 'allproducts') renderAllProducts();
+                    updateStats();
+                }, (err) => {
+                    console.error("Products sync error:", err);
+                    if (err.code === 'permission-denied') showToast("Access Denied: Check Firestore Rules");
+                });
+
+                onSnapshot(collection(db, "articles"), (snapshot) => {
+                    articles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    localStorage.setItem('nova_admin_articles_cache', JSON.stringify(articles));
+                    if (currentTab === 'articles') renderArticles();
+                    updateStats();
+                }, (err) => {
+                    console.error("Articles sync error:", err);
+                });
+
+                onSnapshot(query(collection(db, "payments"), orderBy("createdAt", "desc")), (snapshot) => {
+                    payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    if (currentTab === 'payments') renderPayments();
+                }, (err) => {
+                    console.error("Payments sync error:", err);
+                });
+
+                onSnapshot(query(collection(db, "users"), orderBy("joinedAt", "desc")), (snapshot) => {
+                    users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    updateStats();
+                }, (err) => {
+                    console.error("Users sync error:", err);
+                });
+
+                onSnapshot(query(collection(db, "activity"), orderBy("timestamp", "desc"), firestoreLimit(50)), (snapshot) => {
+                    activity = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    if (currentTab === 'users') renderActivity();
+                }, (err) => {
+                    console.error("Activity sync error:", err);
+                });
+            } catch (err) {
+                console.error("Firestore sync setup failed:", err);
+                alert("Critical: Master archives could not be reached. Verify Firebase permissions.");
+            }
+        }
+
+        function renderActivity() {
+            const feed = document.getElementById('activity-feed');
+            if (!feed) return;
+
+            if (activity.length === 0) {
+                feed.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-10 text-zinc-600">
+                        <i class="fa-solid fa-ghost text-4xl mb-4 opacity-20"></i>
+                        <p class="text-[10px] font-black uppercase tracking-widest">No recent echoes</p>
+                    </div>
+                `;
+                return;
+            }
+
+            feed.innerHTML = activity.slice(0, 5).map(act => {
+                const time = act.timestamp?.toDate ? act.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now';
+                
+                return `
+                    <div class="activity-item">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-black text-white uppercase tracking-tight">${act.action}</p>
+                                <p class="text-[10px] text-zinc-500 font-medium">${act.userName || 'Anonymous Curator'}</p>
+                            </div>
+                            <span class="text-[9px] font-bold text-zinc-600">${time}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.querySelector('aside');
+            sidebar.classList.toggle('open');
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('main > div').forEach(div => {
+                div.classList.add('hidden');
+                div.classList.remove('animate-fadeIn');
+            });
+            
+            const viewEl = document.getElementById(`view-${tab}`);
+            if (viewEl) {
+                viewEl.classList.remove('hidden');
+                viewEl.classList.add('animate-fadeIn');
+            }
+            
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active-tab'));
+            const tabEl = document.getElementById(`tab-${tab}`);
+            if (tabEl) tabEl.classList.add('active-tab');
+            
+            currentTab = tab;
+            
+            // Close mobile sidebar if open
+            if (window.innerWidth < 768) {
+                const sidebar = document.querySelector('aside');
+                sidebar.classList.remove('open');
+            }
+            
+            if (tab === 'inventory') renderInventory();
+            if (tab === 'allproducts') renderAllProducts();
+            if (tab === 'articles') renderArticles();
+            if (tab === 'dashboard') { updateStats(); renderActivity(); }
+            if (tab === 'payments') renderPayments();
+            if (tab === 'settings') renderSettings();
+            if (tab === 'users') renderUsers();
+        }
+
+        function updateStats() {
+            const prodEl = document.getElementById('stat-products');
+            const userEl = document.getElementById('stat-users');
+            const artEl = document.getElementById('stat-articles');
+            const valEl = document.getElementById('stat-valuation');
+
+            if(prodEl) prodEl.textContent = inventory.length;
+            if(artEl) artEl.textContent = articles.length;
+            if(userEl) userEl.textContent = users.length || 1;
+            
+            const valuation = inventory.reduce((s, i) => s + (parseInt(i.price || 0) * (parseInt(i.stock || 0))), 0);
+            if(valEl) valEl.textContent = `₦${(valuation/1000000).toFixed(1)}M`;
+
+            renderPerformanceChart();
+        }
+
+        function renderPerformanceChart() {
+            const container = document.getElementById('performance-chart');
+            if (!container) return;
+
+            // Simulated growth data based on actual counts + some random variation for aesthetics
+            const base = Math.max(10, inventory.length);
+            const data = [
+                Math.floor(base * 0.7),
+                Math.floor(base * 0.8),
+                Math.floor(base * 0.75),
+                Math.floor(base * 0.9),
+                Math.floor(base * 0.85),
+                Math.floor(base * 0.95),
+                base
+            ];
+
+            const max = Math.max(...data);
+            container.innerHTML = data.map(val => {
+                const height = (val / max) * 100;
+                return `<div class="chart-bar" style="height: ${height}%" data-value="${val}"></div>`;
+            }).join('');
+        }
+
+        function renderUsers() {
+            const tbody = document.getElementById('user-list');
+            if (!tbody) return;
+            if (users.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-10 text-center text-slate-500 font-bold">No registered curators yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = users.map(u => {
+                const initials = escapeHtml(((u.firstName || 'U')[0] + (u.lastName || 'N')[0]).toUpperCase());
+                const joined = u.joinedAt?.toDate ? u.joinedAt.toDate().toLocaleString() : 'Recent';
+                return `
+                    <tr class="hover:bg-white/5 transition-all">
+                        <td class="p-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">${initials}</div>
+                                <div>
+                                    <div class="font-bold text-sm text-white">${escapeHtml(u.firstName)} ${escapeHtml(u.lastName)}</div>
+                                    <div class="text-[10px] text-slate-500 uppercase">${escapeHtml(u.email)}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-6 text-sm font-medium text-slate-400">${joined}</td>
+                        <td class="p-6">
+                            <span class="text-[8px] font-black px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-md uppercase">Curator</span>
+                        </td>
+                        <td class="p-6 text-right"><button class="text-slate-600 hover:text-white"><i class="fa-solid fa-ellipsis-vertical"></i></button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        let siteSettings = {
+            hero: [
+                { title: "The Winter Collection.", img: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=2070", btn: "Shop Now", cat: "all" },
+                { title: "Imperial Elegance.", img: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&q=80&w=2070", btn: "Discover More", cat: "shoes" },
+                { title: "Timeless Horology.", img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=2070", btn: "Explore Vault", cat: "luxury-horology" }
+            ],
+            quick: [
+                { label: "Awoof Deals", img: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=300", cat: "awoof" },
+                { label: "Elite Dispatch", img: "https://images.unsplash.com/photo-1586769852044-692d6e3703f0?w=300", cat: "express" },
+                { label: "Luxury Vault", img: "https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=300", cat: "luxury" }
+            ],
+            departments: [
+                { label: "Home Appliances", cat: "Appliances" },
+                { label: "Shoes & Footwear", cat: "Shoes" },
+                { label: "Supermarket", cat: "Supermarket" }
+            ]
+        };
+
+        function renderSettings() {
+            const heroList = document.getElementById('hero-settings-list');
+            const quickList = document.getElementById('quick-settings-list');
+            const deptList = document.getElementById('dept-settings-list');
+            
+            heroList.innerHTML = siteSettings.hero.map((s, i) => `
+                <div class="glass p-6 rounded-2xl space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-black uppercase text-indigo-500 tracking-widest">Slide #${i+1}</span>
+                        <button onclick="removeHeroSlide(${i})" class="text-red-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                    <input type="text" value="${s.title}" placeholder="Headline" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white">
+                    <input type="text" value="${s.img}" placeholder="Image URL" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white">
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" value="${s.btn}" placeholder="Button Text" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white">
+                        <input type="text" value="${s.cat}" placeholder="Category Link" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white">
+                    </div>
+                </div>
+            `).join('');
+
+            quickList.innerHTML = siteSettings.quick.map((q, i) => `
+                <div class="glass p-6 rounded-2xl space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-black uppercase text-emerald-500 tracking-widest">Item #${i+1}</span>
+                        <button onclick="removeQuickItem(${i})" class="text-red-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                    <input type="text" value="${q.label}" placeholder="Label" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white">
+                    <input type="text" value="${q.img}" placeholder="Image URL" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white">
+                    <input type="text" value="${q.cat}" placeholder="Category Link" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white">
+                </div>
+            `).join('');
+
+            deptList.innerHTML = siteSettings.departments.map((d, i) => `
+                <div class="glass p-6 rounded-2xl space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-black uppercase text-indigo-500 tracking-widest">Dept #${i+1}</span>
+                        <button onclick="removeDeptItem(${i})" class="text-red-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" value="${d.label}" placeholder="Display Label" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white">
+                        <input type="text" value="${d.cat}" placeholder="Category Slug" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white">
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addHeroSlide() { siteSettings.hero.push({ title: "New Collection", img: "", btn: "Shop Now", cat: "all" }); renderSettings(); }
+        function removeHeroSlide(i) { siteSettings.hero.splice(i, 1); renderSettings(); }
+        function addQuickItem() { siteSettings.quick.push({ label: "New Item", img: "", cat: "all" }); renderSettings(); }
+        function removeQuickItem(i) { siteSettings.quick.splice(i, 1); renderSettings(); }
+        function addDeptItem() { siteSettings.departments.push({ label: "New Dept", cat: "All" }); renderSettings(); }
+        function removeDeptItem(i) { siteSettings.departments.splice(i, 1); renderSettings(); }
+
+        async function saveSettings() {
+            const heroSlides = Array.from(document.querySelectorAll('#hero-settings-list > div')).map(div => {
+                const inputs = div.querySelectorAll('input');
+                return { 
+                    title: inputs[0].value, 
+                    img: inputs[1].value, 
+                    btn: inputs[2].value, 
+                    cat: inputs[3].value 
+                };
+            });
+            const quickItems = Array.from(document.querySelectorAll('#quick-settings-list > div')).map(div => {
+                const inputs = div.querySelectorAll('input');
+                return { 
+                    label: inputs[0].value, 
+                    img: inputs[1].value, 
+                    cat: inputs[2].value 
+                };
+            });
+            const deptItems = Array.from(document.querySelectorAll('#dept-settings-list > div')).map(div => {
+                const inputs = div.querySelectorAll('input');
+                return { 
+                    label: inputs[0].value, 
+                    cat: inputs[1].value 
+                };
+            });
+            siteSettings = { hero: heroSlides, quick: quickItems, departments: deptItems };
+            
+            try {
+                const { db, doc, setDoc, serverTimestamp } = window.novaFB;
+                await setDoc(doc(db, "settings", "storefront"), { 
+                    ...siteSettings, 
+                    updatedAt: serverTimestamp() 
+                });
+                showToast('Storefront Synchronized to Cloud');
+            } catch (err) {
+                console.error("Sync failed:", err);
+                alert('Cloud sync failed. Verify permissions in Firebase Console.');
+            }
+        }
+
+        function renderPayments() {
+            const tbody = document.getElementById('payment-list');
+            if (!tbody) return;
+            if (!payments.length) { tbody.innerHTML = `<tr><td colspan="9" class="p-10 text-center text-slate-500 font-bold">No transfer confirmations yet.</td></tr>`; return; }
+
+            tbody.innerHTML = payments.map(p => {
+                const buyer = p.userName || p.email || 'Unknown';
+                const bank = p.bankName || p.transfer?.bankName || 'Bank';
+                const holder = p.holderName || p.transfer?.holderName || p.transfer?.accountHolderName || 'Name';
+                const transfer = `${bank} • ${holder}`;
+                const items = (p.items || []).map(i => `${i.name} ×${i.qty}`).join(', ');
+                const dropOff = (p.dropOffLocation || p.dropoffLocation || p.dropOff || '').trim();
+                const phone = (p.phoneNumber || p.phone || p.phoneNo || '').toString().trim();
+                const total = `₦${parseInt(p.total || 0).toLocaleString()}`;
+                const time = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString() : 'Recent';
+                const status = p.status || 'Pending';
+                const statusStyle = status === 'Confirmed' ? 'bg-emerald-500/10 text-emerald-400' : status === 'Rejected' ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400';
+
+                return `
+                    <tr class="hover:bg-white/5 transition-all">
+                        <td class="p-6"><div class="font-bold text-sm text-white">${buyer}</div></td>
+                        <td class="p-6 text-xs font-bold text-slate-400">${transfer}</td>
+                        <td class="p-6 text-xs text-slate-400 max-w-[320px]"><div class="line-clamp-2">${items}</div></td>
+                        <td class="p-6 text-xs text-slate-400 max-w-[260px]"><div class="line-clamp-2">${dropOff || '-'}</div></td>
+                        <td class="p-6 text-xs font-bold text-slate-400">${phone || '-'}</td>
+                        <td class="p-6 font-black text-sm text-indigo-400">${total}</td>
+                        <td class="p-6 text-xs font-bold text-slate-500">${time}</td>
+                        <td class="p-6"><span class="text-[8px] font-black px-2 py-1 rounded-md uppercase ${statusStyle}">${status}</span></td>
+                        <td class="p-6 text-right">
+                            <div class="flex justify-end gap-2">
+                                <button onclick="setPaymentStatus('${p.id}', 'Confirmed')" class="px-3 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 font-black text-[9px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all">Confirm</button>
+                                <button onclick="setPaymentStatus('${p.id}', 'Rejected')" class="px-3 py-2 rounded-xl bg-red-500/10 text-red-400 font-black text-[9px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Reject</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function setPaymentStatus(id, status) {
+            try {
+                const { db, doc, updateDoc, getDoc, serverTimestamp } = window.novaFB;
+                if (status === 'Confirmed') {
+                    const payDoc = await getDoc(doc(db, "payments", id));
+                    if (payDoc.exists()) {
+                        const items = payDoc.data().items || [];
+                        for (const item of items) {
+                            if (item.id) {
+                                const prodRef = doc(db, "products", item.id.toString());
+                                const prodDoc = await getDoc(prodRef);
+                                if (prodDoc.exists()) {
+                                    const currentStock = prodDoc.data().stock || 0;
+                                    await updateDoc(prodRef, {
+                                        stock: Math.max(0, currentStock - (item.qty || 1))
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+                await updateDoc(doc(db, "payments", id), { status, updatedAt: serverTimestamp() });
+                showToast(`Payment ${status}`);
+            } catch (err) { 
+                console.error("Update failed:", err);
+                alert('Update failed: ' + err.message); 
+            }
+        }
+
+        async function clearPayments() {
+            if (!confirm('Clear all transfer confirmations history?')) return;
+            try {
+                const { db, collection, getDocs, deleteDoc, doc } = window.novaFB;
+                const snapshot = await getDocs(collection(db, "payments"));
+                const batch = snapshot.docs.map(d => deleteDoc(doc(db, "payments", d.id)));
+                await Promise.all(batch);
+                showToast('History purged');
+            } catch (err) { alert('Clear failed: ' + err.message); }
+        }
+
+        function renderInventory(query = '') {
+            const grid = document.getElementById('inventory-list');
+            if (!grid) return;
+            
+            const filtered = inventory.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+            
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="p-20 text-center text-zinc-600 font-black uppercase tracking-widest col-span-full">Catalog empty</div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(item => `
+                <div class="inventory-card p-6 rounded-3xl space-y-4">
+                    <div class="aspect-video rounded-2xl overflow-hidden bg-black/20">
+                        <img src="${item.image}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" class="w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-black text-white uppercase tracking-tight text-sm truncate pr-4">${escapeHtml(item.name)}</h4>
+                            <span class="text-[9px] font-black px-2 py-1 bg-[#c5a059]/10 text-[#c5a059] rounded uppercase">${escapeHtml(item.category)}</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-4">
+                            <p class="text-xs font-black text-white">₦${parseInt(item.price).toLocaleString()}</p>
+                            <div class="flex gap-2">
+                                <button onclick="editProduct('${item._id}')" class="w-8 h-8 rounded-lg border border-white/5 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-white/5 transition-all"><i class="fa-solid fa-pen-to-square text-[10px]"></i></button>
+                                <button onclick="deleteProduct('${item._id}')" class="w-8 h-8 rounded-lg border border-white/5 flex items-center justify-center text-zinc-500 hover:text-red-500 hover:bg-red-500/5 transition-all"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterInventory(q) { renderInventory(q); }
+
+        let registryFilter = 'all';
+
+        function renderAllProducts(query = '') {
+            const list = document.getElementById('registry-list');
+            const countEl = document.getElementById('registry-count');
+            if (!list) return;
+
+            let filtered = inventory;
+
+            // Apply search query
+            if (query) {
+                const q = query.toLowerCase();
+                filtered = filtered.filter(p => 
+                    p.name.toLowerCase().includes(q) || 
+                    (p.category && p.category.toLowerCase().includes(q))
+                );
+            }
+
+            // Apply active filter
+            if (registryFilter === 'low') {
+                filtered = filtered.filter(p => p.stock > 0 && p.stock <= 10);
+            } else if (registryFilter !== 'all') {
+                filtered = filtered.filter(p => p.category === registryFilter);
+            }
+
+            if (countEl) countEl.innerText = filtered.length;
+
+            if (!filtered.length) {
+                list.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-zinc-600 font-black uppercase tracking-widest">No assets found in the directory</td></tr>`;
+                return;
+            }
+
+            list.innerHTML = filtered.map(item => {
+                const stockStatus = item.stock <= 0 ? 'Out of Stock' : item.stock <= 10 ? 'Low Stock' : 'In Stock';
+                const stockColor = item.stock <= 0 ? 'text-red-500' : item.stock <= 10 ? 'text-amber-500' : 'text-emerald-500';
+                const stockBg = item.stock <= 0 ? 'bg-red-500/10' : item.stock <= 10 ? 'bg-amber-500/10' : 'bg-emerald-500/10';
+
+                return `
+                <tr class="registry-row group">
+                    <td class="p-8">
+                        <div class="flex items-center gap-6">
+                            <div class="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 border border-white/5 shadow-xl">
+                                <img src="${item.image}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" class="w-full h-full object-cover">
+                            </div>
+                            <div>
+                                <h4 class="font-black text-white uppercase tracking-tight text-sm">${escapeHtml(item.name)}</h4>
+                                <p class="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-1">ID: ${item._id.substring(0, 8)}...</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-8">
+                        <span class="text-[9px] font-black px-3 py-1.5 bg-white/5 text-zinc-400 rounded-lg uppercase tracking-widest border border-white/5">${item.category || 'Legacy'}</span>
+                    </td>
+                    <td class="p-8">
+                        <div class="space-y-1">
+                            <p class="text-sm font-black text-white">₦${parseInt(item.price).toLocaleString()}</p>
+                            ${item.oldPrice && item.oldPrice > item.price ? `<p class="text-[10px] text-zinc-600 line-through font-bold">₦${parseInt(item.oldPrice).toLocaleString()}</p>` : ''}
+                        </div>
+                    </td>
+                    <td class="p-8">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2 h-2 rounded-full ${stockStatus === 'Out of Stock' ? 'bg-red-500' : 'bg-emerald-500'}"></span>
+                            <div>
+                                <p class="text-xs font-black text-white">${item.stock} Units</p>
+                                <p class="text-[8px] font-black uppercase tracking-widest ${stockColor}">${stockStatus}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-8 text-right">
+                        <div class="flex justify-end gap-3">
+                            <button onclick="editProduct('${item._id}'); switchTab('inventory');" class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-zinc-500 hover:text-[#c5a059] hover:bg-[#c5a059]/10 transition-all" title="Edit Asset"><i class="fa-solid fa-pen-nib text-[10px]"></i></button>
+                            <button onclick="deleteProduct('${item._id}')" class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-zinc-500 hover:text-red-500 hover:bg-red-500/10 transition-all" title="Decommission Asset"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        function filterRegistry(filter) {
+            registryFilter = filter;
+            document.querySelectorAll('.registry-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.innerText.toLowerCase().includes(filter.toLowerCase()) || (filter === 'all' && btn.innerText.includes('All'))) {
+                    btn.classList.add('active');
+                }
+            });
+            renderAllProducts(document.getElementById('registry-search')?.value || '');
+        }
+
+        function handleGlobalSearch(query) {
+            if (!query) {
+                renderArticles();
+                renderInventory();
+                return;
+            }
+            
+            const q = query.toLowerCase();
+            const filteredArticles = articles.filter(a => a.title.toLowerCase().includes(q) || a.category.toLowerCase().includes(q));
+            const filteredInventory = inventory.filter(p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+            
+            // If on articles tab, update article grid
+            if (document.getElementById('view-articles').classList.contains('hidden') === false) {
+                const grid = document.getElementById('article-grid');
+                grid.innerHTML = filteredArticles.map(art => `
+                    <div class="imperial-card overflow-hidden group">
+                        <div class="h-56 overflow-hidden relative">
+                            <img src="${art.image}" alt="${escapeHtml(art.title)}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000">
+                        </div>
+                        <div class="p-8 space-y-4">
+                            <h4 class="font-black text-white text-lg leading-tight line-clamp-2">${escapeHtml(art.title)}</h4>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // If on inventory tab, update inventory list
+            if (document.getElementById('view-inventory').classList.contains('hidden') === false) {
+                renderInventory(query);
+            }
+
+            // If on registry tab, update registry list
+            if (document.getElementById('view-allproducts').classList.contains('hidden') === false) {
+                renderAllProducts(query);
+            }
+        }
+
+        function calculateDiscount() {
+            const p = parseInt(document.getElementById('pPrice').value);
+            const o = parseInt(document.getElementById('pOld').value);
+            const l = document.getElementById('pDiscountLabel');
+            if (p && o && o > p) { l.innerText = `-${Math.round((1 - p/o) * 100)}%`; } else { l.innerText = '0%'; }
+        }
+
+        async function saveProduct() {
+            const name = document.getElementById('pName').value.trim();
+            const price = parseInt(document.getElementById('pPrice').value);
+            const oldPrice = parseInt(document.getElementById('pOld').value) || price;
+            const category = document.getElementById('pCategory').value;
+            const imagesRaw = document.getElementById('pImage').value.trim();
+            const stock = parseInt(document.getElementById('pStock').value) || 0;
+            const description = document.getElementById('pDesc').value.trim();
+            
+            if (!name || !price || !imagesRaw) return alert('Name, Price and at least one Image are required.');
+            
+            // Multi-image handling (newlines supported)
+            const images = imagesRaw.split('\n').map(url => url.trim()).filter(url => url);
+            const mainImage = images[0];
+            const editId = document.getElementById('edit-id')?.value;
+            
+            try {
+                const { db, collection, doc, setDoc, serverTimestamp } = window.novaFB;
+                const data = { 
+                    name, 
+                    price, 
+                    oldPrice, 
+                    category, 
+                    image: mainImage, 
+                    images, 
+                    stock, 
+                    description, 
+                    status: 'Live', 
+                    updatedAt: serverTimestamp(),
+                    tags: [category.toLowerCase(), `SKU-${Math.random().toString(36).substr(2, 5).toUpperCase()}`]
+                };
+
+                if (editId) { 
+                    await setDoc(doc(db, "products", editId), data, { merge: true }); 
+                } else { 
+                    await setDoc(doc(collection(db, "products")), { ...data, createdAt: serverTimestamp() }); 
+                }
+                
+                clearForm(); 
+                showToast(editId ? 'Asset Updated' : 'Asset Synchronized');
+            } catch (err) { 
+                console.error("Save Error:", err);
+                alert('Error: ' + err.message); 
+            }
+        }
+
+        function editProduct(id) {
+            const item = inventory.find(i => i._id === id);
+            if (!item) return;
+            
+            document.getElementById('pName').value = item.name;
+            document.getElementById('pPrice').value = item.price;
+            document.getElementById('pOld').value = item.oldPrice || item.price;
+            document.getElementById('pCategory').value = item.category;
+            document.getElementById('pImage').value = (item.images || [item.image]).join('\n');
+            document.getElementById('pStock').value = item.stock || 0;
+            document.getElementById('pDesc').value = item.description || '';
+            
+            if (item.image) { 
+                document.getElementById('pPreview').src = item.image; 
+                document.getElementById('pPreviewWrap').classList.remove('hidden'); 
+                document.getElementById('no-preview').classList.add('hidden');
+                document.getElementById('preview-name').innerText = item.name;
+                document.getElementById('preview-price').innerText = `₦${parseInt(item.price).toLocaleString()}`;
+            }
+            
+            let e = document.getElementById('edit-id') || document.createElement('input');
+            e.type = 'hidden'; e.id = 'edit-id'; e.value = id; document.body.appendChild(e);
+            document.getElementById('addBtn').innerText = 'Update Asset';
+            calculateDiscount();
+            
+            // Switch to inventory tab to show the form
+            switchTab('inventory');
+        }
+
+        async function deleteProduct(id) {
+            if(confirm('Decommission this asset? This action is irreversible.')) {
+                try { 
+                    await window.novaFB.deleteDoc(window.novaFB.doc(window.novaFB.db, "products", id)); 
+                    showToast('Asset Decommissioned');
+                    // Data will be updated via the syncWithFirebase listener automatically
+                }
+                catch (err) { 
+                    console.error("Delete Error:", err);
+                    showToast('Decommission failed', 'error');
+                }
+            }
+        }
+
+        function clearForm() {
+            ['pName','pPrice','pOld','pImage','pStock','pDesc'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            document.getElementById('pPreviewWrap').classList.add('hidden');
+            document.getElementById('no-preview').classList.remove('hidden');
+            document.getElementById('edit-id')?.remove();
+            document.getElementById('addBtn').innerText = 'Initialize Asset';
+            document.getElementById('pDiscountLabel').innerText = '0%';
+        }
+
+        async function clearAllProducts() {
+            if(confirm('PURGE ALL ASSETS?')) {
+                try {
+                    const { db, collection, getDocs, deleteDoc, doc } = window.novaFB;
+                    const snapshot = await getDocs(collection(db, "products"));
+                    await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, "products", d.id))));
+                    showToast('Catalog Purged');
+                } catch (err) { alert('Error: ' + err.message); }
+            }
+        }
+
+        async function handleUploadFile(e) {
+            const files = Array.from(e.target.files);
+            if (!files.length) return;
+            
+            const textarea = document.getElementById('pImage');
+            const uploadBtn = e.target.parentElement;
+            const originalBtnHtml = uploadBtn.innerHTML;
+            
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="text-xs font-bold text-zinc-500">Uploading Assets...</span>';
+            uploadBtn.style.pointerEvents = 'none';
+
+            try {
+                const { storage, ref, uploadBytes, getDownloadURL } = window.novaFB;
+                
+                for (const file of files) {
+                    const storageRef = ref(storage, `products/${Date.now()}-${file.name}`);
+                    const snapshot = await uploadBytes(storageRef, file);
+                    const url = await getDownloadURL(snapshot.ref);
+                    
+                    let currentUrls = textarea.value.trim();
+                    textarea.value = currentUrls + (currentUrls ? '\n' : '') + url;
+                    
+                    const preview = document.getElementById('pPreview');
+                    preview.src = url;
+                    document.getElementById('pPreviewWrap').classList.remove('hidden');
+                    
+                    // Setup for enhancement
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.getElementById('pCanvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                    };
+                    img.src = url;
+                }
+                showToast(`${files.length} image(s) uploaded to storage`);
+            } catch (err) {
+                console.error("Upload Error:", err);
+                alert('Upload failed: ' + err.message);
+            } finally {
+                uploadBtn.innerHTML = originalBtnHtml;
+                uploadBtn.style.pointerEvents = 'auto';
+            }
+        }
+
+        async function handleArticleUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const input = document.getElementById('art-img');
+            const uploadBtn = e.target.parentElement;
+            const originalBtnHtml = uploadBtn.innerHTML;
+            
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="text-xs font-bold text-zinc-500">Uploading...</span>';
+            uploadBtn.style.pointerEvents = 'none';
+
+            try {
+                const { storage, ref, uploadBytes, getDownloadURL } = window.novaFB;
+                const storageRef = ref(storage, `articles/${Date.now()}-${file.name}`);
+                const snapshot = await uploadBytes(storageRef, file);
+                const url = await getDownloadURL(snapshot.ref);
+                
+                input.value = url;
+                showToast('Article cover uploaded');
+            } catch (err) {
+                console.error("Upload Error:", err);
+                alert('Upload failed: ' + err.message);
+            } finally {
+                uploadBtn.innerHTML = originalBtnHtml;
+                uploadBtn.style.pointerEvents = 'auto';
+            }
+        }
+
+        function enhanceImage(){ 
+            const c = document.getElementById('pCanvas');
+            const ctx = c.getContext('2d');
+            if (!c.width) return alert('No image to enhance');
+            
+            // Apply imperial enhancement filters
+            ctx.filter = 'contrast(1.1) saturate(1.1) brightness(1.05)';
+            ctx.drawImage(c, 0, 0);
+            ctx.filter = 'none';
+            
+            const preview = document.getElementById('pPreview');
+            preview.src = c.toDataURL('image/jpeg', 0.9);
+            showToast('Imperial filters applied');
+        }
+
+        async function useEnhanced() { 
+            const c = document.getElementById('pCanvas');
+            if (!c.width) return alert('No enhanced image found');
+            
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = 'Uploading...';
+            btn.disabled = true;
+
+            try {
+                // Convert canvas to blob
+                const blob = await new Promise(resolve => c.toBlob(resolve, 'image/jpeg', 0.9));
+                const { storage, ref, uploadBytes, getDownloadURL } = window.novaFB;
+                
+                const storageRef = ref(storage, `products/enhanced-${Date.now()}.jpg`);
+                const snapshot = await uploadBytes(storageRef, blob);
+                const enhancedUrl = await getDownloadURL(snapshot.ref);
+
+                const textarea = document.getElementById('pImage');
+                let urls = textarea.value.trim().split('\n');
+                urls[urls.length - 1] = enhancedUrl;
+                textarea.value = urls.join('\n');
+                
+                showToast('Enhanced asset stored in Imperial Archives');
+            } catch (err) {
+                console.error("Enhance Upload Error:", err);
+                alert('Storage failed: ' + err.message);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function updateArticlePreview() {
+            const title = document.getElementById('art-title').value || 'Your Story Title Here';
+            const cat = document.getElementById('art-cat').value || 'Classification';
+            const read = document.getElementById('art-read').value || '5 MIN READ';
+            const img = document.getElementById('art-img').value;
+
+            document.getElementById('art-preview-title').innerText = title;
+            document.getElementById('art-preview-cat').innerText = cat;
+            document.getElementById('art-preview-read').innerText = read.toUpperCase();
+            if (img) document.getElementById('art-preview-img').src = img;
+        }
+
+        function renderArticles() {
+            const grid = document.getElementById('article-grid');
+            if (!grid) return;
+            
+            if (articles.length === 0) {
+                grid.innerHTML = `<div class="p-20 text-center text-zinc-600 font-black uppercase tracking-widest col-span-full">Archives empty</div>`;
+                return;
+            }
+
+            grid.innerHTML = articles.map(art => `
+                <div class="imperial-card overflow-hidden group">
+                    <div class="h-56 overflow-hidden relative">
+                        <img src="${art.image}" alt="${escapeHtml(art.title)}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                            <button onclick="editArticle('${art.id}')" class="w-12 h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-[#c5a059] transition-all"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteArticle('${art.id}')" class="w-12 h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-all"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <div class="p-8 space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[8px] font-black px-2 py-1 bg-[#c5a059]/10 text-[#c5a059] rounded uppercase tracking-widest">${art.category}</span>
+                            <span class="text-[9px] text-zinc-500 font-bold">${art.readTime}</span>
+                        </div>
+                        <h4 class="font-black text-white text-lg leading-tight line-clamp-2">${art.title}</h4>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openArticleModal() { document.getElementById('article-modal').classList.remove('hidden'); }
+
+        async function saveArticle() {
+            const title = document.getElementById('art-title').value;
+            const category = document.getElementById('art-cat').value;
+            const readTime = document.getElementById('art-read').value;
+            const image = document.getElementById('art-img').value;
+            const desc = document.getElementById('art-desc').value;
+            
+            if(!title || !image) return alert('Title and Image are required for chronicles.');
+            const editId = document.getElementById('art-edit-id')?.value;
+            
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = 'Publishing...';
+            btn.disabled = true;
+
+            try {
+                const { db, collection, doc, setDoc, serverTimestamp } = window.novaFB;
+                const data = { title, category, readTime, image, desc, updatedAt: serverTimestamp() };
+                
+                if (editId) { 
+                    await setDoc(doc(db, "articles", editId), data, { merge: true }); 
+                } else { 
+                    await setDoc(doc(collection(db, "articles")), { ...data, createdAt: serverTimestamp() }); 
+                }
+                
+                closeArticleModal(); 
+                showToast(editId ? 'Chronicle Updated' : 'Chronicle Published');
+            } catch (err) { 
+                console.error("Save Error:", err);
+                alert('Error: ' + err.message); 
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function editArticle(id) {
+            const art = articles.find(a => a.id === id); 
+            if (!art) return;
+            
+            document.getElementById('art-title').value = art.title || '';
+            document.getElementById('art-cat').value = art.category || '';
+            document.getElementById('art-read').value = art.readTime || '';
+            document.getElementById('art-img').value = art.image || '';
+            document.getElementById('art-desc').value = art.desc || art.content || '';
+            
+            let e = document.getElementById('art-edit-id') || document.createElement('input');
+            e.type = 'hidden'; e.id = 'art-edit-id'; e.value = id; document.body.appendChild(e);
+            
+            updateArticlePreview();
+            openArticleModal();
+        }
+
+        function closeArticleModal() {
+            document.getElementById('article-modal').classList.add('hidden');
+            ['art-title','art-cat','art-read','art-img','art-desc'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('art-edit-id')?.remove();
+            document.getElementById('art-preview-title').innerText = 'Your Story Title Here';
+            document.getElementById('art-preview-cat').innerText = 'Classification';
+            document.getElementById('art-preview-read').innerText = '5 MIN READ';
+            document.getElementById('art-preview-img').src = '';
+        }
+
+        async function deleteArticle(id) {
+            if(confirm('Decommission this story?')) {
+                try { await window.novaFB.deleteDoc(window.novaFB.doc(window.novaFB.db, "articles", id)); showToast('Story Decommissioned'); }
+                catch (err) { alert('Error: ' + err.message); }
+            }
+        }
+
+        function init() { 
+            syncWithFirebase(); 
+            
+            // Listen for global activity
+            const q = window.novaFB.query(window.novaFB.collection(window.novaFB.db, "activity"), window.novaFB.orderBy("timestamp", "desc"), window.novaFB.limit(10));
+            window.novaFB.onSnapshot(q, (snapshot) => {
+                activity = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderActivity();
+            });
+
+            updateStats(); 
+            renderArticles(); 
+            renderInventory(); 
+            renderPayments(); 
+            renderSettings(); 
+        }
+
+        window.initAdmin = initAdmin;
+
+        function toggleTheme() {
+            const body = document.body;
+            body.classList.toggle('light-mode');
+            const theme = body.classList.contains('light-mode') ? 'light' : 'dark';
+            localStorage.setItem('nova_theme', theme);
+        }
+
+        function initTheme() {
+            const theme = localStorage.getItem('nova_theme') || 'dark';
+            if (theme === 'light') document.body.classList.add('light-mode');
+        }
+        initTheme();
+    </script>
+    <style>
+        /* Light Mode Styles for Admin */
+        body.light-mode { background-color: #f3f4f6; color: #1f2937; }
+        body.light-mode .sidebar { background: #ffffff; border-right: 1px solid #e5e7eb; }
+        body.light-mode .sidebar h1 { color: #0a0f1d; }
+        body.light-mode .active-tab { background: rgba(212, 175, 55, 0.1); color: #b49431; }
+        body.light-mode .imperial-card { background: #ffffff; border: 1px solid #e5e7eb; }
+        body.light-mode .imperial-card h2, body.light-mode .imperial-card h3 { color: #0a0f1d; }
+        body.light-mode .imperial-input { background: #f9fafb; border: 1px solid #d1d5db; color: #1f2937; }
+        body.light-mode .glass { background: rgba(255, 255, 255, 0.8); border: 1px solid #e5e7eb; }
+        body.light-mode table thead { background: #f9fafb; }
+        body.light-mode tr:hover { background: #f9fafb; }
+        body.light-mode .text-white { color: #1f2937 !important; }
+        body.light-mode .text-zinc-500 { color: #6b7280 !important; }
+        body.light-mode .text-zinc-400 { color: #4b5563 !important; }
+    </style>
+    <div id="scroll-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+        <i class="fa-solid fa-chevron-up"></i>
+    </div>
+
+    <script>
+        window.addEventListener('scroll', () => {
+            const scrollTop = document.getElementById('scroll-top');
+            if (window.scrollY > 500) {
+                scrollTop.classList.add('visible');
+            } else {
+                scrollTop.classList.remove('visible');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Course — Geo-Books</title>
+<link rel="icon" href="data:,">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: { brand: { 50:'#f5f3ff',100:'#ede9fe',200:'#ddd6fe',300:'#c4b5fd',400:'#a78bfa',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9',800:'#5b21b6',900:'#4c1d95' } } } }
+  };
+</script>
+<style>
+  body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;zoom:1}
+  ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:99px}
+  .minitext-heading{font-size:1.15rem;font-weight:800;color:#1e293b;margin:20px 0 8px}
+  .minitext-heading:first-of-type{margin-top:0}
+  .minitext-subheading{font-size:.95rem;font-weight:800;color:#1e293b;margin:18px 0 6px}
+  .minitext-paragraph{color:#64748b;font-size:.85rem;line-height:1.8;margin:0 0 10px}
+  .minitext-pills{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 16px}
+  .minitext-pill{background:#ede9fe;color:#6d28d9;font-size:.68rem;font-weight:800;padding:6px 12px;border-radius:999px}
+  .minitext-divider{border:0;border-top:1px solid #e2e8f0;margin:18px 0}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+<header class="bg-white border-b border-slate-100 sticky top-0 z-20">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+    <a href="geo-books.htm" class="flex items-center gap-2 text-xs font-black text-slate-400 hover:text-slate-600">
+      <span>←</span> Back to Geo-Books
+    </a>
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-600 to-brand-400 flex items-center justify-center text-white font-black text-sm">G+</div>
+      <span class="font-black text-sm">Geo-Books University</span>
+    </div>
+  </div>
+</header>
+
+<div id="accessGate" class="hidden max-w-lg mx-auto text-center py-32 px-6">
+  <h2 class="text-2xl font-black mb-3">University Pass required</h2>
+  <p class="text-slate-400 font-bold text-sm mb-6">You need an active University Pass to view course lectures.</p>
+  <a href="geo-books.htm" class="inline-block px-6 py-3 rounded-2xl bg-brand-600 text-white font-black text-xs uppercase tracking-widest">Back to Geo-Books</a>
+</div>
+
+<main id="app" class="max-w-7xl mx-auto px-6 py-8">
+  <div class="mb-8">
+    <p class="text-[10px] font-black uppercase tracking-widest text-brand-600 mb-1" id="courseKicker">Loading course...</p>
+    <h1 class="text-3xl font-black tracking-tight" id="courseTitle">Loading topics...</h1>
+    <p class="text-slate-400 font-bold text-sm mt-1" id="courseSummary">Fetching your topics for this course.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 items-start">
+    <!-- Topic sidebar -->
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden lg:sticky lg:top-24">
+      <div class="px-5 py-4 border-b border-slate-100">
+        <p class="text-[10px] font-black uppercase text-slate-400">Topics</p>
+      </div>
+      <div id="topicSidebarList" class="divide-y divide-slate-50 max-h-[70vh] overflow-y-auto">
+        <p class="p-8 text-center text-xs font-bold text-slate-300">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Detail panel -->
+    <div id="topicDetailPanel" class="bg-white rounded-3xl border border-slate-100 p-8 min-h-[400px]">
+      <p class="text-center text-slate-300 font-bold py-24">Pick a topic on the left to get started.</p>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1nVLSPFs30wG-PLaEyFqm_PEVhZdzISU",
+    authDomain: "geo-books-8411e.firebaseapp.com",
+    projectId: "geo-books-8411e",
+    storageBucket: "geo-books-8411e.firebasestorage.app",
+    messagingSenderId: "972887107793",
+    appId: "1:972887107793:web:7e0374bf81e6713fd0fdf0",
+    measurementId: "G-RY84V5DXPN"
+  };
+  function getFirebaseApp() { return getApps().length ? getApps()[0] : initializeApp(firebaseConfig); }
+  const auth = getAuth(getFirebaseApp());
+  const db = getFirestore(getFirebaseApp());
+
+  const API_BASE_URL = window.GEO_BOOKS_API_URL ||
+    (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:3007' : '');
+
+  const escapeHTML = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const params = new URLSearchParams(location.search);
+  const courseId = params.get('course');
+  let currentUser = null;
+  let allTopics = [];
+  let activeTopicId = null;
+
+  if (!courseId) {
+    document.getElementById('courseTitle').textContent = 'No course selected';
+    document.getElementById('courseSummary').textContent = 'Go back and pick a course first.';
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = 'geo-books.htm'; return; }
+    currentUser = user;
+
+    // Same access check as the original course-lectures.htm and the main
+    // University SPA section — this page is reachable directly by URL, so
+    // it needs its own independent gate.
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      const sub = snap.exists() ? snap.data().subscription : null;
+      const hasAccess = sub && ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'].includes(sub.tier) && sub.verified === true && sub.status === 'active';
+      const isAdmin = (await user.getIdTokenResult()).claims.admin === true;
+      if (!hasAccess && !isAdmin) {
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('accessGate').classList.remove('hidden');
+        return;
+      }
+    } catch (e) {
+      console.error('Access check failed:', e);
+    }
+
+    if (courseId) loadCourse(courseId);
+  });
+
+  async function loadCourse(cid) {
+    document.getElementById('courseKicker').textContent = cid;
+    document.getElementById('courseTitle').textContent = `${cid} — Topics`;
+
+    try {
+      const snap = await getDocs(query(collection(db, 'courseTopics'), where('courseId', '==', cid), orderBy('topicNumber', 'asc')));
+      allTopics = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderSidebar(cid);
+    } catch (e) {
+      console.error('Failed to load topics:', e);
+      document.getElementById('topicSidebarList').innerHTML = `<p class="p-8 text-center text-xs font-bold text-rose-400">Could not load topics.</p>`;
+    }
+  }
+
+  const RESOURCE_DEFS = [
+    { key: 'miniText', icon: '▤', label: 'Mini-text' },
+    { key: 'voiceNote', icon: '♪', label: 'Voice note' },
+    { key: 'fullLecture', icon: '▶', label: 'Full lecture' },
+    { key: 'structuredAnswer', icon: '✎', label: 'Structured answer' },
+    { key: 'quizAssessmentId', icon: '✓', label: 'Quiz' }
+  ];
+
+  function isTopicReady(t) { return RESOURCE_DEFS.some((r) => t[r.key]); }
+
+  function renderSidebar(cid) {
+    const readyCount = allTopics.filter(isTopicReady).length;
+    document.getElementById('courseSummary').textContent = allTopics.length
+      ? `${allTopics.length} topic${allTopics.length === 1 ? '' : 's'} for ${cid}. ${readyCount} ready so far.`
+      : `No topics added for ${cid} yet — check back soon.`;
+
+    const list = document.getElementById('topicSidebarList');
+    if (!allTopics.length) {
+      list.innerHTML = `<p class="p-8 text-center text-xs font-bold text-slate-300">Nothing here yet.</p>`;
+      return;
+    }
+
+    list.innerHTML = allTopics.map((t, i) => {
+      const num = String(t.topicNumber ?? i + 1).padStart(2, '0');
+      const ready = isTopicReady(t);
+      return `
+      <button data-topic-id="${t.id}" class="topic-sidebar-item w-full text-left px-5 py-4 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+        <span class="w-8 h-8 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-[10px] font-black shrink-0">${num}</span>
+        <span class="flex-1 min-w-0">
+          <span class="block text-xs font-black truncate">${escapeHTML(t.title || 'Untitled topic')}</span>
+          <span class="block text-[10px] font-bold ${ready ? 'text-emerald-500' : 'text-slate-300'}">${ready ? 'Ready' : 'Coming soon'}</span>
+        </span>
+      </button>`;
+    }).join('');
+
+    list.querySelectorAll('[data-topic-id]').forEach((btn) => {
+      btn.addEventListener('click', () => selectTopic(btn.dataset.topicId));
+    });
+
+    // Open the first topic with content by default.
+    const firstReady = allTopics.find(isTopicReady) || allTopics[0];
+    if (firstReady) selectTopic(firstReady.id);
+  }
+
+  function selectTopic(topicId) {
+    activeTopicId = topicId;
+    document.querySelectorAll('.topic-sidebar-item').forEach((el) => {
+      el.classList.toggle('bg-brand-50', el.dataset.topicId === topicId);
+    });
+    renderDetailPanel(allTopics.find((t) => t.id === topicId));
+  }
+
+  function estimateReadMinutes(text) {
+    const words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.round(words / 200));
+  }
+
+  function renderMiniTextBlock(block) {
+    switch (block.type) {
+      case 'heading': return `<div class="minitext-heading">${escapeHTML(block.text || '')}</div>`;
+      case 'subheading': return `<div class="minitext-subheading">${escapeHTML(block.text || '')}</div>`;
+      case 'paragraph': return `<p class="minitext-paragraph">${escapeHTML(block.text || '')}</p>`;
+      case 'pills': return `<div class="minitext-pills">${(block.items || []).map((i) => `<span class="minitext-pill">${escapeHTML(i)}</span>`).join('')}</div>`;
+      case 'divider': return `<hr class="minitext-divider">`;
+      default: return '';
+    }
+  }
+
+  function miniTextHTML(topic) {
+    const readMinutes = topic.miniTextReadMinutes || estimateReadMinutes(topic.miniText || '');
+    let html = `
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <span class="text-[10px] font-black uppercase tracking-widest text-brand-600">${escapeHTML(topic.miniTextKicker || 'Mini-text')}</span>
+        <span class="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full whitespace-nowrap">⟳ ${readMinutes} min read</span>
+      </div>`;
+    if (Array.isArray(topic.miniTextBlocks) && topic.miniTextBlocks.length) {
+      html += topic.miniTextBlocks.map(renderMiniTextBlock).join('');
+    } else if (topic.miniText) {
+      html += `<p class="minitext-paragraph">${escapeHTML(topic.miniText)}</p>`;
+    }
+    return html;
+  }
+
+  function renderDetailPanel(topic) {
+    const panel = document.getElementById('topicDetailPanel');
+    if (!topic) { panel.innerHTML = `<p class="text-center text-slate-300 font-bold py-24">Topic not found.</p>`; return; }
+
+    const num = String(topic.topicNumber ?? '').padStart(2, '0');
+    let html = `
+      <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Topic ${num}</p>
+      <h2 class="text-2xl font-black mb-2">${escapeHTML(topic.title || 'Untitled topic')}</h2>
+      ${topic.description ? `<p class="text-slate-400 font-bold text-sm mb-6">${escapeHTML(topic.description)}</p>` : '<div class="mb-6"></div>'}`;
+
+    if (topic.miniText || (topic.miniTextBlocks || []).length) {
+      html += `<div class="mb-8 pb-8 border-b border-slate-100">${miniTextHTML(topic)}</div>`;
+    }
+
+    const actionable = RESOURCE_DEFS.filter((r) => r.key !== 'miniText');
+    html += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">`;
+    html += actionable.map((r) => {
+      const has = !!topic[r.key];
+      return `<button ${has ? `data-resource-btn="${r.key}"` : 'disabled'} class="text-left px-5 py-4 rounded-2xl border ${has ? 'border-slate-200 hover:border-brand-300 hover:bg-brand-50 cursor-pointer' : 'border-slate-100 opacity-40 cursor-not-allowed'} flex items-center gap-3 transition-colors">
+        <span class="w-9 h-9 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center text-sm shrink-0">${r.icon}</span>
+        <span class="min-w-0">
+          <span class="block text-xs font-black">${r.label}</span>
+          <span class="block text-[10px] font-bold text-slate-400">${has ? 'Open' : 'Coming soon'}</span>
+        </span>
+      </button>`;
+    }).join('');
+    html += `</div><div id="topicInlineResource" class="mt-6"></div>`;
+
+    panel.innerHTML = html;
+    panel.querySelectorAll('[data-resource-btn]').forEach((btn) => {
+      btn.addEventListener('click', () => openResource(btn.dataset.resourceBtn, topic));
+    });
+  }
+
+  function openResource(key, topic) {
+    const slot = document.getElementById('topicInlineResource');
+    if (key === 'fullLecture') { openLecture(topic.id, topic.fullLecture); return; }
+    if (key === 'quizAssessmentId') { startTopicQuiz(topic); return; }
+    if (key === 'structuredAnswer') {
+      slot.innerHTML = `<div class="p-6 rounded-2xl bg-slate-50"><p class="text-[10px] font-black uppercase text-slate-400 mb-2">Structured Answer</p><p class="text-sm text-slate-600 font-bold whitespace-pre-wrap leading-relaxed">${escapeHTML(topic.structuredAnswer)}</p></div>`;
+      return;
+    }
+    if (key === 'voiceNote') {
+      slot.innerHTML = `<div class="p-6 rounded-2xl bg-slate-50"><p class="text-[10px] font-black uppercase text-slate-400 mb-3">Voice Note</p><audio controls class="w-full" src="${escapeHTML(topic.voiceNote)}"></audio></div>`;
+      return;
+    }
+  }
+
+  // Same monthly-quota-checked open flow as the original course-lectures.htm
+  // and the main University SPA section — duplicated here since this is a
+  // standalone page.
+  async function openLecture(topicId, fileUrl) {
+    if (!currentUser || !fileUrl) return;
+    try {
+      const idToken = await currentUser.getIdToken();
+      const res = await fetch(`${API_BASE_URL}/api/lectures/${topicId}/view`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { alert(data.error || 'Could not open this lecture right now.'); return; }
+      window.open(fileUrl, '_blank', 'noopener');
+    } catch (e) {
+      console.error('openLecture failed:', e);
+      alert('Could not open this lecture. Check your connection and try again.');
+    }
+  }
+
+  // Same cbt.htm session hand-off contract launchCbtSession() in
+  // ai-vault-shared.js uses — duplicated here since this standalone page
+  // doesn't share that module.
+  async function startTopicQuiz(topic) {
+    try {
+      const snap = await getDoc(doc(db, 'assessments', topic.quizAssessmentId));
+      if (!snap.exists()) { alert('This quiz is not available right now.'); return; }
+      const a = snap.data();
+      sessionStorage.setItem('geoBooksCbtSession', JSON.stringify({
+        subject: a.title || topic.title || 'Quiz',
+        questions: a.questions || [],
+        durationSec: Math.max(600, (a.questions || []).length * 60),
+        examType: 'UNIVERSITY_MANUAL',
+        startedAtMs: Date.now()
+      }));
+      window.location.href = 'cbt.htm';
+    } catch (e) {
+      console.error('startTopicQuiz failed:', e);
+      alert('Could not start the quiz. Please try again.');
+    }
+  }
+</script>
+</body>
+</html>

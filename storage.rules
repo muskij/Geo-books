@@ -1,0 +1,61 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // --- Imperial Security Protocols ---
+
+    // Check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Check for Master Curator privileges.
+    // Mirrors firestore.rules: admin status is granted by the existence
+    // of a document at /admins/{uid} in Firestore.
+    function isAdmin() {
+      return isSignedIn() &&
+             firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+
+    // High-fidelity image validation
+    function isValidImage() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp|gif)') &&
+             request.resource.size < 10 * 1024 * 1024; // 10MB limit
+    }
+
+    // --- Asset-Specific Security Zones ---
+
+    // Product Imagery: The face of the catalog
+    match /products/{allImages=**} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
+
+    // Article Chronicles: Visuals for the Imperial Journal
+    match /articles/{allImages=**} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
+
+    // User Profile Data: Personal Citizen Assets
+    match /users/{userId}/{allImages=**} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == userId && isValidImage();
+    }
+
+    // Settings & Branding: Core UI Assets
+    match /settings/{allImages=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+    }
+
+    // --- Global Safety Interlock ---
+    // Total denial of unauthorized data streams
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

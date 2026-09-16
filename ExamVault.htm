@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExamVault | Tactical Neural Core</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;900&display=swap');
+
+    :root {
+      --brand: #7c3aed;
+      --brand-glow: rgba(124, 58, 237, 0.4);
+      --bg: #030712;
+      --accent: #10b981;
+      --error: #ef4444;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: #f8fafc;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow: hidden;
+      perspective: 1000px;
+    }
+
+    .orbitron { font-family: 'Orbitron', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Tactical Grid & Scanline */
+    .tactical-overlay {
+      position: fixed;
+      inset: 0;
+      background: 
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 4px, 3px 100%;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle at 1px 1px, rgba(124, 58, 237, 0.1) 1px, transparent 0);
+      background-size: 40px 40px;
+      z-index: -2;
+    }
+
+    /* Glass Morphism */
+    .neural-glass {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(124, 58, 237, 0.2);
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Floating UI Elements */
+    .floating-module {
+      transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    
+    .option-card {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .option-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.1), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.5s ease;
+    }
+
+    .option-card:hover::before {
+      transform: translateX(100%);
+    }
+
+    .option-card.active {
+      border-color: var(--brand);
+      background: rgba(124, 58, 237, 0.15);
+      box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
+    }
+
+    /* Animation Keyframes */
+    @keyframes pulse-border {
+      0% { border-color: rgba(124, 58, 237, 0.2); }
+      50% { border-color: rgba(124, 58, 237, 0.6); }
+      100% { border-color: rgba(124, 58, 237, 0.2); }
+    }
+
+    .pulse-active { animation: pulse-border 2s infinite; }
+
+    /* Custom range styling */
+    input[type=range] { -webkit-appearance: none; background: transparent; cursor: pointer; }
+    input[type=range]::-webkit-slider-runnable-track { height: 4px; background: #1e293b; border-radius: 2px; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: var(--brand); margin-top: -8px; box-shadow: 0 0 15px var(--brand-glow); border: 2px solid white; }
+
+    #neural-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.4;
+    }
+
+    .loader-line {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--brand), transparent);
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      transform: translateX(-100%);
+      animation: load-slide 2s infinite linear;
+    }
+
+    @keyframes load-slide {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+  </style>
+</head>
+<body class="h-full selection:bg-violet-500/30">
+
+  <div class="tactical-overlay"></div>
+  <div class="grid-bg"></div>
+  <canvas id="neural-canvas"></canvas>
+
+  <!-- BACKGROUND AUDIO ELEMENTS -->
+  <audio id="sfx-click" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"></audio>
+  <audio id="sfx-hover" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
+  <audio id="sfx-scan" src="https://assets.mixkit.co/active_storage/sfx/2558/2558-preview.mp3"></audio>
+
+  <!-- INITIALIZER SCREEN -->
+  <div id="stage0" class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md overflow-y-auto">
+    <div id="initModule" class="w-full max-w-3xl neural-glass rounded-[40px] p-8 md:p-12 relative overflow-hidden floating-module border-t-4 border-violet-500">
+      
+      <div class="flex justify-between items-start mb-12">
+        <div class="space-y-1">
+          <h2 class="orbitron text-4xl font-black tracking-tighter text-white">NEURAL_INIT</h2>
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-[10px] mono text-emerald-500 tracking-[0.3em] font-bold">SYSTEM_READY // VER 4.0.9</span>
+          </div>
+        </div>
+        <div class="text-right hidden md:block">
+          <p class="mono text-[10px] text-slate-500">LOCATION: 40.7128° N, 74.0060° W</p>
+          <p class="mono text-[10px] text-slate-500">ENTROPY: <span id="entropy-val">0.024</span></p>
+        </div>
+      </div>
+
+      <!-- Parameters Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <div class="bg-black/40 p-6 rounded-3xl border border-white/5 space-y-4">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h4 class="text-[10px] mono text-slate-500 uppercase tracking-widest">Question Nodes</h4>
+                    <p class="text-2xl font-black orbitron text-white" id="qCountVal">08</p>
+                </div>
+                <i data-lucide="layers" class="text-violet-500 w-5 h-5 mb-1"></i>
+            </div>
+            <input type="range" id="qCountInput" min="1" max="30" value="8" class="w-full" oninput="document.getElementById('qCountVal').textContent = this.value.padStart(2,'0')">
+        </div>
+        <div class="bg-black/40 p-6 rounded-3xl border border-white/5 space-y-4">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h4 class="text-[10px] mono text-slate-500 uppercase tracking-widest">Temporal Limit</h4>
+                    <p class="text-2xl font-black orbitron text-white" id="timeVal">15:00</p>
+                </div>
+                <i data-lucide="clock" class="text-violet-500 w-5 h-5 mb-1"></i>
+            </div>
+            <input type="range" id="timeLimitInput" min="1" max="60" value="15" class="w-full" oninput="document.getElementById('timeVal').textContent = this.value.padStart(2,'0') + ':00'">
+        </div>
+      </div>
+
+      <!-- Mode Selector -->
+      <div class="flex justify-center mb-12">
+        <div class="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 backdrop-blur-3xl">
+          <button onclick="setMode('file')" id="tab-file" class="selector-tab active px-8 py-3 rounded-xl text-xs orbitron font-bold transition-all flex items-center gap-3">
+            <i data-lucide="binary" class="w-4 h-4"></i> UPLOAD
+          </button>
+          <button onclick="setMode('prompt')" id="tab-prompt" class="selector-tab px-8 py-3 rounded-xl text-xs orbitron font-bold text-slate-500 transition-all flex items-center gap-3">
+            <i data-lucide="terminal" class="w-4 h-4"></i> PROMPT
+          </button>
+          <button onclick="setMode('scan')" id="tab-scan" class="selector-tab px-8 py-3 rounded-xl text-xs orbitron font-bold text-slate-500 transition-all flex items-center gap-3">
+            <i data-lucide="eye" class="w-4 h-4"></i> SCAN
+          </button>
+        </div>
+      </div>
+
+      <!-- Mode Containers -->
+      <div id="mode-file" class="mode-content">
+        <div id="dropZone" class="group h-64 rounded-[32px] border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-6 hover:border-violet-500/50 hover:bg-violet-500/5 transition-all cursor-pointer">
+            <div class="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-500 group-hover:scale-110 transition-transform">
+                <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+            </div>
+            <p class="orbitron text-xs tracking-widest text-slate-400 group-hover:text-white transition-colors">DRAG_DATA_STREAM_HERE</p>
+            <input type="file" id="fileInput" class="hidden" accept="image/*,.pdf,.txt">
+        </div>
+      </div>
+
+      <div id="mode-prompt" class="mode-content hidden">
+        <div class="relative">
+            <textarea id="promptInput" rows="4" placeholder="INPUT_SUBJECT_CURRICULUM..." 
+                      class="w-full bg-black/40 border border-white/5 rounded-3xl p-8 focus:border-violet-500 outline-none text-xl transition-all text-white placeholder:text-slate-700 resize-none orbitron"></textarea>
+            <button onclick="processPrompt()" class="absolute bottom-6 right-6 p-5 bg-violet-600 rounded-2xl hover:bg-violet-500 shadow-2xl shadow-violet-900/40 transition-all active:scale-90">
+                <i data-lucide="cpu" class="w-6 h-6"></i>
+            </button>
+        </div>
+      </div>
+
+      <div id="mode-scan" class="mode-content hidden">
+        <div class="relative rounded-3xl overflow-hidden aspect-video border border-white/5 bg-black">
+            <video id="cameraFeed" class="w-full h-full object-cover opacity-60" autoplay playsinline></video>
+            <div class="absolute inset-0 border-[20px] border-black/20 pointer-events-none"></div>
+            <div class="absolute top-1/2 left-0 w-full h-[1px] bg-emerald-500/30 animate-scan"></div>
+            <button onclick="captureImage()" class="absolute bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full border-4 border-white/50 flex items-center justify-center hover:scale-110 transition-all bg-white/10 backdrop-blur-md">
+                <div class="w-10 h-10 bg-white rounded-full"></div>
+            </button>
+        </div>
+      </div>
+
+      <!-- Neural Loading Overlay -->
+      <div id="neuralLoader" class="hidden absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-12 z-50">
+        <div class="w-full max-w-md space-y-8">
+            <div class="flex justify-between items-end mb-2">
+                <h3 class="orbitron text-sm font-bold text-violet-500 tracking-tighter" id="loaderStatus">CALIBRATING_SYNAPSES...</h3>
+                <span class="mono text-xs text-slate-500" id="loaderPct">0%</span>
+            </div>
+            <div class="h-1 w-full bg-slate-900 rounded-full overflow-hidden relative">
+                <div id="loaderBar" class="h-full bg-violet-500 w-0 transition-all duration-300"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="text-[8px] mono text-slate-600">ENCRYPTION: AES-256<br>GATEWAY: NEURAL_LINK_V4</div>
+                <div class="text-[8px] mono text-slate-600 text-right">MODEL: GEMINI_FLASH_2.5<br>LATENCY: 14MS</div>
+            </div>
+        </div>
+        <div class="loader-line"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TACTICAL WORKSPACE -->
+  <div id="mainWorkspace" class="hidden opacity-0 h-full flex flex-col pt-24 pb-8 px-6 relative">
+    
+    <!-- Header Hud -->
+    <header class="fixed top-0 left-0 w-full px-8 py-6 flex justify-between items-center z-50">
+        <div class="flex items-center gap-6">
+            <div class="flex flex-col">
+                <h1 class="orbitron text-2xl font-black text-white italic tracking-tighter">EXAM<span class="text-violet-500">VAULT</span></h1>
+                <span class="text-[8px] mono text-slate-500 tracking-[0.4em]">TACTICAL_INTERFACE_X1</span>
+            </div>
+            <div class="h-8 w-[1px] bg-white/10"></div>
+            <div id="hud-stats" class="hidden md:flex gap-8">
+                <div>
+                    <p class="text-[8px] mono text-slate-500 uppercase">Latency</p>
+                    <p class="text-[10px] mono text-white">12.4ms</p>
+                </div>
+                <div>
+                    <p class="text-[8px] mono text-slate-500 uppercase">Synapse</p>
+                    <p id="synapse-health" class="text-[10px] mono text-emerald-400">STABLE</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <div class="text-right">
+                <p class="text-[10px] mono text-slate-500 uppercase">Temporal Remaining</p>
+                <p id="timer" class="orbitron text-2xl font-black text-violet-500">00:00</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center">
+                <i data-lucide="activity" class="text-violet-500 w-6 h-6 animate-pulse"></i>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex items-center justify-center w-full max-w-6xl mx-auto">
+        <div id="questionCard" class="w-full neural-glass rounded-[48px] p-8 md:p-16 flex flex-col md:flex-row gap-12 relative overflow-hidden">
+            <!-- Background Decoration -->
+            <div class="absolute top-0 right-0 p-8 opacity-5">
+                <i data-lucide="shield" class="w-64 h-64"></i>
+            </div>
+            
+            <!-- Left Side: Nav & Status -->
+            <div class="w-full md:w-1/4 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/5 pb-8 md:pb-0 md:pr-12">
+                <div class="space-y-8">
+                    <div>
+                        <span id="qCategory" class="px-3 py-1 bg-violet-500/10 text-violet-500 text-[10px] font-black orbitron tracking-widest rounded-md border border-violet-500/20 uppercase">Core_Logic</span>
+                    </div>
+                    <div class="space-y-2">
+                        <p class="text-[10px] mono text-slate-500 uppercase tracking-widest">Data Node</p>
+                        <h3 id="progressText" class="orbitron text-4xl font-black text-white">01<span class="text-slate-700 text-2xl">/08</span></h3>
+                    </div>
+                </div>
+                
+                <div class="hidden md:block space-y-4">
+                    <div class="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
+                        <div id="sideProgressFill" class="h-full bg-violet-500 transition-all duration-700"></div>
+                    </div>
+                    <p class="text-[8px] mono text-slate-500 uppercase">Matrix progress // 12%</p>
+                </div>
+            </div>
+
+            <!-- Right Side: Interaction -->
+            <div class="flex-grow flex flex-col">
+                <h2 id="qText" class="text-2xl md:text-4xl font-bold leading-tight mb-12 text-white/90">Synchronizing neural pathways...</h2>
+                
+                <div id="options" class="grid gap-4 mb-12">
+                    <!-- Options injected here -->
+                </div>
+
+                <div class="mt-auto flex gap-4">
+                    <button onclick="prevQ()" id="prevBtn" class="flex-shrink-0 p-6 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all disabled:opacity-10 text-white">
+                        <i data-lucide="chevron-left" class="w-6 h-6"></i>
+                    </button>
+                    <button onclick="nextQ()" id="nextBtn" class="flex-grow group bg-violet-600 hover:bg-violet-500 p-6 rounded-3xl orbitron font-black text-sm tracking-widest flex items-center justify-center gap-4 transition-all shadow-2xl shadow-violet-900/30">
+                        <span id="nextBtnText">COMMIT_RESPONSE</span>
+                        <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-2 transition-transform"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Hud Footer -->
+    <footer class="w-full flex justify-between items-end">
+        <div class="flex gap-4">
+            <div class="p-3 neural-glass rounded-xl border-white/5 flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                <span class="text-[10px] mono text-white/40">NODE_HEALTH: OPTIMAL</span>
+            </div>
+            <div class="p-3 neural-glass rounded-xl border-white/5 flex items-center gap-3">
+                <i data-lucide="database" class="w-3 h-3 text-violet-500"></i>
+                <span class="text-[10px] mono text-white/40" id="data-size">3.2 MB / CACHED</span>
+            </div>
+        </div>
+        <div class="mono text-[8px] text-slate-700">
+            SECURE_LINK // END_TO_END_ENCRYPTED // (C) 2024 EXAMVAULT
+        </div>
+    </footer>
+  </div>
+
+  <!-- FINAL RESULTS HUD -->
+  <div id="resultsScreen" class="hidden fixed inset-0 z-[300] bg-slate-950 flex flex-col items-center justify-center p-6 overflow-y-auto">
+    <div class="w-full max-w-4xl grid md:grid-cols-2 gap-12 items-center">
+        <!-- Visualization -->
+        <div class="relative flex justify-center">
+            <div class="absolute inset-0 bg-violet-600/20 blur-[120px] rounded-full"></div>
+            <svg class="w-64 h-64 transform -rotate-90 z-10">
+                <circle cx="128" cy="128" r="110" stroke="currentColor" stroke-width="2" fill="transparent" class="text-white/5"></circle>
+                <circle id="resultRing" cx="128" cy="128" r="110" stroke="currentColor" stroke-width="16" fill="transparent" stroke-dasharray="691" stroke-dashoffset="691" stroke-linecap="round" class="text-violet-500 transition-all duration-[2000ms] ease-out"></circle>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center z-20">
+                <span id="resultScore" class="orbitron text-6xl font-black italic">0%</span>
+                <span class="text-[10px] mono text-violet-400 tracking-[0.5em] mt-2 uppercase font-bold">ACCURACY</span>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="space-y-8">
+            <div class="space-y-2">
+                <h2 class="orbitron text-5xl font-black tracking-tighter">DATA<br><span class="text-violet-500">SYNTHESIS</span></h2>
+                <p id="resultMsg" class="text-slate-400 text-sm mono">Neural profile mapping complete. Nodes integrated.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
+                    <p id="finalTime" class="text-2xl font-black orbitron">00:00</p>
+                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">TIME_ELAPSED</p>
+                </div>
+                <div class="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
+                    <p id="finalPoints" class="text-2xl font-black orbitron">0/0</p>
+                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">NODES_SOLVED</p>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="location.reload()" class="flex-grow bg-violet-600 text-white orbitron p-6 rounded-3xl font-black hover:bg-violet-500 transition-all shadow-2xl shadow-violet-900/30">
+                    REBOOT_SIMULATION
+                </button>
+                <button onclick="window.__examVaultImportToCbt()" class="flex-grow bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-white orbitron p-6 rounded-3xl font-black shadow-2xl flex items-center justify-center gap-3">
+                    <i data-lucide="file-check-2" class="w-5 h-5"></i>
+                    IMPORT_TO_CBT
+                </button>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    // No client-side API key here anymore — exam generation is routed
+    // through the secure Cloud Function via ai-vault-shared.js (see the
+    // <script type="module"> block near the end of this file).
+    let examData = null;
+    let currentIdx = 0;
+    let userAnswers = {};
+    let startTime = 0;
+    let stream = null;
+    let timeLimitMinutes = 15;
+    let timerInterval = null;
+
+    // examData is parsed from an AI response (see the Gemini call below) and
+    // its `options` strings get injected into innerHTML when rendering each
+    // question card. Since that AI call runs on user-supplied input (a
+    // topic or an uploaded PDF), a crafted input could get the model to
+    // emit HTML/script inside an option string. Escaping before render
+    // closes that off regardless of how the AI output was produced. This
+    // script isn't loaded as an ES module (see the plain <script> tag
+    // above), so it can't `import` utils.js's escapeHTML — this is a local
+    // copy of the same implementation.
+    const escapeHTML = (value) =>
+      String(value ?? '').replace(/[&<>"'`]/g, (ch) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;'
+      }[ch] || ch));
+
+    // SFX Logic
+    const playSfx = (id) => {
+        const audio = document.getElementById(id);
+        audio.currentTime = 0;
+        audio.volume = 0.2;
+        audio.play().catch(() => {});
+    };
+
+    window.onload = async () => {
+      lucide.createIcons();
+      initBackgroundAnimation();
+      animateEntrance();
+      setupFileHandlers();
+
+      // Random entropy updates
+      setInterval(() => {
+          document.getElementById('entropy-val').textContent = (0.01 + Math.random() * 0.05).toFixed(3);
+      }, 2000);
+
+      // Premium gate — see ai-vault-shared.js header comment: this is a UX
+      // gate only, real enforcement must also live server-side.
+      const gateResult = await window.__examVaultCheckAccess();
+      if (!gateResult.allowed) {
+        document.getElementById('stage0').innerHTML = `
+          <div class="flex flex-col items-center justify-center h-full gap-6 text-center px-12">
+            <i data-lucide="lock" class="w-16 h-16 text-violet-500"></i>
+            <h2 class="orbitron text-3xl font-black">UPGRADE_REQUIRED</h2>
+            <p class="text-slate-400 max-w-md">The Exam Vault is available on any paid plan. Upgrade your subscription to generate AI exams.</p>
+            <button onclick="window.location.href='geo-books.htm'" class="bg-violet-600 text-white orbitron px-8 py-4 rounded-2xl font-black">BACK_TO_APP</button>
+          </div>`;
+        lucide.createIcons();
+      }
+    };
+
+    function initBackgroundAnimation() {
+        const canvas = document.getElementById('neural-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        
+        const resize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+        window.onresize = resize;
+        resize();
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 1.5;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) this.reset();
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(124, 58, 237, 0.5)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < 100; i++) particles.push(new Particle());
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            
+            // Connect nearby particles
+            ctx.strokeStyle = 'rgba(124, 58, 237, 0.05)';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 150) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+
+    function animateEntrance() {
+      gsap.from("#initModule", { opacity: 0, scale: 0.95, y: 40, rotateX: -10, duration: 1.2, ease: "power4.out" });
+    }
+
+    function setMode(mode) {
+      playSfx('sfx-hover');
+      document.querySelectorAll('.selector-tab').forEach(t => t.classList.remove('active', 'text-white'));
+      document.querySelectorAll('.mode-content').forEach(c => c.classList.add('hidden'));
+      document.getElementById(`tab-${mode}`).classList.add('active', 'text-white');
+      document.getElementById(`mode-${mode}`).classList.remove('hidden');
+      if(mode === 'scan') startCamera(); else stopCamera();
+      gsap.from(`#mode-${mode}`, { opacity: 0, x: mode === 'scan' ? 20 : -20, duration: 0.4, ease: "power2.out" });
+      lucide.createIcons();
+    }
+
+    function setupFileHandlers() {
+      const dz = document.getElementById('dropZone');
+      dz.onclick = () => document.getElementById('fileInput').click();
+      dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('bg-violet-500/10', 'border-violet-500'); };
+      dz.ondragleave = () => dz.classList.remove('bg-violet-500/10', 'border-violet-500');
+      dz.ondrop = (e) => {
+        e.preventDefault();
+        dz.classList.remove('bg-violet-500/10', 'border-violet-500');
+        if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+      };
+      document.getElementById('fileInput').onchange = (e) => {
+        if(e.target.files.length) handleFile(e.target.files[0]);
+      };
+    }
+
+    async function handleFile(file) {
+      playSfx('sfx-scan');
+      startNeuralProcessing("DECRYPTING_FILE_BLOCKS...");
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64 = e.target.result.split(',')[1];
+            await generateExamWithGemini(null, base64);
+        };
+        reader.readAsDataURL(file);
+      } else if (file.type === 'text/plain') {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const text = e.target.result;
+            await generateExamWithGemini(text);
+        };
+        reader.readAsText(file);
+      } else if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        try {
+          // Previously this branch never actually read the PDF — it faked a
+          // prompt string ("Deep analysis of: <filename>") and generated
+          // questions with no relation to the file's actual content.
+          // window.__examVaultExtractPdf (module script below) does real
+          // local text extraction via pdf.js, same as ai.js's extractTextFromPdf.
+          const text = await window.__examVaultExtractPdf(file);
+          await generateExamWithGemini(text);
+        } catch (err) {
+          console.error('PDF extraction failed:', err);
+          document.getElementById('loaderStatus').textContent = "COULD_NOT_READ_PDF";
+        }
+      } else {
+        document.getElementById('loaderStatus').textContent = "UNSUPPORTED_FILE_TYPE";
+      }
+    }
+
+    async function processPrompt() {
+      const prompt = document.getElementById('promptInput').value;
+      if(!prompt) return;
+      playSfx('sfx-click');
+      startNeuralProcessing("ASSEMBLING_CONCEPTUAL_NODES...");
+      await generateExamWithGemini(prompt);
+    }
+
+    function startNeuralProcessing(status) {
+      document.getElementById('neuralLoader').classList.remove('hidden');
+      document.getElementById('loaderStatus').textContent = status;
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 6;
+        if(progress >= 98) { progress = 98; clearInterval(interval); }
+        updateLoader(progress);
+      }, 100);
+    }
+
+    function updateLoader(val) {
+        document.getElementById('loaderBar').style.width = `${val}%`;
+        document.getElementById('loaderPct').textContent = `${Math.floor(val)}%`;
+    }
+
+    async function generateExamWithGemini(promptText, base64Image = null) {
+      const qCount = document.getElementById('qCountInput').value;
+      timeLimitMinutes = parseInt(document.getElementById('timeLimitInput').value);
+
+      if (base64Image) {
+        // Camera/image scan needs a vision-capable AI call. The old code path
+        // sent this straight to Gemini with a client-side API key exposed in
+        // the page source — that's the security hole we're removing, and the
+        // safe Cloud-Function proxy this now uses (aiChatCompletion) is
+        // text-only. Re-enabling image scan needs a vision-capable Cloud
+        // Function added server-side first (see chat notes).
+        document.getElementById('loaderStatus').textContent = "IMAGE_SCAN_UNAVAILABLE — USE PROMPT OR FILE MODE";
+        return;
+      }
+
+      try {
+        // window.__examVaultGenerate is defined in the module script below —
+        // it wraps ai-vault-shared.js's generateExamFromText(), which routes
+        // through the same secure Cloud Function ai.js's other AI features use.
+        const result = await window.__examVaultGenerate({ sourceText: promptText, qCount });
+        examData = {
+          questions: result.questions.map(q => ({
+            text: q.q,
+            category: result.subject || 'NODE_DATA',
+            options: q.opts,
+            answer: q.correct
+          }))
+        };
+        updateLoader(100);
+        setTimeout(initMatrix, 800);
+      } catch (error) {
+        console.error('Exam generation failed:', error);
+        document.getElementById('loaderStatus').textContent = "GENERATION_FAILED — " + (error?.message || 'PLEASE_RETRY');
+      }
+    }
+
+    function initMatrix() {
+      gsap.to("#initModule", {
+        scale: 1.2, opacity: 0, rotateY: 20, filter: "blur(40px)", duration: 1, ease: "power4.inOut",
+        onComplete: () => {
+          document.getElementById('stage0').classList.add('hidden');
+          document.getElementById('mainWorkspace').classList.remove('hidden');
+          gsap.to("#mainWorkspace", { opacity: 1, duration: 1 });
+          startTime = Date.now();
+          startTimer();
+          renderQuestion();
+        }
+      });
+    }
+
+    function renderQuestion() {
+      const q = examData.questions[currentIdx];
+      const total = examData.questions.length;
+      
+      gsap.to("#questionCard > *", { 
+        opacity: 0, x: -20, duration: 0.3, stagger: 0.05,
+        onComplete: () => {
+            document.getElementById('qText').textContent = q.text;
+            document.getElementById('qCategory').textContent = q.category || 'NODE_DATA';
+            document.getElementById('progressText').innerHTML = `${String(currentIdx+1).padStart(2, '0')}<span class="text-slate-700 text-2xl">/${String(total).padStart(2, '0')}</span>`;
+            document.getElementById('sideProgressFill').style.width = `${((currentIdx+1) / total) * 100}%`;
+            
+            const container = document.getElementById('options');
+            container.innerHTML = '';
+            q.options.forEach((opt, i) => {
+              const isSelected = userAnswers[currentIdx] === i;
+              const card = document.createElement('div');
+              card.className = `option-card p-6 rounded-3xl border text-left flex items-center gap-6 cursor-pointer group ${isSelected ? 'active border-violet-500' : 'bg-black/20 border-white/5'}`;
+              card.innerHTML = `
+                <div class="w-12 h-12 rounded-xl ${isSelected ? 'bg-violet-600 text-white' : 'bg-white/5 text-slate-500'} flex items-center justify-center font-black orbitron transition-all">${String.fromCharCode(65 + i)}</div>
+                <span class="flex-grow font-medium text-lg ${isSelected ? 'text-white' : 'text-slate-400'} group-hover:text-white transition-colors">${escapeHTML(opt)}</span>
+                ${isSelected ? '<i data-lucide="shield-check" class="w-6 h-6 text-violet-400"></i>' : '<i data-lucide="circle" class="w-6 h-6 text-white/5 group-hover:text-white/20 transition-all"></i>'}
+              `;
+              card.onclick = () => { 
+                  playSfx('sfx-hover');
+                  userAnswers[currentIdx] = i; 
+                  renderQuestion(); 
+              };
+              container.appendChild(card);
+            });
+            
+            document.getElementById('prevBtn').disabled = currentIdx === 0;
+            document.getElementById('nextBtnText').textContent = currentIdx === total - 1 ? 'UPLOAD_FINAL_DATA' : 'COMMIT_RESPONSE';
+            
+            lucide.createIcons();
+            gsap.to("#questionCard > *", { opacity: 1, x: 0, duration: 0.5, stagger: 0.08 });
+        }
+      });
+    }
+
+    function nextQ() { 
+        playSfx('sfx-click');
+        if(currentIdx < examData.questions.length - 1) { 
+            currentIdx++; renderQuestion(); 
+        } else completeExam(); 
+    }
+    
+    function prevQ() { 
+        playSfx('sfx-hover');
+        if(currentIdx > 0) { currentIdx--; renderQuestion(); } 
+    }
+
+    function startTimer() {
+        const totalSecs = timeLimitMinutes * 60;
+        timerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const remaining = totalSecs - elapsed;
+            
+            if (remaining <= 0) {
+                clearInterval(timerInterval);
+                completeExam(true);
+                return;
+            }
+
+            const m = Math.floor(remaining / 60).toString().padStart(2, '0');
+            const s = (remaining % 60).toString().padStart(2, '0');
+            const timerEl = document.getElementById('timer');
+            timerEl.textContent = `${m}:${s}`;
+            
+            if (remaining < 60) {
+                timerEl.classList.add('text-red-500', 'animate-pulse');
+                document.getElementById('synapse-health').textContent = 'CRITICAL_LATENCY';
+                document.getElementById('synapse-health').classList.replace('text-emerald-400', 'text-red-500');
+            }
+        }, 1000);
+    }
+
+    function completeExam(isTimeout = false) {
+        clearInterval(timerInterval);
+        playSfx('sfx-scan');
+        
+        let correctCount = 0;
+        examData.questions.forEach((q, i) => { if(userAnswers[i] === q.answer) correctCount++; });
+        const score = Math.round((correctCount / examData.questions.length) * 100);
+        
+        document.getElementById('finalPoints').textContent = `${correctCount}/${examData.questions.length}`;
+        const diff = Math.floor((Date.now() - startTime) / 1000);
+        const m = Math.floor(diff / 60).toString().padStart(2, '0');
+        const s = (diff % 60).toString().padStart(2, '0');
+        document.getElementById('finalTime').textContent = `${m}:${s}`;
+        document.getElementById('resultScore').textContent = `${score}%`;
+        
+        gsap.to("#mainWorkspace", { opacity: 0, y: 50, duration: 1, onComplete: () => {
+            document.getElementById('mainWorkspace').classList.add('hidden');
+            document.getElementById('resultsScreen').classList.remove('hidden');
+            const ring = document.getElementById('resultRing');
+            const circumference = 691;
+            ring.style.strokeDashoffset = circumference - (score / 100) * circumference;
+            if(score >= 70) confetti({ particleCount: 300, spread: 120, origin: { y: 0.6 }, colors: ['#7c3aed', '#6366f1'] });
+        }});
+    }
+
+    async function startCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            document.getElementById('cameraFeed').srcObject = stream;
+        } catch (err) { console.error("Camera access denied."); }
+    }
+    function stopCamera() { if(stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } }
+    function captureImage() {
+        playSfx('sfx-scan');
+        const video = document.getElementById('cameraFeed');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        const base64 = canvas.toDataURL('image/png').split(',')[1];
+        startNeuralProcessing("UPLOADING_VISUAL_STREAM...");
+        generateExamWithGemini(null, base64);
+        stopCamera();
+    }
+  </script>
+  <script type="module">
+    import { requireEliteAccess, generateExamFromText, extractTextFromPdfFile, launchCbtSession } from "./ai-vault-shared.js";
+
+    window.__examVaultCheckAccess = requireEliteAccess;
+
+    window.__examVaultGenerate = async ({ sourceText, qCount }) => {
+      return generateExamFromText({
+        sourceText,
+        topic: sourceText && sourceText.length < 200 ? sourceText : null,
+        subject: 'Exam Vault',
+        count: qCount
+      });
+    };
+
+    window.__examVaultExtractPdf = (file) => extractTextFromPdfFile(file);
+
+    // "Import into CBT" on the results screen — hands the exam this page
+    // already generated (examData, in its own {text, category, options,
+    // answer} shape) over to cbt.htm, which expects {q, opts, correct}.
+    window.__examVaultImportToCbt = () => {
+      if (!examData || !Array.isArray(examData.questions) || !examData.questions.length) {
+        return;
+      }
+      const questions = examData.questions.map(q => ({
+        q: q.text,
+        opts: q.options,
+        correct: q.answer
+      }));
+      launchCbtSession({
+        subject: examData.questions[0]?.category || 'Exam Vault',
+        questions,
+        examType: 'EXAM_VAULT'
+      });
+    };
+  </script>
+</body>
+</html>

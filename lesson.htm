@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lesson — Geo-Books</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--ink:#18333b;--navy:#123a46;--teal:#0b9b96;--mint:#dff8f2;--orange:#ff8b62;--yellow:#ffd66b;--line:#dbe9e6}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#f5faf8;color:var(--ink);font-family:Arial,Helvetica,sans-serif;zoom:1}a{color:inherit;text-decoration:none}
+.logo{display:flex;align-items:center;gap:10px}.logo-mark{width:36px;height:36px;display:grid;place-items:center;position:relative;border-radius:11px 11px 11px 4px;background:var(--teal);color:white;font-weight:800;font-size:18px;box-shadow:0 7px 18px #0b9b962e}.logo-mark span{color:var(--yellow);font-size:10px;position:absolute;right:4px;top:4px}.logo-copy strong,.logo-copy small{display:block}.logo-copy strong{color:var(--navy);font-size:15px;line-height:1}.logo-copy small{margin-top:2px;color:#72878a;text-transform:uppercase;letter-spacing:.2em;font-size:7px;font-weight:700}
+.button{border:0;border-radius:10px;padding:12px 16px;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:var(--teal);color:white;font-weight:800;font-size:12px;cursor:pointer;transition:.2s}.button:hover{transform:translateY(-2px)}
+
+/* Lesson workspace — matches the reference layout exactly */
+.lesson-page{min-height:100vh;background:#f5faf8}.lesson-topbar{height:74px;padding:0 28px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:1px solid var(--line);background:white;position:sticky;top:0;z-index:30}.lesson-breadcrumb{display:flex;align-items:center;gap:10px;color:#829496;font-size:10px;justify-self:center}.lesson-breadcrumb a:hover{color:var(--teal)}.lesson-breadcrumb strong{color:var(--navy)}.student-chip{justify-self:end;padding:5px 9px 5px 5px;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;background:white;color:var(--ink)}.student-chip>span{width:31px;height:31px;display:grid;place-items:center;border-radius:9px;background:var(--mint);color:var(--teal);font-size:9px;font-weight:900}.student-chip p{margin:0;text-align:left}.student-chip strong,.student-chip small{display:block}.student-chip strong{font-size:9px}.student-chip small{color:#95a3a5;font-size:7px}
+.lesson-shell{min-height:calc(100vh - 74px);display:grid;grid-template-columns:300px minmax(0,1fr)}.lesson-sidebar{padding:30px 25px;border-right:1px solid var(--line);background:white;position:sticky;top:74px;height:calc(100vh - 74px);overflow-y:auto}.sidebar-back{color:#7a8e91;font-size:9px;font-weight:700}.topic-label{display:block;margin-top:30px;color:var(--teal);font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.15em}.lesson-sidebar h1{margin:7px 0 20px;color:var(--navy);font-size:22px;line-height:1.15;letter-spacing:-.035em}.overall-progress>div:first-child{display:flex;justify-content:space-between;color:#87999b;font-size:8px;text-transform:uppercase;letter-spacing:.08em}.overall-progress strong{color:var(--teal)}.overall-bar{height:5px;margin-top:7px;border-radius:10px;background:#e8efed;overflow:hidden}.overall-bar span{display:block;height:100%;border-radius:inherit;background:var(--teal);transition:.3s}.lesson-tabs{margin-top:25px;display:grid;gap:7px}.lesson-tabs button{width:100%;padding:10px;display:flex;align-items:center;gap:10px;border:1px solid transparent;border-radius:11px;background:transparent;color:#526a6f;text-align:left;cursor:pointer}.lesson-tabs button:hover:not(:disabled){background:#f5faf8}.lesson-tabs button.active{border-color:#bfe5de;background:#eaf8f4;color:var(--teal)}.lesson-tabs button>span{width:31px;height:31px;flex:none;display:grid;place-items:center;border-radius:9px;background:white;border:1px solid #e4ecea;color:var(--teal);font-size:11px;font-weight:900}.lesson-tabs button.done>span{background:var(--teal);color:white}.lesson-tabs p{margin:0}.lesson-tabs strong,.lesson-tabs small{display:block}.lesson-tabs strong{font-size:10px}.lesson-tabs small{margin-top:2px;color:#9ba8aa;font-size:8px}.lesson-tabs button:disabled{cursor:not-allowed;opacity:.45}
+.lesson-workspace{max-width:980px;width:100%;margin:0 auto;padding:40px 50px 60px}.workspace-heading{display:flex;align-items:end;justify-content:space-between;margin-bottom:20px;gap:20px}.workspace-kicker{color:var(--teal);font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.15em}.workspace-heading h2{margin:5px 0 0;color:var(--navy);font-size:28px;letter-spacing:-.04em}.duration-pill{padding:7px 10px;border-radius:20px;background:white;border:1px solid var(--line);color:#74898c;font-size:9px;white-space:nowrap}
+.media-stage{min-height:340px;padding:45px;position:relative;display:flex;align-items:center;justify-content:center;flex-direction:column;overflow:hidden;border-radius:22px;background:linear-gradient(145deg,#173e48,#0b7775);color:white;text-align:center;box-shadow:0 18px 40px #173e4821}.media-stage:before{content:"";position:absolute;width:280px;height:280px;right:-110px;top:-120px;border:35px solid #ffffff0d;border-radius:50%}.media-icon{font-size:30px;color:var(--yellow)}.media-stage h3{margin:12px 0 6px;font-size:22px}.media-stage>p{max-width:470px;margin:0;color:#d2e3e2;font-size:11px;line-height:1.6}.play-button{width:54px;height:54px;margin-top:23px;padding-left:5px;border:0;border-radius:50%;background:var(--orange);color:white;font-size:18px;cursor:pointer;box-shadow:0 9px 24px #0003}.play-button:disabled{opacity:.6;cursor:wait}
+.lesson-notes{margin-top:20px;padding:28px;border:1px solid var(--line);border-radius:18px;background:white}.notes-kicker{color:#9aabad;font-size:8px;text-transform:uppercase;letter-spacing:.13em;font-weight:800}.lesson-notes h3{margin:7px 0 12px;color:var(--navy);font-size:17px}.lesson-notes ul{margin:0;padding-left:19px;color:#647b80;font-size:11px;line-height:1.9}.exam-note{margin-top:20px;padding:14px 16px;display:flex;gap:12px;border-radius:11px;background:#fff7df;color:#725f36}.exam-note>span{color:var(--orange)}.exam-note p{margin:0;font-size:10px;line-height:1.6}.exam-note strong{display:block;margin-bottom:2px;color:#8a6623}
+.video-lesson-card{overflow:hidden;border:1px solid var(--line);border-radius:22px;background:white;box-shadow:0 18px 40px #173e4814}.video-player-frame{position:relative;width:100%;aspect-ratio:16/9;background:#0b2026}.video-player-frame video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0b2026}.video-lesson-details{padding:22px 25px 25px}.video-lesson-details>span{color:var(--teal);font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.15em}.video-lesson-details h3{margin:6px 0;color:var(--navy);font-size:20px}.video-lesson-details p{max-width:680px;margin:0;color:#6d8185;font-size:11px;line-height:1.7}
+.mini-text-card{padding:38px 42px;border:1px solid var(--line);border-radius:20px;background:white;box-shadow:0 14px 34px #173e480d}.mini-text-header{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:1px solid #e9efee;color:var(--teal);font-size:8px;text-transform:uppercase;letter-spacing:.13em;font-weight:900}.mini-text-header strong{color:#87999b;font-size:8px}.mini-text-card>h3{margin:24px 0 14px;color:var(--navy);font-size:27px;letter-spacing:-.035em}.mini-text-card>p,.minitext-paragraph{color:#587176;font-size:12px;line-height:1.85;margin:0 0 10px}.minitext-heading{color:var(--navy);font-size:19px;margin:20px 0 8px;font-weight:800}.minitext-heading:first-of-type{margin-top:0}.minitext-subheading{color:var(--navy);font-size:15px;margin:18px 0 6px;font-weight:800}.minitext-pills{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 16px}.minitext-pill{background:var(--mint);color:#0b6b66;font-size:10px;font-weight:800;padding:7px 13px;border-radius:20px;white-space:pre-wrap}.minitext-divider{border:0;border-top:1px solid var(--line);margin:18px 0}
+.audio-lesson-card{padding:30px;border:1px solid #dedaf0;border-radius:22px;background:linear-gradient(145deg,#f8f6ff,#fff);box-shadow:0 18px 40px #4d487d14}.audio-lesson-heading{display:flex;align-items:center;gap:14px}.audio-lesson-icon{width:48px;height:48px;display:grid;place-items:center;flex:none;border-radius:14px;background:#ebe7fb;color:#6c60aa;font-size:20px}.audio-lesson-heading>div>span{color:#7668b5;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.15em}.audio-lesson-heading h3{margin:5px 0 0;color:var(--navy);font-size:20px}.drive-audio-player{width:100%;margin:22px 0 14px}.audio-lesson-card>p{max-width:680px;margin:0;color:#6d7187;font-size:11px;line-height:1.7}
+.quiz-workspace{padding:38px;border-radius:20px;background:white;border:1px solid var(--line);text-align:center}.quiz-workspace .media-icon{color:var(--teal)}.quiz-workspace h3{max-width:520px;margin:12px auto 8px;color:var(--navy);font-size:22px;line-height:1.35}.quiz-workspace p{max-width:480px;margin:0 auto;color:#71868a;font-size:12px;line-height:1.7}.quiz-workspace .button{margin-top:22px}
+.workspace-footer{margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:20px}.complete-button{padding:12px 16px;border:0;border-radius:10px;background:var(--teal);color:white;font-size:10px;font-weight:800;cursor:pointer}.complete-button.completed{background:#dff5ee;color:#218277}.workspace-footer p{margin:0;color:#93a2a4;font-size:8px}
+.empty-state{padding:80px 20px;text-align:center;color:#8a9b9d}.empty-state h3{color:var(--navy);font-size:20px;margin-bottom:8px}
+@media(max-width:800px){.lesson-topbar{grid-template-columns:1fr auto}.lesson-breadcrumb{display:none}.lesson-shell{grid-template-columns:1fr}.lesson-sidebar{position:static;width:100%;height:auto;border-right:0;border-bottom:1px solid var(--line)}.lesson-tabs{grid-template-columns:repeat(5,1fr);display:grid;overflow-x:auto}.lesson-tabs button{min-width:130px}.lesson-workspace{padding:30px 22px}.media-stage{min-height:300px}.workspace-footer{align-items:flex-start;flex-direction:column}}
+@media(max-width:480px){.lesson-topbar{padding:0 14px}.student-chip p{display:none}.lesson-sidebar{padding:25px 18px}.lesson-workspace{padding:25px 14px}.workspace-heading{align-items:flex-start;flex-direction:column;gap:10px}.media-stage{padding:30px 18px}.lesson-notes,.quiz-workspace,.mini-text-card{padding:24px 20px}}
+</style>
+</head>
+<body>
+<main class="lesson-page">
+  <header class="lesson-topbar">
+    <a class="logo" href="geo-books.htm" aria-label="Geo-Books home">
+      <span class="logo-mark">G<span>+</span></span>
+      <span class="logo-copy"><strong>Geo-Books</strong><small>University</small></span>
+    </a>
+    <div class="lesson-breadcrumb">
+      <a id="breadcrumbCourse" href="course-lectures.htm">Course</a>
+      <span>›</span>
+      <strong id="breadcrumbTopic">Topic</strong>
+    </div>
+    <button class="student-chip" id="studentChip" type="button">
+      <span id="studentInitials">ST</span>
+      <p><strong>Student</strong><small>Learning mode</small></p>
+    </button>
+  </header>
+
+  <div class="lesson-shell">
+    <aside class="lesson-sidebar">
+      <a class="sidebar-back" id="sidebarBack" href="course-lectures.htm">← Course overview</a>
+      <span class="topic-label" id="topicLabel">Topic —</span>
+      <h1 id="sidebarTitle">Loading...</h1>
+      <div class="overall-progress">
+        <div><span>Lesson progress</span><strong id="progressCount">0/0</strong></div>
+        <div class="overall-bar"><span id="progressBar" style="width:0%"></span></div>
+      </div>
+      <nav class="lesson-tabs" id="lessonTabs"></nav>
+    </aside>
+
+    <section class="lesson-workspace" id="lessonWorkspace">
+      <div class="empty-state"><h3>Loading lesson...</h3></div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA1nVLSPFs30wG-PLaEyFqm_PEVhZdzISU",
+    authDomain: "geo-books-8411e.firebaseapp.com",
+    projectId: "geo-books-8411e",
+    storageBucket: "geo-books-8411e.firebasestorage.app",
+    messagingSenderId: "972887107793",
+    appId: "1:972887107793:web:7e0374bf81e6713fd0fdf0",
+    measurementId: "G-RY84V5DXPN"
+  };
+  function getFirebaseApp() { return getApps().length ? getApps()[0] : initializeApp(firebaseConfig); }
+  const auth = getAuth(getFirebaseApp());
+  const db = getFirestore(getFirebaseApp());
+
+  const API_BASE_URL = window.GEO_BOOKS_API_URL ||
+    (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:3007' : '');
+
+  const escapeHTML = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const params = new URLSearchParams(location.search);
+  const courseId = params.get('course');
+  const topicId = params.get('topic');
+  const initialTab = params.get('tab');
+
+  const courseLink = `course-lectures.htm?course=${encodeURIComponent(courseId || '')}`;
+  document.getElementById('sidebarBack').href = courseLink;
+  document.getElementById('breadcrumbCourse').href = courseLink;
+  document.getElementById('breadcrumbCourse').textContent = courseId || 'Course';
+
+  if (!courseId || !topicId) {
+    document.getElementById('lessonWorkspace').innerHTML = `<div class="empty-state"><h3>Lesson not found</h3><p>Go back and open a topic from the course page.</p></div>`;
+    document.getElementById('sidebarTitle').textContent = 'Not found';
+  }
+
+  let currentUser = null;
+  let topic = null;
+  let quiz = null; // { title, questions: [...] }
+  let active = null;
+  const RESOURCE_DEFS = [
+    { key: 'miniText', id: 'mini', icon: '◫', label: 'Mini-text', caption: 'Start here' },
+    { key: 'voiceNote', id: 'voice', icon: '♫', label: 'Voice note', caption: 'Listen and revise' },
+    { key: 'fullLecture', id: 'full', icon: '▶', label: 'Full lecture', caption: 'Detailed lesson' },
+    { key: 'structuredAnswer', id: 'answer', icon: '✎', label: 'Structured answer', caption: 'Exam preparation' },
+    { key: 'quizAssessmentId', id: 'quiz', icon: '✓', label: 'Quiz', caption: 'Test yourself' }
+  ];
+  const PROGRESS_KEY_PREFIX = 'geoBooksLessonProgress:';
+  let completed = new Set();
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = 'geo-books.htm'; return; }
+    currentUser = user;
+    const initials = (user.displayName || user.email || 'ST').trim().split(/\s+/).map((s) => s[0]).slice(0, 2).join('').toUpperCase();
+    document.getElementById('studentInitials').textContent = initials || 'ST';
+
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      const sub = snap.exists() ? snap.data().subscription : null;
+      const hasAccess = sub && ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'].includes(sub.tier) && sub.verified === true && sub.status === 'active';
+      const isAdmin = (await user.getIdTokenResult()).claims.admin === true;
+      if (!hasAccess && !isAdmin) {
+        document.body.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;">
+          <div><h2 style="color:var(--navy)">University Pass required</h2>
+          <p style="color:#718589;margin:12px 0 20px">You need an active University Pass to view lessons.</p>
+          <a class="button" href="geo-books.htm">Back to Geo-Books</a></div></div>`;
+        return;
+      }
+    } catch (e) {
+      console.error('Access check failed:', e);
+    }
+
+    loadProgress();
+    if (courseId && topicId) loadTopic();
+  });
+
+  function loadProgress() {
+    try {
+      const raw = localStorage.getItem(PROGRESS_KEY_PREFIX + (currentUser?.uid || '') + ':' + topicId);
+      completed = new Set(raw ? JSON.parse(raw) : []);
+    } catch (e) { completed = new Set(); }
+  }
+
+  function saveProgress() {
+    try {
+      localStorage.setItem(PROGRESS_KEY_PREFIX + (currentUser?.uid || '') + ':' + topicId, JSON.stringify([...completed]));
+    } catch (e) { console.warn('Could not save progress locally:', e); }
+  }
+
+  async function loadTopic() {
+    try {
+      const snap = await getDoc(doc(db, 'courseTopics', topicId));
+      if (!snap.exists()) {
+        document.getElementById('lessonWorkspace').innerHTML = `<div class="empty-state"><h3>Lesson not found</h3><p>This topic may have been removed.</p></div>`;
+        return;
+      }
+      topic = { id: snap.id, ...snap.data() };
+
+      if (topic.quizAssessmentId) {
+        try {
+          const qSnap = await getDoc(doc(db, 'assessments', topic.quizAssessmentId));
+          if (qSnap.exists()) quiz = qSnap.data();
+        } catch (e) { console.warn('Could not load quiz assessment:', e); }
+      }
+
+      renderSidebar();
+      const available = RESOURCE_DEFS.find((r) => r.id === initialTab && topic[r.key]) || RESOURCE_DEFS.find((r) => topic[r.key]);
+      setActive(available ? available.id : RESOURCE_DEFS[0].id);
+    } catch (e) {
+      console.error('Failed to load topic:', e);
+      document.getElementById('lessonWorkspace').innerHTML = `<div class="empty-state"><h3>Could not load this lesson</h3><p>${escapeHTML(e.message || '')}</p></div>`;
+    }
+  }
+
+  function resourceSub(def) {
+    if (def.id === 'mini') {
+      const mins = topic.miniTextReadMinutes || estimateReadMinutes(topic.miniText || '');
+      return `${mins} min read`;
+    }
+    if (def.id === 'voice') return 'Ready to listen';
+    if (def.id === 'full') return 'Video lesson';
+    if (def.id === 'answer') return 'Written answer';
+    if (def.id === 'quiz') return quiz?.questions?.length ? `${quiz.questions.length} question${quiz.questions.length === 1 ? '' : 's'}` : 'Quiz';
+    return '';
+  }
+
+  function renderSidebar() {
+    const num = String(topic.topicNumber ?? 1).padStart(2, '0');
+    document.getElementById('topicLabel').textContent = `Topic ${num}`;
+    document.getElementById('sidebarTitle').textContent = topic.title || 'Untitled topic';
+    document.getElementById('breadcrumbTopic').textContent = `Topic ${num}`;
+
+    const available = RESOURCE_DEFS.filter((r) => topic[r.key]);
+    document.getElementById('progressCount').textContent = `${completed.size}/${available.length || 5}`;
+    document.getElementById('progressBar').style.width = `${available.length ? (completed.size / available.length) * 100 : 0}%`;
+
+    const tabs = document.getElementById('lessonTabs');
+    tabs.innerHTML = RESOURCE_DEFS.map((def) => {
+      const has = !!topic[def.key];
+      const isDone = completed.has(def.id);
+      return `<button class="${isDone ? 'done' : ''}" data-tab="${def.id}" ${has ? '' : 'disabled'}>
+        <span>${isDone ? '✓' : def.icon}</span>
+        <p><strong>${def.label}</strong><small>${has ? resourceSub(def) : 'Coming soon'}</small></p>
+      </button>`;
+    }).join('');
+    tabs.querySelectorAll('button[data-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => setActive(btn.dataset.tab));
+    });
+  }
+
+  function setActive(tabId) {
+    active = tabId;
+    document.querySelectorAll('.lesson-tabs button').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.tab === tabId);
+    });
+    renderWorkspace();
+  }
+
+  function toggleComplete() {
+    if (completed.has(active)) completed.delete(active); else completed.add(active);
+    saveProgress();
+    renderSidebar();
+    document.querySelectorAll('.lesson-tabs button').forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === active));
+    renderWorkspaceFooter();
+  }
+
+  function workspaceFooterHTML() {
+    const isDone = completed.has(active);
+    return `<div class="workspace-footer">
+      <button class="complete-button ${isDone ? 'completed' : ''}" id="completeBtn">${isDone ? '✓ Marked as complete' : 'Mark this section complete'}</button>
+      <p>Your progress is saved for your account on this device.</p>
+    </div>`;
+  }
+
+  function renderWorkspaceFooter() {
+    const el = document.querySelector('.workspace-footer');
+    if (!el) return;
+    el.outerHTML = workspaceFooterHTML();
+    document.getElementById('completeBtn')?.addEventListener('click', toggleComplete);
+  }
+
+  function estimateReadMinutes(text) {
+    const words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.round(words / 200));
+  }
+
+  function renderMiniTextBlock(block) {
+    switch (block.type) {
+      case 'heading': return `<div class="minitext-heading">${escapeHTML(block.text || '')}</div>`;
+      case 'subheading': return `<div class="minitext-subheading">${escapeHTML(block.text || '')}</div>`;
+      case 'paragraph': return `<p class="minitext-paragraph">${escapeHTML(block.text || '')}</p>`;
+      case 'pills': return `<div class="minitext-pills">${(block.items || []).map((i) => `<span class="minitext-pill">${escapeHTML(i)}</span>`).join('')}</div>`;
+      case 'divider': return `<hr class="minitext-divider">`;
+      default: return '';
+    }
+  }
+
+  const CAPTIONS = { mini: 'Start here', voice: 'Listen and revise', full: 'Detailed lesson', answer: 'Exam preparation', quiz: 'Test yourself' };
+  const LABELS = { mini: 'Mini-text', voice: 'Voice note', full: 'Full lecture', answer: 'Structured answer', quiz: 'Quiz' };
+
+  function renderWorkspace() {
+    const def = RESOURCE_DEFS.find((r) => r.id === active);
+    const has = def && topic[def.key];
+    const ws = document.getElementById('lessonWorkspace');
+
+    if (!has) {
+      ws.innerHTML = `<div class="empty-state"><h3>Not available yet</h3><p>This resource hasn't been added to the topic.</p></div>`;
+      return;
+    }
+
+    let durationPill = '';
+    if (active === 'mini') durationPill = `<span class="duration-pill">◷ ${topic.miniTextReadMinutes || estimateReadMinutes(topic.miniText || '')} min read</span>`;
+    if (active === 'quiz' && quiz?.questions?.length) durationPill = `<span class="duration-pill">◷ ${quiz.questions.length} question${quiz.questions.length === 1 ? '' : 's'}</span>`;
+
+    let body = '';
+    if (active === 'mini') body = renderMiniTextBody();
+    else if (active === 'voice') body = renderVoiceBody();
+    else if (active === 'full') body = renderVideoGateBody('full');
+    else if (active === 'answer') body = renderAnswerBody();
+    else if (active === 'quiz') body = renderQuizBody();
+
+    ws.innerHTML = `
+      <div class="workspace-heading">
+        <div><span class="workspace-kicker">${escapeHTML(CAPTIONS[active])}</span><h2>${escapeHTML(LABELS[active])}</h2></div>
+        ${durationPill}
+      </div>
+      ${body}
+      ${workspaceFooterHTML()}
+    `;
+    document.getElementById('completeBtn')?.addEventListener('click', toggleComplete);
+    wireDynamicHandlers();
+  }
+
+  function renderMiniTextBody() {
+    let inner = '';
+    if (Array.isArray(topic.miniTextBlocks) && topic.miniTextBlocks.length) {
+      inner = topic.miniTextBlocks.map(renderMiniTextBlock).join('');
+    } else if (topic.miniText) {
+      inner = `<p class="minitext-paragraph">${escapeHTML(topic.miniText)}</p>`;
+    }
+    return `<div class="mini-text-card">
+      <div class="mini-text-header"><span>${escapeHTML(topic.miniTextKicker || 'Mini-text')}</span><strong>Read time: ${topic.miniTextReadMinutes || estimateReadMinutes(topic.miniText || '')} minutes</strong></div>
+      <h3>${escapeHTML(topic.title || '')}</h3>
+      ${inner || '<p class="minitext-paragraph">This resource is ready to be connected.</p>'}
+    </div>`;
+  }
+
+  function renderVoiceBody() {
+    return `<div class="audio-lesson-card">
+      <div class="audio-lesson-heading">
+        <span class="audio-lesson-icon">♫</span>
+        <div><span>Geo-Books voice note</span><h3>${escapeHTML(topic.title || '')}</h3></div>
+      </div>
+      <audio class="drive-audio-player" controls src="${escapeHTML(topic.voiceNote)}"></audio>
+      <p>Use this focused audio revision to reinforce the major concepts, mechanisms and examination points in ${escapeHTML((topic.title || 'this topic').toLowerCase())}.</p>
+    </div>`;
+  }
+
+  function renderVideoGateBody() {
+    return `<div class="media-stage full" id="videoGate">
+      <div class="media-icon">▶</div>
+      <h3>Full tutorial lecture</h3>
+      <p>Your monthly viewing quota is checked before this lecture opens, same as everywhere else in Geo-Books.</p>
+      <button class="play-button" id="loadLectureBtn">▶</button>
+    </div>`;
+  }
+
+  function renderAnswerBody() {
+    return `<div class="mini-text-card">
+      <div class="mini-text-header"><span>Structured answer</span><strong>Exam-style writing</strong></div>
+      <h3>${escapeHTML(topic.title || '')}</h3>
+      <p class="minitext-paragraph">${escapeHTML(topic.structuredAnswer || '')}</p>
+    </div>
+    <div class="exam-note"><span>✎</span><p><strong>Examiner tip</strong>Use this as a model for how to structure your own written answer under exam conditions.</p></div>`;
+  }
+
+  function renderQuizBody() {
+    const count = quiz?.questions?.length;
+    return `<div class="quiz-workspace">
+      <div class="media-icon">✓</div>
+      <h3>${escapeHTML(quiz?.title || topic.title || 'Quiz')}</h3>
+      <p>${count ? `${count} question${count === 1 ? '' : 's'} to check your understanding of ${escapeHTML((topic.title || 'this topic').toLowerCase())}.` : 'This quiz is ready to test your understanding of this topic.'}</p>
+      <button class="button" id="startQuizBtn">Start quiz →</button>
+    </div>`;
+  }
+
+  function wireDynamicHandlers() {
+    document.getElementById('loadLectureBtn')?.addEventListener('click', openLecture);
+    document.getElementById('startQuizBtn')?.addEventListener('click', startTopicQuiz);
+  }
+
+  // Same monthly-quota-checked open flow used across the University section —
+  // now plays inline instead of opening a new tab.
+  async function openLecture() {
+    if (!currentUser || !topic.fullLecture) return;
+    const btn = document.getElementById('loadLectureBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '···'; }
+    try {
+      const idToken = await currentUser.getIdToken();
+      const res = await fetch(`${API_BASE_URL}/api/lectures/${topic.id}/view`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Could not open this lecture right now.');
+        if (btn) { btn.disabled = false; btn.textContent = '▶'; }
+        return;
+      }
+      const gate = document.getElementById('videoGate');
+      if (gate) {
+        gate.outerHTML = `<div class="video-lesson-card">
+          <div class="video-player-frame"><video controls autoplay src="${escapeHTML(topic.fullLecture)}"></video></div>
+          <div class="video-lesson-details"><span>Geo-Books full lecture</span><h3>${escapeHTML(topic.title || '')}</h3><p>${escapeHTML(topic.description || '')}</p></div>
+        </div>`;
+      }
+    } catch (e) {
+      console.error('openLecture failed:', e);
+      alert('Could not open this lecture. Check your connection and try again.');
+      if (btn) { btn.disabled = false; btn.textContent = '▶'; }
+    }
+  }
+
+  // Quiz hands off to the same cbt.htm session contract launchCbtSession()
+  // uses in ai-vault-shared.js — Geo-Books quizzes are full timed CBT
+  // sessions (not the single-question inline demo this design was
+  // originally sketched around), so "Start quiz" launches that flow.
+  async function startTopicQuiz() {
+    if (!quiz) { alert('This quiz is not available right now.'); return; }
+    try {
+      sessionStorage.setItem('geoBooksCbtSession', JSON.stringify({
+        subject: quiz.title || topic.title || 'Quiz',
+        questions: quiz.questions || [],
+        durationSec: Math.max(600, (quiz.questions || []).length * 60),
+        examType: 'UNIVERSITY_MANUAL',
+        startedAtMs: Date.now()
+      }));
+      window.location.href = 'cbt.htm';
+    } catch (e) {
+      console.error('startTopicQuiz failed:', e);
+      alert('Could not start the quiz. Please try again.');
+    }
+  }
+</script>
+</body>
+</html>

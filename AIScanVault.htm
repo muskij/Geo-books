@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geo-Books AI | The Vault</title>
+  
+  <!-- Performance Pre-connects -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    :root {
+      --brand-blue: #007AFF;
+      --brand-purple: #5856D6;
+      --glass-bg: rgba(10, 10, 10, 0.7);
+      --border-glow: rgba(0, 122, 255, 0.3);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000000;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      color: #ffffff;
+    }
+
+    .mono-text { font-family: 'JetBrains Mono', monospace; }
+
+    /* Cinematic Background Effects */
+    .neural-mesh {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(0, 122, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 100% 0%, rgba(88, 86, 214, 0.1) 0%, transparent 40%);
+      filter: blur(60px);
+      z-index: 1;
+    }
+
+    .grid-canvas {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      perspective: 1000px;
+      transform: rotateX(60deg) translateY(-200px) translateZ(-500px);
+      mask-image: linear-gradient(to bottom, transparent, black, transparent);
+      z-index: 2;
+      opacity: 0.5;
+    }
+
+    /* Elite Glassmorphism */
+    .vault-shell {
+      background: var(--glass-bg);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.05),
+        0 0 40px var(--border-glow);
+    }
+
+    /* Advanced Neural Loader */
+    .loader-ring {
+      stroke-dasharray: 440;
+      stroke-dashoffset: 440;
+      transition: stroke-dashoffset 0.5s ease;
+    }
+
+    .pulse-glow {
+      animation: pulse-glow 3s infinite alternate;
+    }
+
+    .neural-glow-active {
+      box-shadow: 0 0 15px #22c55e, 0 0 30px #22c55e;
+      animation: neural-pulse 2s infinite;
+    }
+
+    @keyframes neural-pulse {
+      0% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px #22c55e; }
+      50% { transform: scale(1.2); opacity: 0.8; box-shadow: 0 0 25px #22c55e; }
+      100% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px #22c55e; }
+    }
+
+    @keyframes pulse-glow {
+      0% { box-shadow: 0 0 20px rgba(0, 122, 255, 0.2); }
+      100% { box-shadow: 0 0 60px rgba(0, 122, 255, 0.5); }
+    }
+
+    /* Shutter Exit Animation */
+    .shutter-active {
+      animation: shutter-out 0.8s cubic-bezier(0.85, 0, 0.15, 1) forwards;
+    }
+
+    @keyframes shutter-out {
+      0% { clip-path: inset(0 0 0 0); }
+      100% { clip-path: inset(50% 0 50% 0); filter: brightness(2); }
+    }
+
+    /* Custom Scrollbar for Iframe fallback */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+
+    /* Floating Exit FAB */
+    .exit-btn {
+      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .exit-btn:hover {
+      background: #ffffff;
+      color: #000000;
+      transform: scale(1.1) rotate(90deg);
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
+    }
+
+    /* Scanner Scanline Effect */
+    .scanline {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to bottom, transparent, rgba(0, 122, 255, 0.05) 50%, transparent);
+      background-size: 100% 200%;
+      animation: scan 4s linear infinite;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    @keyframes scan {
+      0% { background-position: 0 100%; }
+      100% { background-position: 0 -100%; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Cinematic Background -->
+  <div class="neural-mesh"></div>
+  <div class="grid-canvas"></div>
+  <div class="scanline"></div>
+
+  <div id="mainViewport" class="fixed inset-0 z-10 flex items-center justify-center p-4 sm:p-12 overflow-hidden">
+    
+    <!-- Header Meta (Top Left) -->
+    <div class="absolute top-10 left-10 z-50 flex items-center gap-4">
+      <div id="statusIndicator" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.5)]"></div>
+      <div>
+        <h1 class="mono-text text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Vault Subsystem</h1>
+        <p id="statusString" class="mono-text text-[9px] font-bold text-amber-500 mt-1 uppercase tracking-widest">Establishing Handshake...</p>
+      </div>
+    </div>
+
+    <!-- Exit FAB (Top Right) -->
+    <button onclick="vaultExit()" class="exit-btn absolute top-10 right-10 z-50 w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 backdrop-blur-xl">
+      <i data-lucide="x" class="w-6 h-6"></i>
+    </button>
+
+    <!-- The Vault Shell -->
+    <div id="vaultShell" class="relative w-full h-full max-w-[1700px] vault-shell rounded-[4rem] overflow-hidden flex flex-col scale-95 opacity-0">
+      
+      <!-- Loading Experience -->
+      <div id="neuralLoader" class="absolute inset-0 z-40 bg-black flex flex-col items-center justify-center">
+        <div class="relative scale-125 mb-16">
+          <!-- Animated Ring -->
+          <svg class="w-48 h-48 transform -rotate-90">
+            <circle cx="96" cy="96" r="90" stroke="rgba(255, 255, 255, 0.03)" stroke-width="2" fill="transparent" />
+            <circle id="loaderRing" class="loader-ring" cx="96" cy="96" r="90" stroke="url(#gradient)" stroke-width="4" fill="transparent" stroke-linecap="round" />
+            <defs>
+              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#007AFF" />
+                <stop offset="100%" stop-color="#5856D6" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <!-- Core Logo -->
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="w-24 h-24 rounded-[32px] bg-gradient-to-br from-[#007AFF] to-[#5856D6] flex items-center justify-center shadow-2xl pulse-glow">
+              <i data-lucide="graduation-cap" class="w-12 h-12 text-white"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-center">
+          <h2 class="text-3xl font-black tracking-[0.3em] uppercase mb-4">Geo-Books <span class="text-[#007AFF]">AI</span></h2>
+          <div class="flex items-center justify-center gap-3 mb-8">
+            <div class="w-12 h-[1px] bg-white/10"></div>
+            <p id="loadingPhrase" class="mono-text text-[11px] text-white/40 uppercase tracking-[0.5em]">Initializing Architecture</p>
+            <div class="w-12 h-[1px] bg-white/10"></div>
+          </div>
+          <!-- Tech Stats Readout -->
+          <div class="grid grid-cols-3 gap-12 border-t border-white/5 pt-8 px-12">
+            <div>
+              <p class="mono-text text-[8px] text-white/20 uppercase mb-1">OCR Buffer</p>
+              <p class="mono-text text-[10px] text-[#007AFF] font-bold">100.0%</p>
+            </div>
+            <div>
+              <p class="mono-text text-[8px] text-white/20 uppercase mb-1">Neural Latency</p>
+              <p class="mono-text text-[10px] text-[#007AFF] font-bold">1.2ms</p>
+            </div>
+            <div>
+              <p class="mono-text text-[8px] text-white/20 uppercase mb-1">Security</p>
+              <p class="mono-text text-[10px] text-emerald-500 font-bold">ENCRYPTED</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Area -->
+      <div class="flex-1 w-full h-full relative overflow-hidden bg-black">
+        <div id="vaultUpsell" class="hidden absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-6 px-12 text-center">
+          <i data-lucide="lock" class="w-16 h-16 text-[#007AFF]"></i>
+          <h3 class="text-2xl font-black uppercase tracking-widest">Upgrade Required</h3>
+          <p class="text-white/50 max-w-md">AI Scan is available on any paid plan. Upgrade to generate exams from your notes, PDFs, or a topic prompt.</p>
+          <button onclick="vaultExit()" class="mono-text text-xs font-bold uppercase tracking-widest px-8 py-4 rounded-2xl bg-[#007AFF] text-white">Back to App</button>
+        </div>
+
+        <div id="vaultGenerator" class="hidden absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-8 px-8 sm:px-24">
+          <div class="w-full max-w-2xl">
+            <label class="mono-text text-[10px] uppercase tracking-[0.3em] text-white/40 mb-3 block">Topic or Prompt</label>
+            <textarea id="vaultPromptInput" rows="3" placeholder="e.g. SS3 Chemistry: Chemical bonding and periodicity" class="w-full bg-white/5 border border-white/10 rounded-3xl p-6 text-white outline-none focus:border-[#007AFF]/50 resize-none"></textarea>
+          </div>
+
+          <div class="w-full max-w-2xl flex items-center gap-4">
+            <div class="flex-1 h-px bg-white/10"></div>
+            <span class="mono-text text-[9px] text-white/30 uppercase">or upload a source</span>
+            <div class="flex-1 h-px bg-white/10"></div>
+          </div>
+
+          <div id="vaultDropZone" class="w-full max-w-2xl h-32 rounded-3xl border-2 border-dashed border-white/10 flex items-center justify-center gap-4 cursor-pointer hover:border-[#007AFF]/50 transition-all">
+            <i data-lucide="upload" class="w-6 h-6 text-white/40"></i>
+            <span class="mono-text text-xs text-white/40 uppercase tracking-wider">PDF or .txt file</span>
+            <input type="file" id="vaultFileInput" class="hidden" accept=".pdf,.txt,text/plain,application/pdf">
+          </div>
+          <p id="vaultFileName" class="mono-text text-[10px] text-emerald-400 hidden"></p>
+
+          <div class="w-full max-w-2xl flex items-center gap-6">
+            <div class="flex-1">
+              <label class="mono-text text-[9px] uppercase tracking-widest text-white/30 mb-2 block">Questions</label>
+              <input type="number" id="vaultQCount" value="10" min="3" max="50" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white outline-none">
+            </div>
+            <button id="vaultGenerateBtn" onclick="window.__vaultGenerate()" class="flex-1 mt-6 py-4 rounded-2xl bg-gradient-to-br from-[#007AFF] to-[#5856D6] font-black uppercase text-xs tracking-widest shadow-2xl hover:scale-[1.02] transition-all">
+              Generate Exam
+            </button>
+          </div>
+          <p id="vaultGenerateStatus" class="mono-text text-[10px] text-white/30 uppercase tracking-widest h-4"></p>
+        </div>
+      </div>
+
+      <!-- Elite Footer -->
+      <div class="px-12 py-8 bg-white/[0.02] border-t border-white/5 flex items-center justify-between">
+        <div class="flex items-center gap-10">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-lg bg-[#007AFF]/10">
+              <i data-lucide="shield-check" class="w-4 h-4 text-[#007AFF]"></i>
+            </div>
+            <div>
+              <p class="mono-text text-[8px] text-white/20 uppercase">Encryption</p>
+              <p class="mono-text text-[8px] font-bold text-white/60">Quantum-RSA 4096</p>
+            </div>
+          </div>
+          <div class="w-px h-8 bg-white/5"></div>
+          <div id="xpStatus" class="flex items-center gap-3 transition-all duration-500">
+            <div class="p-2 rounded-lg bg-emerald-500/10">
+              <i data-lucide="zap" class="w-4 h-4 text-emerald-500"></i>
+            </div>
+            <div>
+              <p class="mono-text text-[8px] text-white/20 uppercase">Reward Protocol</p>
+              <p class="mono-text text-[8px] font-bold text-emerald-500 tracking-tighter uppercase">+50 XP ENABLED</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <div class="text-right">
+            <p class="mono-text text-[8px] text-white/20 uppercase">Subsystem</p>
+            <p class="mono-text text-[8px] font-bold text-white/60">Geo-Books Vault v5.0</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center">
+            <i data-lucide="layout-grid" class="w-5 h-5 text-white/20"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PHRASES = [
+      "Waking the Architect",
+      "Calibrating Neural Vision",
+      "Synchronizing Data Stream",
+      "Optimizing Response Matrix",
+      "Finalizing Secure Handshake"
+    ];
+
+    let phraseIdx = 0;
+
+    // Initialize UI
+    lucide.createIcons();
+
+    // GSAP Entrance (Accelerated)
+    gsap.to("#vaultShell", {
+      scale: 1,
+      opacity: 1,
+      duration: 0.8,
+      ease: "power4.out",
+      delay: 0.1
+    });
+
+    // Cycle Phrases (Accelerated)
+    const phraseInterval = setInterval(() => {
+      phraseIdx = (phraseIdx + 1) % PHRASES.length;
+      document.getElementById('loadingPhrase').textContent = PHRASES[phraseIdx];
+      // Simulate ring filling
+      document.getElementById('loaderRing').style.strokeDashoffset = 440 - (phraseIdx + 1) * 88;
+    }, 800);
+
+    function vaultExit() {
+      document.getElementById('mainViewport').classList.add('shutter-active');
+      setTimeout(() => {
+        window.location.href = 'geo-books.htm';
+      }, 750);
+    }
+
+    function onSynthesisComplete() {
+      confetti({
+        particleCount: 200,
+        spread: 90,
+        origin: { y: 0.7 },
+        colors: ['#22c55e', '#007AFF', '#FFFFFF'],
+        gravity: 1.2,
+        scalar: 1.2
+      });
+    }
+
+    // Bridge for the module script below (real generation logic lives there
+    // since it needs `import`; this file's main script isn't a module so
+    // inline onclick="..." handlers keep working as plain globals).
+    window.__vaultShowGenerator = function () {
+      clearInterval(phraseInterval);
+      const indicator = document.getElementById('statusIndicator');
+      indicator.className = "w-2.5 h-2.5 rounded-full bg-[#22c55e] neural-glow-active";
+      document.getElementById('statusString').textContent = "Neural Link Active";
+      document.getElementById('statusString').className = "mono-text text-[9px] font-bold text-[#22c55e] mt-1 uppercase tracking-widest";
+      gsap.to("#neuralLoader", { opacity: 0, duration: 0.6, pointerEvents: "none" });
+      document.getElementById('vaultGenerator').classList.remove('hidden');
+      lucide.createIcons();
+    };
+
+    window.__vaultShowUpsell = function () {
+      clearInterval(phraseInterval);
+      document.getElementById('statusString').textContent = "Upgrade Required";
+      gsap.to("#neuralLoader", { opacity: 0, duration: 0.6, pointerEvents: "none" });
+      document.getElementById('vaultUpsell').classList.remove('hidden');
+      lucide.createIcons();
+    };
+
+    window.__vaultOnGenerated = function () {
+      onSynthesisComplete();
+    };
+  </script>
+
+  <script type="module">
+    import { requireEliteAccess, generateExamFromText, extractTextFromPdfFile, launchCbtSession } from "./ai-vault-shared.js";
+
+    let pendingSourceText = '';
+    let pendingFileName = '';
+
+    async function init() {
+      const { allowed } = await requireEliteAccess();
+      if (!allowed) {
+        window.__vaultShowUpsell();
+        return;
+      }
+      window.__vaultShowGenerator();
+
+      const dz = document.getElementById('vaultDropZone');
+      const fileInput = document.getElementById('vaultFileInput');
+      dz.onclick = () => fileInput.click();
+      fileInput.onchange = async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const statusEl = document.getElementById('vaultGenerateStatus');
+        const nameEl = document.getElementById('vaultFileName');
+        try {
+          if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+            statusEl.textContent = 'Reading PDF...';
+            pendingSourceText = await extractTextFromPdfFile(file);
+          } else {
+            pendingSourceText = await file.text();
+          }
+          pendingFileName = file.name;
+          nameEl.textContent = `Loaded: ${file.name}`;
+          nameEl.classList.remove('hidden');
+          statusEl.textContent = '';
+        } catch (err) {
+          console.error('File read failed:', err);
+          statusEl.textContent = 'Could not read that file.';
+        }
+      };
+    }
+
+    window.__vaultGenerate = async function () {
+      const btn = document.getElementById('vaultGenerateBtn');
+      const statusEl = document.getElementById('vaultGenerateStatus');
+      const promptText = document.getElementById('vaultPromptInput').value.trim();
+      const count = document.getElementById('vaultQCount').value;
+
+      if (!promptText && !pendingSourceText) {
+        statusEl.textContent = 'Enter a topic or upload a file first.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+      statusEl.textContent = 'Generating your exam...';
+
+      try {
+        const result = await generateExamFromText({
+          sourceText: pendingSourceText || null,
+          topic: promptText,
+          subject: promptText || pendingFileName || 'General',
+          count
+        });
+        window.__vaultOnGenerated();
+        launchCbtSession({ subject: result.subject, questions: result.questions, examType: 'AI_SCAN' });
+      } catch (err) {
+        console.error('Exam generation failed:', err);
+        statusEl.textContent = err.message || 'Generation failed. Please try again.';
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+      }
+    };
+
+    init();
+  </script>
+</body>
+</html>

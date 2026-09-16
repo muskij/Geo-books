@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full scroll-smooth" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%237c3aed'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M18 30.5L32 22l14 8.5-14 8.5-14-8.5zm6 4.6L32 40l8-4.9V42L32 47l-8-5v-6.9z' fill='white'/%3E%3C/svg%3E">
+  <meta name="theme-color" content="#7c3aed">
+  <title>Geo-Books • Seller Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      height: 100%;
+      width: 100%;
+      overflow-x: hidden;
+    }
+    body {
+      overflow-x: hidden;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    @supports (height: 100dvh) {
+      html, body {
+        height: 100dvh;
+      }
+    }
+    main, .custom-scrollbar {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Elite Premium Styles */
+    .elite-gradient { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #06b6d4 100%); }
+    .elite-text {
+      background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #06B6D4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+    }
+    .dark .glass { background: rgba(15, 23, 42, 0.7); }
+
+    .premium-card {
+      background: white;
+      border-radius: 3rem;
+      border: 1px solid #F1F5F9;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.04);
+      transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+      transform-style: preserve-3d;
+    }
+    .dark .premium-card {
+      background: #0F172A;
+      border-color: #1E293B;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    .premium-card:hover {
+      transform: translateY(-16px) scale(1.01);
+      box-shadow: 0 40px 100px -20px rgba(124, 58, 237, 0.2);
+      border-color: #E0E7FF;
+    }
+
+    .hero-orb {
+      filter: blur(120px);
+      border-radius: 100%;
+      position: absolute;
+      z-index: 0;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 20px; }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
+
+    .btn-hover-effect { position: relative; overflow: hidden; }
+    .btn-hover-effect::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .btn-hover-effect:hover::after { opacity: 0.1; }
+
+    .haptic-feedback {
+      transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .haptic-feedback:active { transform: scale(0.95); }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+    .animate-float { animation: float 7s ease-in-out infinite; }
+    .animate-float-slow { animation: float 10s ease-in-out infinite; }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .animate-shimmer {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+
+    .stat-glow {
+      position: relative;
+    }
+    .stat-glow::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: inherit;
+      background: radial-gradient(circle at center, rgba(124,58,237,0.2), transparent 70%);
+      z-index: -1;
+      filter: blur(10px);
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body class="antialiased opacity-0 transition-opacity duration-500 bg-slate-50 dark:bg-slate-950">
+  <div id="toast-container" class="fixed bottom-8 right-8 z-[300] flex flex-col gap-3"></div>
+
+  <!-- NAVBAR -->
+  <nav class="fixed top-0 left-0 right-0 z-[100] glass border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center gap-4 group cursor-pointer" onclick="window.location.href='index.htm'">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-600 text-white flex items-center justify-center shadow-xl shadow-brand-500/20 group-hover:rotate-12 transition-all duration-500">
+          <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+        </div>
+        <span class="text-2xl font-black tracking-tighter">Geo-Books<span class="elite-text">.ng</span></span>
+        <span class="ml-3 px-5 py-1.5 rounded-full bg-gradient-to-r from-brand-600 to-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.3em] shadow-lg shadow-brand-500/30">Seller Hub</span>
+      </div>
+
+      <div class="hidden lg:flex items-center gap-10">
+        <a href="#overview" class="text-sm font-bold text-slate-500 hover:text-brand-600 transition-all uppercase tracking-widest">Overview</a>
+        <a href="#listings" class="text-sm font-bold text-slate-500 hover:text-brand-600 transition-all uppercase tracking-widest">Listings</a>
+        <a href="#orders" class="text-sm font-bold text-slate-500 hover:text-brand-600 transition-all uppercase tracking-widest">Orders</a>
+        <a href="#analytics" class="text-sm font-bold text-slate-500 hover:text-brand-600 transition-all uppercase tracking-widest">Analytics</a>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <button id="themeToggle" class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-90 haptic-feedback">
+          <i data-lucide="sun" class="w-5 h-5 hidden dark:block text-amber-400"></i>
+          <i data-lucide="moon" class="w-5 h-5 block dark:hidden text-slate-600"></i>
+        </button>
+        <a href="geo-books.htm" class="px-6 py-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-2 haptic-feedback">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <div class="relative pt-32 pb-20 px-8 overflow-hidden">
+    <div class="hero-orb w-96 h-96 bg-brand-500 top-20 left-0 animate-float"></div>
+    <div class="hero-orb w-80 h-80 bg-indigo-500 bottom-0 right-0 animate-float-slow"></div>
+    <div class="max-w-7xl mx-auto relative z-10">
+      <div class="text-center mb-12">
+        <p class="text-[11px] font-black uppercase tracking-[0.4em] text-brand-600 mb-4">Welcome Back</p>
+        <h1 class="text-7xl font-black tracking-tight mb-4">Sell Smarter, Earn <span class="elite-text">Bigger.</span></h1>
+        <p class="text-xl font-medium text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Manage your campus store with AI-powered tools, real‑time analytics, and seamless order management.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="max-w-7xl mx-auto px-8 pb-32">
+    <!-- STATS OVERVIEW -->
+    <section id="overview" class="mb-20">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div class="premium-card p-10 relative overflow-hidden stat-glow">
+          <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-brand-500/10 to-transparent rounded-bl-[5rem]"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-8">
+              <div class="w-16 h-16 rounded-3xl bg-brand-50 dark:bg-brand-900/20 text-brand-600 flex items-center justify-center">
+                <i data-lucide="shopping-bag" class="w-8 h-8"></i>
+              </div>
+            </div>
+            <p class="text-6xl font-black mb-3" id="totalListings">0</p>
+            <p class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400">Active Listings</p>
+          </div>
+        </div>
+
+        <div class="premium-card p-10 relative overflow-hidden stat-glow">
+          <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-bl-[5rem]"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-8">
+              <div class="w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 flex items-center justify-center">
+                <i data-lucide="banknote" class="w-8 h-8"></i>
+              </div>
+            </div>
+            <p class="text-6xl font-black text-emerald-600 mb-3" id="inventoryValue">₦0</p>
+            <p class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400">Inventory Value</p>
+          </div>
+        </div>
+
+        <div class="premium-card p-10 relative overflow-hidden stat-glow">
+          <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-amber-500/10 to-transparent rounded-bl-[5rem]"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-8">
+              <div class="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 flex items-center justify-center">
+                <i data-lucide="message-circle" class="w-8 h-8"></i>
+              </div>
+            </div>
+            <p class="text-6xl font-black text-amber-600 mb-3" id="buyerInquiries">0</p>
+            <p class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400">Buyer Inquiries</p>
+          </div>
+        </div>
+
+        <div class="premium-card p-10 relative overflow-hidden stat-glow">
+          <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-indigo-500/10 to-transparent rounded-bl-[5rem]"></div>
+          <div class="relative z-10">
+            <div class="flex items-center justify-between mb-8">
+              <div class="w-16 h-16 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 flex items-center justify-center">
+                <i data-lucide="eye" class="w-8 h-8"></i>
+              </div>
+            </div>
+            <p class="text-6xl font-black text-indigo-600 mb-3" id="totalViews">0</p>
+            <p class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400">Total Views</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <!-- LEFT SIDEBAR -->
+      <div class="lg:col-span-4">
+        <div class="sticky top-32 space-y-8">
+          <!-- ADD LISTING -->
+          <div class="premium-card p-10">
+            <div class="flex items-center gap-4 mb-8">
+              <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-600 text-white flex items-center justify-center shadow-xl">
+                <i data-lucide="plus-circle" class="w-7 h-7" id="formIcon"></i>
+              </div>
+              <h3 class="text-2xl font-black" id="formTitle">Add Listing</h3>
+            </div>
+            <form id="addListingForm" class="space-y-5">
+              <input type="hidden" id="editId" value="">
+              <div class="space-y-2">
+                <label class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 ml-2">Item Title</label>
+                <input type="text" id="itemTitle" placeholder="e.g. Engineering Math Vol 1" class="w-full px-6 py-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-brand-500 outline-none transition-all font-bold text-lg" required>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                  <label class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 ml-2">Category</label>
+                  <select id="itemCategory" class="w-full px-6 py-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-brand-500 outline-none transition-all font-bold text-lg">
+                    <option value="Textbook">Textbook</option>
+                    <option value="Gadget">Gadget</option>
+                    <option value="Hostel">Hostel</option>
+                    <option value="Project">Project Material</option>
+                    <option value="Digital">Digital Asset</option>
+                    <option value="Service">Service</option>
+                  </select>
+                </div>
+                <div class="space-y-2">
+                  <label class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 ml-2">Price (₦)</label>
+                  <input type="number" id="itemPrice" placeholder="4500" class="w-full px-6 py-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-brand-500 outline-none transition-all font-bold text-lg" min="100" required>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <label class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 ml-2">Location</label>
+                <input type="text" id="itemLocation" placeholder="e.g. Unilag Front Gate" class="w-full px-6 py-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-brand-500 outline-none transition-all font-bold text-lg" required>
+              </div>
+              <div class="space-y-2">
+                <label class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 ml-2">Description</label>
+                <textarea id="itemDescription" rows="4" placeholder="Describe your item..." maxlength="800" class="w-full px-6 py-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-brand-500 outline-none transition-all font-bold text-lg resize-none"></textarea>
+              </div>
+              <div class="space-y-2">
+                <label class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 ml-2">Photo</label>
+                <div class="flex items-center gap-4">
+                  <div id="itemImagePreviewWrap" class="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 flex items-center justify-center">
+                    <img id="itemImagePreview" class="w-full h-full object-cover hidden">
+                    <i data-lucide="image" class="w-7 h-7 text-slate-400" id="itemImagePlaceholder"></i>
+                  </div>
+                  <div class="flex-1 space-y-2">
+                    <label for="itemImageFile" class="cursor-pointer w-full px-5 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+                      <i data-lucide="upload" class="w-4 h-4"></i> <span id="itemImageUploadLabel">Upload Photo</span>
+                    </label>
+                    <input type="file" id="itemImageFile" accept="image/*" class="hidden">
+                    <input type="hidden" id="itemImage" value="">
+                  </div>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <label class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 ml-2">Digital File URL (Optional)</label>
+                <input type="url" id="itemFileUrl" placeholder="https://download..." class="w-full px-6 py-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-brand-500 outline-none transition-all font-bold text-lg">
+              </div>
+              <div class="flex gap-3">
+                <button type="button" id="cancelEditBtn" onclick="window.cancelEdit()" class="hidden flex-1 py-6 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[2rem] font-black uppercase tracking-[0.2em] transition-all haptic-feedback">
+                  Cancel
+                </button>
+                <button type="submit" id="submitListingBtn" class="flex-1 py-6 bg-gradient-to-r from-brand-600 to-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl shadow-brand-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 btn-hover-effect haptic-feedback">
+                  <i data-lucide="sparkles" class="w-6 h-6"></i>
+                  <span id="submitListingBtnText">Publish Now</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- QUICK ACTIONS -->
+          <div class="premium-card p-10">
+            <h3 class="text-2xl font-black mb-8 flex items-center gap-3">
+              <i data-lucide="zap" class="w-7 h-7 text-brand-600"></i> Quick Actions
+            </h3>
+            <div class="space-y-4">
+              <a href="geo-books.htm" target="_blank" class="w-full px-8 py-5 rounded-[2rem] bg-gradient-to-r from-brand-50 to-indigo-50 dark:from-brand-900/20 dark:to-indigo-900/20 text-brand-700 dark:text-brand-300 text-sm font-black uppercase tracking-widest border border-brand-200 dark:border-brand-800 hover:border-brand-400 dark:hover:border-brand-600 transition-all flex items-center justify-between haptic-feedback">
+                <span class="flex items-center gap-3"><i data-lucide="store" class="w-5 h-5"></i> Preview Storefront</span>
+                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+              </a>
+              <button onclick="window.exportData()" class="w-full px-8 py-5 rounded-[2rem] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 transition-all flex items-center justify-between haptic-feedback">
+                <span class="flex items-center gap-3"><i data-lucide="download" class="w-5 h-5"></i> Export Data</span>
+                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT CONTENT -->
+      <div class="lg:col-span-8 space-y-12">
+        <!-- ANALYTICS CHARTS -->
+        <section id="analytics" class="premium-card p-10">
+          <div class="flex items-center justify-between mb-8">
+            <div>
+              <h3 class="text-2xl font-black flex items-center gap-3">
+                <i data-lucide="bar-chart-3" class="w-7 h-7 text-emerald-600"></i> Listing Performance
+              </h3>
+              <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Real view counts and category mix across your live listings</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div>
+              <p class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Views by Listing (Top 8)</p>
+              <div class="h-72"><canvas id="viewsChart"></canvas></div>
+            </div>
+            <div>
+              <p class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Listings by Category</p>
+              <div class="h-72"><canvas id="categoryChart"></canvas></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- LISTINGS -->
+        <section id="listings">
+          <div class="flex items-center justify-between mb-8">
+            <h3 class="text-2xl font-black flex items-center gap-3">
+              <i data-lucide="list" class="w-7 h-7 text-brand-600"></i> My Listings
+            </h3>
+            <span id="listingCount" class="px-5 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-black uppercase tracking-widest text-slate-500">0 Items</span>
+          </div>
+          <div id="listingsContainer" class="space-y-6">
+            <div class="premium-card p-16 text-center text-slate-400">
+              <i data-lucide="loader-2" class="w-8 h-8 mx-auto mb-3 animate-spin"></i>
+              <p class="font-bold">Loading your listings…</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- BUYER INQUIRIES -->
+        <section id="orders">
+          <div class="flex items-center justify-between mb-8">
+            <h3 class="text-2xl font-black flex items-center gap-3">
+              <i data-lucide="message-circle" class="w-7 h-7 text-emerald-600"></i> Buyer Inquiries
+            </h3>
+            <a href="geo-books.htm" class="px-6 py-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-2 haptic-feedback">
+              Open Messages <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </a>
+          </div>
+          <p class="text-slate-500 dark:text-slate-400 text-sm -mt-4 mb-8">Geo-Books doesn't process payments in-app &mdash; buyers reach out to arrange pickup and payment directly. These are the scholars who've messaged you.</p>
+          <div id="ordersContainer" class="space-y-6">
+            <div class="premium-card p-16 text-center text-slate-400">
+              <i data-lucide="loader-2" class="w-8 h-8 mx-auto mb-3 animate-spin"></i>
+              <p class="font-bold">Loading inquiries…</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="py-20 px-8 border-t border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-600 text-white flex items-center justify-center shadow-xl">
+          <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+        </div>
+        <span class="text-xl font-black tracking-tighter">Geo-Books<span class="elite-text">.ng</span></span>
+      </div>
+      <p class="text-xs font-black text-slate-400 uppercase tracking-[0.4em]">© 2025 Geo-Books. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script type="module">
+    // Firebase imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+    import {
+      getFirestore, collection, addDoc, query, where, orderBy, limit,
+      onSnapshot, doc, getDoc, getDocs, updateDoc, deleteDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+    import { escapeHTML, isValidHttpUrl, toText, safeUrl } from "./utils.js";
+
+    // jsAttr: escapes a value for safe interpolation inside a single-quoted
+    // JS string that itself sits inside a double-quoted HTML onclick="..."
+    // attribute (same two-layer problem/fix as main_admin.htm — see the
+    // comment there for why escapeHTML() alone isn't enough).
+    const jsAttr = (value) => escapeHTML(String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+
+    // Firebase config — same project as the rest of Geo-Books.
+    const firebaseConfig = {
+      apiKey: "AIzaSyA1nVLSPFs30wG-PLaEyFqm_PEVhZdzISU",
+      authDomain: "geo-books-8411e.firebaseapp.com",
+      projectId: "geo-books-8411e",
+      storageBucket: "geo-books-8411e.firebasestorage.app",
+      messagingSenderId: "972887107793",
+      appId: "1:972887107793:web:7e0374bf81e6713fd0fdf0",
+      measurementId: "G-RY84V5DXPN"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // API base for the image upload endpoint (mirrors app.js's
+    // dispatchAssetToCloudflare — same server.js /api/upload route, which
+    // requires a Firebase ID token and streams into Cloudflare R2).
+    const API_BASE_URL = window.GEO_BOOKS_API_URL ||
+      (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+        ? 'http://localhost:3007'
+        : '');
+
+    async function uploadListingImage(file) {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Please sign in to upload images');
+      const idToken = await user.getIdToken();
+      const destinationKey = `marketItems/${user.uid}/${Date.now()}-${file.name}`;
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('destinationKey', destinationKey);
+
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${idToken}` },
+        body: formData
+      });
+
+      if (!response.ok) {
+        let msg = `Upload failed (${response.status})`;
+        try { msg = (await response.json())?.error || msg; } catch {}
+        throw new Error(msg);
+      }
+      const data = await response.json();
+      return data.url;
+    }
+
+    // Utility functions
+    const $ = (q) => document.querySelector(q);
+    const $$ = (q) => Array.from(document.querySelectorAll(q));
+    const toast = (msg, type = 'info') => {
+      const container = $('#toast-container');
+      const el = document.createElement('div');
+      const colors = {
+        info: 'bg-slate-900',
+        success: 'bg-emerald-600',
+        error: 'bg-rose-600',
+        brand: 'bg-gradient-to-r from-brand-600 to-indigo-600'
+      };
+      const icons = { info: 'info', success: 'check-circle', error: 'alert-circle', brand: 'zap' };
+      el.className = `${colors[type]} text-white px-8 py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl flex items-center gap-4 border border-white/10`;
+      el.innerHTML = `<i data-lucide="${icons[type] || 'info'}" class="w-6 h-6"></i> <span>${escapeHTML(msg)}</span>`;
+      container.appendChild(el);
+      if (window.lucide) window.lucide.createIcons();
+      setTimeout(() => {
+        el.classList.add('opacity-0', 'translate-x-12');
+        setTimeout(() => el.remove(), 500);
+      }, 4000);
+    };
+    window.toast = toast;
+
+    // Theme toggle
+    const themeBtn = $('#themeToggle');
+    if (themeBtn) {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') document.documentElement.classList.add('dark');
+      if (savedTheme === 'light') document.documentElement.classList.remove('dark');
+      themeBtn.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        if (window.lucide) window.lucide.createIcons();
+      });
+    }
+
+    // ==========================================================================
+    // STATE
+    // ==========================================================================
+    const state = {
+      user: null,
+      listings: [],      // marketItems where sellerId == uid
+      inquiries: [],      // chats where participants array-contains uid
+      userCache: {}       // uid -> users/{uid} data, for rendering inquiry names
+    };
+    let listingsUnsub = null;
+    let inquiriesUnsub = null;
+    let sellerOnboardPromise = null;
+
+    // ==========================================================================
+    // AUTH
+    // ==========================================================================
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        // Not signed in — the seller dashboard has no login form of its own;
+        // send them to the main app to authenticate, then come back.
+        toast('Please sign in to access your Seller Dashboard', 'error');
+        setTimeout(() => { window.location.href = 'index.htm'; }, 1200);
+        return;
+      }
+      state.user = user;
+      document.body.classList.remove('opacity-0');
+      if (window.lucide) window.lucide.createIcons();
+      initListingsSync();
+      initInquiriesSync();
+    });
+
+    // Mirrors app.js's ensureSellerOnboarded() — flips sellerOnboarded on the
+    // user doc the first time someone publishes a listing from this page, so
+    // firestore.rules' isSeller() recognizes them going forward.
+    async function ensureSellerOnboarded() {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Please sign in to post listings');
+      if (!sellerOnboardPromise) {
+        sellerOnboardPromise = (async () => {
+          const userRef = doc(db, "users", user.uid);
+          const snap = await getDoc(userRef);
+          if (snap.exists() && (snap.data().sellerOnboarded || snap.data().role === 'SELLER')) return;
+          await updateDoc(userRef, { sellerOnboarded: true });
+          toast("You're now a seller on Geo-Books!", 'success');
+        })().finally(() => { sellerOnboardPromise = null; });
+      }
+      await sellerOnboardPromise;
+    }
+
+    // ==========================================================================
+    // LISTINGS — real-time sync against marketItems where sellerId == uid
+    // ==========================================================================
+    function initListingsSync() {
+      if (listingsUnsub) listingsUnsub();
+      const q = query(collection(db, "marketItems"), where("sellerId", "==", state.user.uid));
+      listingsUnsub = onSnapshot(q, (snap) => {
+        state.listings = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+        renderListings();
+        renderStats();
+        renderCharts();
+      }, (error) => {
+        console.error('Listings sync error:', error);
+        const msg = error?.code === 'failed-precondition'
+          ? 'Listings need a Firestore index — check the console link in dev tools.'
+          : (error?.message || 'Error loading your listings');
+        toast(msg, 'error');
+      });
+    }
+
+    function renderStats() {
+      const active = state.listings.filter(l => (l.status || 'active') === 'active');
+      $('#totalListings').textContent = active.length;
+      $('#listingCount').textContent = `${state.listings.length} Item${state.listings.length === 1 ? '' : 's'}`;
+      const inventoryValue = active.reduce((sum, l) => sum + (Number(l.price) || 0), 0);
+      $('#inventoryValue').textContent = `₦${inventoryValue.toLocaleString()}`;
+      const totalViews = state.listings.reduce((sum, l) => sum + (Number(l.views) || 0), 0);
+      $('#totalViews').textContent = totalViews.toLocaleString();
+      $('#buyerInquiries').textContent = state.inquiries.length.toLocaleString();
+    }
+
+    function renderListings() {
+      const container = $('#listingsContainer');
+      if (!state.listings.length) {
+        container.innerHTML = `
+          <div class="premium-card p-16 text-center text-slate-400">
+            <i data-lucide="shopping-bag" class="w-12 h-12 mx-auto mb-4 opacity-30"></i>
+            <p class="font-bold text-lg text-slate-500 dark:text-slate-300">No listings yet</p>
+            <p class="text-sm mt-1">Use the form on the left to publish your first item.</p>
+          </div>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = state.listings.map(listing => {
+        const status = listing.status || 'active';
+        const statusPill = status === 'active'
+          ? `<span class="px-4 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 text-[10px] font-black uppercase tracking-widest">Active</span>`
+          : status === 'sold'
+            ? `<span class="px-4 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest">Sold</span>`
+            : `<span class="px-4 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-widest">Paused</span>`;
+        const rating = listing.ratingCount ? (listing.ratingSum / listing.ratingCount).toFixed(1) : null;
+        const imgSrc = escapeHTML(safeUrl(listing.img, `https://picsum.photos/seed/${encodeURIComponent(listing.id)}/400/400`));
+
+        return `
+        <div class="premium-card p-10 group">
+          <div class="flex flex-col md:flex-row gap-8">
+            <div class="w-40 h-40 rounded-[2rem] bg-gradient-to-br from-slate-100 dark:bg-slate-800 to-slate-200 dark:to-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
+              <img src="${imgSrc}" class="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" loading="lazy">
+            </div>
+            <div class="flex-1 flex flex-col justify-between min-w-0">
+              <div>
+                <div class="flex items-start justify-between gap-4 mb-4">
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-3 mb-2 flex-wrap">
+                      <h4 class="text-2xl font-black truncate">${escapeHTML(listing.title || 'Untitled')}</h4>
+                      <span class="px-4 py-1 rounded-full bg-brand-50 dark:bg-brand-900/20 text-brand-600 text-[10px] font-black uppercase tracking-widest">${escapeHTML(listing.category || 'Other')}</span>
+                      ${statusPill}
+                    </div>
+                    <p class="text-4xl font-black text-emerald-600 mb-3">₦${(Number(listing.price) || 0).toLocaleString()}</p>
+                    ${listing.description ? `<p class="text-slate-500 dark:text-slate-400">${escapeHTML(listing.description)}</p>` : ''}
+                  </div>
+                </div>
+                <div class="flex items-center gap-6 text-xs font-black uppercase tracking-widest text-slate-400 flex-wrap">
+                  <span class="flex items-center gap-2"><i data-lucide="eye" class="w-4 h-4"></i> ${(Number(listing.views) || 0).toLocaleString()} views</span>
+                  <span class="flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4"></i> ${escapeHTML(listing.loc || 'No location')}</span>
+                  ${rating ? `<span class="flex items-center gap-2"><i data-lucide="star" class="w-4 h-4"></i> ${rating}⭐ (${listing.ratingCount})</span>` : ''}
+                </div>
+              </div>
+              <div class="flex items-center gap-3 mt-6 flex-wrap">
+                <button onclick="window.editListing('${listing.id}')" class="px-6 py-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-2 haptic-feedback">
+                  <i data-lucide="edit-3" class="w-4 h-4"></i> Edit
+                </button>
+                <button onclick="window.toggleListingStatus('${listing.id}')" class="px-6 py-3 rounded-full ${status === 'active' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/40'} text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 haptic-feedback">
+                  <i data-lucide="${status === 'active' ? 'pause' : 'play'}" class="w-4 h-4"></i> ${status === 'active' ? 'Pause' : 'Activate'}
+                </button>
+                ${status !== 'sold' ? `
+                <button onclick="window.markListingSold('${listing.id}')" class="px-6 py-3 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 text-xs font-black uppercase tracking-widest hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all flex items-center gap-2 haptic-feedback">
+                  <i data-lucide="check-circle" class="w-4 h-4"></i> Mark Sold
+                </button>` : ''}
+                <button onclick="window.deleteListing('${listing.id}')" class="px-6 py-3 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-600 text-xs font-black uppercase tracking-widest hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-all flex items-center gap-2 haptic-feedback">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i> Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    // ==========================================================================
+    // CHARTS — real Chart.js visuals over the seller's own listings.
+    // ==========================================================================
+    let viewsChartInstance = null;
+    let categoryChartInstance = null;
+
+    function renderCharts() {
+      if (!window.Chart) return;
+
+      const topByViews = state.listings.slice().sort((a, b) => (Number(b.views) || 0) - (Number(a.views) || 0)).slice(0, 8);
+      const viewsCanvas = $('#viewsChart');
+      if (viewsCanvas) {
+        if (viewsChartInstance) viewsChartInstance.destroy();
+        viewsChartInstance = new Chart(viewsCanvas, {
+          type: 'bar',
+          data: {
+            labels: topByViews.map(l => (l.title || 'Untitled').slice(0, 18)),
+            datasets: [{ label: 'Views', data: topByViews.map(l => Number(l.views) || 0), backgroundColor: '#7c3aed', borderRadius: 8 }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+          }
+        });
+      }
+
+      const categoryCounts = {};
+      state.listings.forEach(l => { const c = l.category || 'Other'; categoryCounts[c] = (categoryCounts[c] || 0) + 1; });
+      const categoryCanvas = $('#categoryChart');
+      if (categoryCanvas) {
+        if (categoryChartInstance) categoryChartInstance.destroy();
+        categoryChartInstance = new Chart(categoryCanvas, {
+          type: 'doughnut',
+          data: {
+            labels: Object.keys(categoryCounts),
+            datasets: [{ data: Object.values(categoryCounts), backgroundColor: ['#7c3aed', '#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e'] }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+      }
+    }
+
+    // ==========================================================================
+    // ADD / EDIT LISTING FORM
+    // ==========================================================================
+    const CATEGORY_VALUES = new Set(['Textbook', 'Gadget', 'Hostel', 'Project', 'Digital', 'Service']);
+    let pendingImageFile = null;
+
+    $('#itemImageFile').addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      pendingImageFile = file;
+      const reader = new FileReader();
+      reader.onload = () => {
+        $('#itemImagePreview').src = reader.result;
+        $('#itemImagePreview').classList.remove('hidden');
+        $('#itemImagePlaceholder').classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+      $('#itemImageUploadLabel').textContent = file.name.length > 24 ? file.name.slice(0, 21) + '…' : file.name;
+    });
+
+    function validateListingForm() {
+      const title = $('#itemTitle').value.trim();
+      const price = Number($('#itemPrice').value);
+      const category = $('#itemCategory').value;
+      const loc = $('#itemLocation').value.trim();
+      const fileUrl = $('#itemFileUrl').value.trim();
+      const description = $('#itemDescription').value.trim();
+
+      if (title.length < 5) return 'Title must be at least 5 characters';
+      if (!Number.isFinite(price) || price <= 0) return 'Enter a valid price';
+      if (!CATEGORY_VALUES.has(category)) return 'Pick a valid category';
+      if (!loc) return 'Enter a location';
+      if (fileUrl && !isValidHttpUrl(fileUrl)) return 'Digital file URL must be a valid http(s) link';
+      if (description.length > 800) return 'Keep the description under 800 characters';
+      return null;
+    }
+
+    $('#addListingForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if (!user) return toast('Please sign in to post listings', 'error');
+
+      const error = validateListingForm();
+      if (error) return toast(error, 'error');
+
+      const editId = $('#editId').value;
+      const submitBtn = $('#submitListingBtn');
+      const submitBtnText = $('#submitListingBtnText');
+      const originalText = submitBtnText.textContent;
+      submitBtn.disabled = true;
+      submitBtnText.textContent = editId ? 'Updating…' : 'Publishing…';
+
+      try {
+        let imgUrl = $('#itemImage').value.trim();
+        if (pendingImageFile) {
+          submitBtnText.textContent = 'Uploading photo…';
+          imgUrl = await uploadListingImage(pendingImageFile);
+        }
+
+        const listingData = {
+          title: $('#itemTitle').value.trim(),
+          price: Math.round(Number($('#itemPrice').value)),
+          category: $('#itemCategory').value,
+          loc: $('#itemLocation').value.trim(),
+          description: $('#itemDescription').value.trim(),
+          fileUrl: $('#itemFileUrl').value.trim(),
+          img: imgUrl || '',
+          sellerId: user.uid,
+          sellerName: user.displayName || user.email || 'Anonymous',
+          updatedAt: serverTimestamp()
+        };
+
+        if (editId) {
+          await updateDoc(doc(db, "marketItems", editId), listingData);
+          toast('Listing updated', 'success');
+        } else {
+          await ensureSellerOnboarded();
+          listingData.status = 'active';
+          listingData.soldAt = null;
+          listingData.views = 0;
+          listingData.ratingSum = 0;
+          listingData.ratingCount = 0;
+          listingData.createdAt = serverTimestamp();
+          await addDoc(collection(db, "marketItems"), listingData);
+          toast('Listing published! 🎉', 'success');
+          if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 80, origin: { y: 0.4 } });
+        }
+
+        window.cancelEdit();
+      } catch (err) {
+        console.error('Save listing error:', err);
+        toast(err?.message || 'Error saving listing', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtnText.textContent = originalText;
+      }
+    });
+
+    window.editListing = (id) => {
+      const listing = state.listings.find(l => l.id === id);
+      if (!listing) return toast('Listing not found', 'error');
+
+      $('#editId').value = id;
+      $('#itemTitle').value = listing.title || '';
+      $('#itemPrice').value = listing.price || '';
+      $('#itemCategory').value = CATEGORY_VALUES.has(listing.category) ? listing.category : 'Textbook';
+      $('#itemLocation').value = listing.loc || '';
+      $('#itemDescription').value = listing.description || '';
+      $('#itemFileUrl').value = listing.fileUrl || '';
+      $('#itemImage').value = listing.img || '';
+      pendingImageFile = null;
+      if (listing.img) {
+        $('#itemImagePreview').src = listing.img;
+        $('#itemImagePreview').classList.remove('hidden');
+        $('#itemImagePlaceholder').classList.add('hidden');
+      } else {
+        $('#itemImagePreview').classList.add('hidden');
+        $('#itemImagePlaceholder').classList.remove('hidden');
+      }
+      $('#itemImageUploadLabel').textContent = 'Replace Photo';
+
+      $('#formTitle').textContent = 'Edit Listing';
+      $('#formIcon').setAttribute('data-lucide', 'edit-3');
+      $('#submitListingBtnText').textContent = 'Update Listing';
+      $('#cancelEditBtn').classList.remove('hidden');
+      if (window.lucide) window.lucide.createIcons();
+      $('#addListingForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    window.cancelEdit = () => {
+      $('#addListingForm').reset();
+      $('#editId').value = '';
+      $('#itemImage').value = '';
+      pendingImageFile = null;
+      $('#itemImagePreview').classList.add('hidden');
+      $('#itemImagePlaceholder').classList.remove('hidden');
+      $('#itemImageUploadLabel').textContent = 'Upload Photo';
+      $('#formTitle').textContent = 'Add Listing';
+      $('#formIcon').setAttribute('data-lucide', 'plus-circle');
+      $('#submitListingBtnText').textContent = 'Publish Now';
+      $('#cancelEditBtn').classList.add('hidden');
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    window.toggleListingStatus = async (id) => {
+      const listing = state.listings.find(l => l.id === id);
+      if (!listing) return;
+      const nextStatus = (listing.status || 'active') === 'active' ? 'paused' : 'active';
+      try {
+        await updateDoc(doc(db, "marketItems", id), { status: nextStatus, updatedAt: serverTimestamp() });
+        toast(nextStatus === 'active' ? 'Listing activated!' : 'Listing paused', 'success');
+      } catch (err) {
+        console.error('Toggle status error:', err);
+        toast('Failed to update listing', 'error');
+      }
+    };
+
+    window.markListingSold = async (id) => {
+      if (!confirm('Mark this listing as sold? It will stop appearing as an active listing.')) return;
+      try {
+        await updateDoc(doc(db, "marketItems", id), { status: 'sold', soldAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        toast('Marked as sold 🎉', 'success');
+      } catch (err) {
+        console.error('Mark sold error:', err);
+        toast('Failed to update listing', 'error');
+      }
+    };
+
+    window.deleteListing = async (id) => {
+      if (!confirm('Are you sure you want to delete this listing?')) return;
+      try {
+        await deleteDoc(doc(db, "marketItems", id));
+        toast('Listing deleted', 'success');
+        if ($('#editId').value === id) window.cancelEdit();
+      } catch (err) {
+        console.error('Delete listing error:', err);
+        toast('Failed to delete listing', 'error');
+      }
+    };
+
+    // ==========================================================================
+    // BUYER INQUIRIES — real-time sync against chats where the seller is a
+    // participant. Geo-Books' marketplace is contact-to-arrange (no in-app
+    // checkout — see contactSeller/openSellerChat in app.js), so this is the
+    // real "who's interested in my stuff" signal, standing in for orders.
+    // ==========================================================================
+    function initInquiriesSync() {
+      if (inquiriesUnsub) inquiriesUnsub();
+      const q = query(collection(db, "chats"), where("participants", "array-contains", state.user.uid), orderBy("updatedAt", "desc"), limit(50));
+      inquiriesUnsub = onSnapshot(q, async (snap) => {
+        state.inquiries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        await renderInquiries();
+        renderStats();
+      }, (error) => {
+        console.error('Inquiries sync error:', error);
+        const msg = error?.code === 'failed-precondition'
+          ? 'Buyer inquiries need a Firestore index — check the console link in dev tools.'
+          : (error?.message || 'Error loading buyer inquiries');
+        $('#ordersContainer').innerHTML = `<div class="premium-card p-16 text-center text-slate-400"><p class="font-bold">${escapeHTML(msg)}</p></div>`;
+      });
+    }
+
+    async function getCachedUser(uid) {
+      if (state.userCache[uid]) return state.userCache[uid];
+      try {
+        const snap = await getDoc(doc(db, "users", uid));
+        state.userCache[uid] = snap.exists() ? snap.data() : {};
+      } catch {
+        state.userCache[uid] = {};
+      }
+      return state.userCache[uid];
+    }
+
+    async function renderInquiries() {
+      const container = $('#ordersContainer');
+      if (!state.inquiries.length) {
+        container.innerHTML = `
+          <div class="premium-card p-16 text-center text-slate-400">
+            <i data-lucide="message-circle" class="w-12 h-12 mx-auto mb-4 opacity-30"></i>
+            <p class="font-bold text-lg text-slate-500 dark:text-slate-300">No inquiries yet</p>
+            <p class="text-sm mt-1">When a buyer messages you about a listing, they'll show up here.</p>
+          </div>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+      }
+
+      const rows = await Promise.all(state.inquiries.map(async (chat) => {
+        const otherUid = (chat.participants || []).find(p => p !== state.user.uid);
+        const otherUser = otherUid ? await getCachedUser(otherUid) : {};
+        const name = otherUser.username || otherUser.displayName || 'A scholar';
+        const isOnline = otherUser.status === 'online';
+        const lastActive = chat.updatedAt?.toDate ? chat.updatedAt.toDate().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Recently';
+
+        return `
+        <div class="premium-card p-10">
+          <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="flex items-center gap-6 min-w-0">
+              <div class="w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 flex items-center justify-center shrink-0 relative">
+                <i data-lucide="user" class="w-8 h-8"></i>
+                ${isOnline ? '<span class="absolute bottom-1 right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900"></span>' : ''}
+              </div>
+              <div class="min-w-0">
+                <h4 class="text-2xl font-black truncate">${escapeHTML(name)}</h4>
+                <p class="text-slate-500 dark:text-slate-400 text-sm flex items-center gap-2">
+                  <span class="status-dot ${isOnline ? 'bg-emerald-500' : 'bg-slate-300'}"></span> ${isOnline ? 'Online now' : `Active ${escapeHTML(lastActive)}`}
+                </p>
+              </div>
+            </div>
+            <a href="geo-books.htm" class="shrink-0 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-black uppercase tracking-widest shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2 haptic-feedback">
+              <i data-lucide="message-circle" class="w-4 h-4"></i> Reply in Messages
+            </a>
+          </div>
+        </div>`;
+      }));
+
+      container.innerHTML = rows.join('');
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    // ==========================================================================
+    // QUICK ACTIONS
+    // ==========================================================================
+    window.exportData = () => {
+      const data = { listings: state.listings, exportedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'geobooks-seller-data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('Data exported successfully! 📄', 'success');
+    };
+
+    // Initialize Lucide on load (auth state listener handles the rest)
+    window.addEventListener('load', () => {
+      if (window.lucide) window.lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
