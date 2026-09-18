@@ -2224,11 +2224,9 @@ window.setBillingCycle = (cycle) => {
     }
   });
 
-  // Free + Tutor Course Pass don't change with the billing toggle (flat/
-  // monthly pricing, no annual variant). Exam Pass / University Pass have
-  // their own toggles (setExamPassDuration / setUniversityPassQuota) called
-  // separately below.
-  ['FREE', 'TUTOR_COURSE_PASS'].forEach(tier => {
+  // Free + Exam Pass + University Pass cards don't change with the billing
+  // toggle (all flat/monthly, no annual variant).
+  ['FREE', 'EXAM_PASS_SEASON', 'EXAM_PASS_ANNUAL', 'UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'].forEach(tier => {
     const btn = S(`planBtn${tier}`);
     if (!btn) return;
     if (tier === currentPlan) {
@@ -2237,16 +2235,9 @@ window.setBillingCycle = (cycle) => {
       btn.className = 'w-full py-4 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-400 font-black uppercase tracking-widest text-[10px]';
     } else {
       btn.disabled = false;
-      btn.textContent = tier === 'FREE' ? 'Switch to Free' : 'Get Tutor Course Pass';
+      btn.textContent = tier === 'FREE' ? 'Switch to Free' : (tier.startsWith('UNIVERSITY_PASS') ? 'Get University Pass' : 'Get Exam Pass');
     }
   });
-
-  // Initialize the Exam Pass / University Pass toggle cards to whichever
-  // sub-tier the user is currently on (if any), so a returning subscriber
-  // sees their actual plan reflected instead of always defaulting to
-  // annual/30.
-  window.setExamPassDuration(currentPlan === 'EXAM_PASS_SEASON' ? 'season' : examPassState.duration);
-  window.setUniversityPassQuota(currentPlan === 'UNIVERSITY_PASS_70' ? 70 : universityPassState.quota);
 };
 
 window.upgradeSubscription = async (tier) => {
@@ -2329,80 +2320,6 @@ const PLAN_PRICES = {
   // "/month" pricing shown on both cards.
   UNIVERSITY_PASS_30: { amount: 5000, durationDays: 30, label: 'University Pass — 30' },
   UNIVERSITY_PASS_70: { amount: 10000, durationDays: 30, label: 'University Pass — 70' },
-  // Standalone Tutor Hub course access — for students who want just the
-  // Tutor Course catalog without the full Standard/Premium platform tiers.
-  TUTOR_COURSE_PASS: { amount: 5000, durationDays: 30, label: 'Tutor Course Pass' },
-};
-
-// Exam Pass and University Pass each collapsed from two separate pricing
-// cards into one card with an in-card toggle (fewer options on the pricing
-// page). The underlying tier stored on the user (EXAM_PASS_SEASON/ANNUAL,
-// UNIVERSITY_PASS_30/70) is unchanged — hasUniversityAccess(), server.js's
-// TIER_LECTURE_QUOTA, etc. all still key off those exact same strings.
-// These two toggle states just decide which one the single card's button
-// currently points at.
-const examPassState = { duration: 'annual' };
-window.resolveExamPassTier = () => examPassState.duration === 'season' ? 'EXAM_PASS_SEASON' : 'EXAM_PASS_ANNUAL';
-window.setExamPassDuration = (duration) => {
-  examPassState.duration = duration === 'season' ? 'season' : 'annual';
-  const seasonBtn = S('examPassToggleSeason');
-  const annualBtn = S('examPassToggleAnnual');
-  [seasonBtn, annualBtn].forEach(btn => btn?.classList.remove('bg-white', 'text-orange-600'));
-  [seasonBtn, annualBtn].forEach(btn => btn?.classList.add('text-white/70'));
-  const active = examPassState.duration === 'season' ? seasonBtn : annualBtn;
-  active?.classList.remove('text-white/70');
-  active?.classList.add('bg-white', 'text-orange-600');
-
-  const tier = window.resolveExamPassTier();
-  const plan = PLAN_PRICES[tier];
-  if (S('priceEXAM_PASS')) S('priceEXAM_PASS').textContent = formatCurrency(plan.amount);
-  if (S('periodEXAM_PASS')) S('periodEXAM_PASS').textContent = examPassState.duration === 'season' ? 'one-time · 6 months' : 'one-time · 12 months';
-
-  const currentPlan = (app.state.userData?.subscription?.tier || 'FREE').toUpperCase();
-  const btn = S('planBtnEXAM_PASS');
-  if (btn) {
-    if (currentPlan === tier) {
-      btn.disabled = true;
-      btn.textContent = 'Current Plan';
-      btn.className = 'w-full py-4 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-400 font-black uppercase tracking-widest text-[10px]';
-    } else {
-      btn.disabled = false;
-      btn.textContent = 'Get Exam Pass';
-      btn.className = 'w-full py-4 rounded-xl bg-white text-orange-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all';
-    }
-  }
-};
-
-const universityPassState = { quota: 30 };
-window.resolveUniversityPassTier = () => universityPassState.quota === 70 ? 'UNIVERSITY_PASS_70' : 'UNIVERSITY_PASS_30';
-window.setUniversityPassQuota = (quota) => {
-  universityPassState.quota = Number(quota) === 70 ? 70 : 30;
-  const btn30 = S('uniPassToggle30');
-  const btn70 = S('uniPassToggle70');
-  [btn30, btn70].forEach(btn => btn?.classList.remove('bg-white', 'text-brand-600'));
-  [btn30, btn70].forEach(btn => btn?.classList.add('text-white/70'));
-  const active = universityPassState.quota === 70 ? btn70 : btn30;
-  active?.classList.remove('text-white/70');
-  active?.classList.add('bg-white', 'text-brand-600');
-
-  const tier = window.resolveUniversityPassTier();
-  const plan = PLAN_PRICES[tier];
-  if (S('priceUNIVERSITY_PASS')) S('priceUNIVERSITY_PASS').textContent = formatCurrency(plan.amount);
-  if (S('uniPassQuotaLine')) S('uniPassQuotaLine').textContent = `${universityPassState.quota} Lecture Views / Month`;
-
-  const currentPlan = (app.state.userData?.subscription?.tier || 'FREE').toUpperCase();
-  const btn = S('planBtnUNIVERSITY_PASS');
-  if (btn) {
-    if (currentPlan === tier) {
-      btn.disabled = true;
-      btn.textContent = 'Current Plan';
-      btn.className = 'w-full py-4 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-400 font-black uppercase tracking-widest text-[10px]';
-    } else {
-      btn.disabled = false;
-      btn.textContent = 'Get University Pass';
-      btn.className = 'w-full py-4 rounded-xl bg-white text-brand-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all';
-    }
-  }
 };
 
 // Billing-cycle toggle for Standard/Premium in the pricing modal. Exam

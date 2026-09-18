@@ -27,13 +27,13 @@ import { hasAiAccess, hasAnyPaidPlan } from "./utils.js";
 
 // Same project as app.js / index.htm / main_admin.htm.
 const firebaseConfig = {
-  apiKey: "AIzaSyA1nVLSPFs30wG-PLaEyFqm_PEVhZdzISU",
-  authDomain: "geo-books-8411e.firebaseapp.com",
-  projectId: "geo-books-8411e",
-  storageBucket: "geo-books-8411e.firebasestorage.app",
-  messagingSenderId: "972887107793",
-  appId: "1:972887107793:web:7e0374bf81e6713fd0fdf0",
-  measurementId: "G-RY84V5DXPN"
+  apiKey: "AIzaSyADGe2kvf7Gpt4YpyFyxd9Zj-iari4wSgI",
+  authDomain: "scholarly-21cac.firebaseapp.com",
+  projectId: "scholarly-21cac",
+  storageBucket: "scholarly-21cac.firebasestorage.app",
+  messagingSenderId: "765010207748",
+  appId: "1:765010207748:web:7250933407d8bfccaf8151",
+  measurementId: "G-JSPDC8D1CN"
 };
 
 function getFirebaseApp() {

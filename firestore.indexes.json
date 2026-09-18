@@ -4,390 +4,211 @@
       "collectionGroup": "marketItems",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "institutionId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "category",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "price",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "institutionId", "order": "ASCENDING" },
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "price", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "marketItems",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "category",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "marketItems",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "category",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "price",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "price", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "marketItems",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "category",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "price",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "price", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "marketItems",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "category",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "views",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "views", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "marketItems",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "sellerId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "updatedAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "sellerId", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "flashcards",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "uid",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "flashcards",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "isPublic",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "isPublic", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "books",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "uploaderEmail",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "uploaderEmail", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "books",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "uploaderId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "uploaderId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "support_messages",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "goals",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "chats",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "participants",
-          "arrayConfig": "CONTAINS"
-        },
-        {
-          "fieldPath": "updatedAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "participants", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "scholarships",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "isActive",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "deadline",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "deadline", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "hostels",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "institutionId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "institutionId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "hostels",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "institutionId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "gender",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "priceMin",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "institutionId", "order": "ASCENDING" },
+        { "fieldPath": "gender", "order": "ASCENDING" },
+        { "fieldPath": "priceMin", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "hostels",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "institutionId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "priceMin",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "institutionId", "order": "ASCENDING" },
+        { "fieldPath": "priceMin", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "lectures",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "institutionId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "courseId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "institutionId", "order": "ASCENDING" },
+        { "fieldPath": "courseId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "lectures",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "uploadedBy",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "uploadedBy", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "courseTopics",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "createdBy",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "createdBy", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "courseTopics",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "institutionId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "institutionId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "courseTopics",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "courseId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "topicNumber",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "courseId", "order": "ASCENDING" },
+        { "fieldPath": "topicNumber", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "assessments",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "createdBy",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "createdBy", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "cbtAttempts",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "uid",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "bookmarks",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "uid",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "uid",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "tutorCourses",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],

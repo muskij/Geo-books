@@ -522,15 +522,6 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Daily AI-generated-exam quota tracking (server.js's
-    // checkAndIncrementCbtGenerationQuota). Written only by the Admin SDK
-    // from server.js — client never writes directly, same reasoning as
-    // lectureUsage above. Doc id is `${uid}_${YYYY-MM-DD}`.
-    match /cbtGenerationUsage/{usageDocId} {
-      allow read: if isAuthenticated() && usageDocId.matches(request.auth.uid + '_.*');
-      allow write: if false;
-    }
-
     match /hostels/{hostelId} {
       allow read: if hasUniversityAccess();
       allow write: if isAdmin();
@@ -697,7 +688,7 @@ service cloud.firestore {
     // Publicly readable (browsable in tutor-courses.htm) — price/title/
     // description aren't sensitive, only the paid content behind them is.
     match /tutorCourses/{courseId} {
-      allow read: if true; // catalog is publicly browsable; gated content lives in tutorTopics
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() && (
         isAdmin() ||
         (

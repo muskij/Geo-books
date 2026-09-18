@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%233d46b8'/%3E%3Cstop offset='1' stop-color='%234f5bd5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M18 30.5L32 22l14 8.5-14 8.5-14-8.5zm6 4.6L32 40l8-4.9V42L32 47l-8-5v-6.9z' fill='white'/%3E%3C/svg%3E">
-<meta name="theme-color" content="#3d46b8">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%237c3aed'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M18 30.5L32 22l14 8.5-14 8.5-14-8.5zm6 4.6L32 40l8-4.9V42L32 47l-8-5v-6.9z' fill='white'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#7c3aed">
 <title>Geo-Books • The Ultimate Nigerian Student Hub</title>
 <meta name="google-adsense-account" content="ca-pub-3177374567374612">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
 <link rel="stylesheet" href="styles.css">
@@ -75,7 +75,7 @@
     --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.04);
     --shadow-2: 0 8px 24px -8px rgba(15, 23, 42, 0.08);
     --shadow-3: 0 24px 48px -12px rgba(15, 23, 42, 0.12);
-    --shadow-brand: 0 20px 40px -12px rgba(61, 70, 184, 0.28);
+    --shadow-brand: 0 20px 40px -12px rgba(124, 58, 237, 0.28);
   }
 
   /* Tabular numerals for stats/scores so digits don't jitter horizontally
@@ -108,7 +108,7 @@
   select:focus-visible,
   textarea:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #3d46b8;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #7C3AED;
     border-radius: 0.5rem;
   }
   .dark a:focus-visible,
@@ -117,7 +117,7 @@
   .dark input:focus-visible,
   .dark select:focus-visible,
   .dark textarea:focus-visible {
-    box-shadow: 0 0 0 2px #0F172A, 0 0 0 4px #818cf8;
+    box-shadow: 0 0 0 2px #0F172A, 0 0 0 4px #A78BFA;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -161,7 +161,7 @@
   }
 
   .shadow-elite {
-    box-shadow: 0 0 50px -12px rgba(61, 70, 184, 0.25);
+    box-shadow: 0 0 50px -12px rgba(124, 58, 237, 0.25);
   }
   
   .elite-card {
@@ -178,14 +178,14 @@
   .elite-card:hover {
     transform: translateY(-8px);
     box-shadow: var(--shadow-3);
-    border-color: #c7d2fe;
+    border-color: #DDD6FE;
   }
 
   .premium-card {
     @apply bg-white dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200/50 dark:border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[2.5rem] transition-all duration-700;
   }
   .premium-card:hover {
-    @apply shadow-[0_40px_80px_rgba(61, 70, 184,0.15)] -translate-y-2 border-brand-500/30;
+    @apply shadow-[0_40px_80px_rgba(124,58,237,0.15)] -translate-y-2 border-brand-500/30;
     transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) translateY(-8px);
   }
   
@@ -209,7 +209,7 @@
   }
   
   .neural-glow {
-    box-shadow: 0 0 40px -10px rgba(61, 70, 184, 0.5);
+    box-shadow: 0 0 40px -10px rgba(124, 58, 237, 0.5);
   }
   
   /* Haptic animation */
@@ -221,17 +221,17 @@
   }
 
   .elite-gradient {
-    background: linear-gradient(135deg, #2f3695 0%, #3d46b8 35%, #4F46E5 70%, #4338CA 100%);
+    background: linear-gradient(135deg, #6D28D9 0%, #7C3AED 35%, #4F46E5 70%, #4338CA 100%);
   }
   .elite-gradient-warm {
-    background: linear-gradient(135deg, #3d46b8 0%, #C026D3 55%, #F97316 100%);
+    background: linear-gradient(135deg, #7C3AED 0%, #C026D3 55%, #F97316 100%);
   }
   .elite-text {
     @apply text-transparent bg-clip-text elite-gradient;
   }
   
   .elite-gradient-text {
-    background: linear-gradient(135deg, #3d46b8 0%, #4F46E5 50%, #06B6D4 100%);
+    background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #06B6D4 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
@@ -256,9 +256,9 @@
   .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; transition: background 0.2s; }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a5b4fc; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #C4B5FD; }
   .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #2f3695; }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6D28D9; }
 
   @keyframes float {
     0%, 100% { transform: translateY(0); }
@@ -277,7 +277,7 @@
   }
 
   .premium-gradient {
-    background: linear-gradient(135deg, #3d46b8 0%, #4F46E5 100%);
+    background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
   }
 
   /* Neo-blur effects */
@@ -352,8 +352,8 @@
 
   /* Badge styling */
   .badge-premium {
-    background: linear-gradient(135deg, #3d46b8 0%, #4F46E5 100%);
-    box-shadow: 0 4px 12px rgba(61, 70, 184, 0.3);
+    background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
   }
   
   /* Sidebar transition refinement */
@@ -411,8 +411,8 @@
 
   /* Improved Progress Pulse */
   @keyframes progress-pulse {
-    0%, 100% { box-shadow: 0 0 15px rgba(61, 70, 184, 0.4); }
-    50% { box-shadow: 0 0 30px rgba(61, 70, 184, 0.8); }
+    0%, 100% { box-shadow: 0 0 15px rgba(124, 58, 237, 0.4); }
+    50% { box-shadow: 0 0 30px rgba(124, 58, 237, 0.8); }
   }
   .progress-pulse-active {
     animation: progress-pulse 2s infinite;
@@ -509,7 +509,7 @@
     @apply border-brand-500/30 -translate-y-2 shadow-2xl;
   }
   .cbt-option.selected {
-    @apply border-brand-500 bg-brand-50/50 dark:bg-brand-900/10 shadow-[0_20px_40px_rgba(61, 70, 184,0.1)];
+    @apply border-brand-500 bg-brand-50/50 dark:bg-brand-900/10 shadow-[0_20px_40px_rgba(124,58,237,0.1)];
   }
   .cbt-option.correct {
     @apply border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/10;
@@ -1753,7 +1753,7 @@
                   <span id="cbtProgressMeta">Vector 0/20</span>
                 </div>
                 <div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner p-0.5">
-                  <div id="cbtProgressBar" class="h-full bg-gradient-to-r from-brand-600 via-indigo-600 to-brand-400 rounded-full transition-all duration-700 shadow-[0_0_15px_rgba(61, 70, 184,0.4)]" style="width: 0%"></div>
+                  <div id="cbtProgressBar" class="h-full bg-gradient-to-r from-brand-600 via-indigo-600 to-brand-400 rounded-full transition-all duration-700 shadow-[0_0_15px_rgba(124,58,237,0.4)]" style="width: 0%"></div>
                 </div>
               </div>
 
@@ -2123,7 +2123,7 @@
                   <circle id="meterCircle" cx="50" cy="50" r="45" fill="none" stroke="url(#gradient)" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" stroke-linecap="round" class="transition-all duration-1000 ease-out"/>
                   <defs>
                     <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stop-color="#4f5bd5" />
+                      <stop offset="0%" stop-color="#8b5cf6" />
                       <stop offset="100%" stop-color="#10b981" />
                     </linearGradient>
                   </defs>
@@ -2667,7 +2667,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10 w-full max-w-5xl">
             <!-- Card A: Your Deck -->
             <div id="fcVaultCard" onclick="window.transitionToFlashcardView('vault')" class="fc-action-card group relative cursor-pointer">
-              <div class="relative rounded-[36px] bg-white dark:bg-slate-900 border border-stone-100 dark:border-slate-800 shadow-[0_20px_50px_-25px_rgba(28,25,23,0.25)] p-10 sm:p-12 flex flex-col items-center text-center transition-all duration-500 overflow-hidden group-hover:-translate-y-2 group-hover:shadow-[0_30px_70px_-25px_rgba(61, 70, 184,0.3)]">
+              <div class="relative rounded-[36px] bg-white dark:bg-slate-900 border border-stone-100 dark:border-slate-800 shadow-[0_20px_50px_-25px_rgba(28,25,23,0.25)] p-10 sm:p-12 flex flex-col items-center text-center transition-all duration-500 overflow-hidden group-hover:-translate-y-2 group-hover:shadow-[0_30px_70px_-25px_rgba(124,58,237,0.3)]">
                 <div class="absolute top-14 sm:top-16 left-0 right-0 h-px bg-rose-200 dark:bg-rose-500/40"></div>
                 <div class="absolute top-0 bottom-0 left-9 sm:left-10 w-px bg-sky-100 dark:bg-sky-400/20"></div>
                 <div class="w-20 h-20 rounded-[22px] bg-brand-600 text-white flex items-center justify-center shadow-lg shadow-brand-500/20 mb-8 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3">
@@ -2785,7 +2785,7 @@
                   </div>
                   <!-- Back -->
                   <div class="absolute inset-0 backface-hidden rotate-y-180">
-                    <div class="relative w-full h-full rounded-[32px] bg-brand-600 text-white p-10 sm:p-16 flex flex-col items-center justify-center text-center overflow-hidden shadow-[0_25px_60px_-25px_rgba(61, 70, 184,0.5)]">
+                    <div class="relative w-full h-full rounded-[32px] bg-brand-600 text-white p-10 sm:p-16 flex flex-col items-center justify-center text-center overflow-hidden shadow-[0_25px_60px_-25px_rgba(124,58,237,0.5)]">
                       <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_60%)]"></div>
                       <span class="absolute top-5 right-6 sm:top-8 sm:right-10 px-4 sm:px-5 py-2 rounded-full bg-white/15 text-white text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] border border-white/20">Answer</span>
                       <h3 id="cardBack" class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-[1.15] max-w-3xl relative z-10">Answer will appear here</h3>
@@ -3962,7 +3962,7 @@
       </div>
     </div>
     
-    <button id="aiToggleBtn" onclick="toggleAiAssistant(true)" class="w-16 h-16 rounded-[24px] bg-brand-600 text-white flex items-center justify-center shadow-[0_20px_50px_rgba(61, 70, 184,0.4)] hover:scale-110 active:scale-95 transition-all pointer-events-auto group relative">
+    <button id="aiToggleBtn" onclick="toggleAiAssistant(true)" class="w-16 h-16 rounded-[24px] bg-brand-600 text-white flex items-center justify-center shadow-[0_20px_50px_rgba(124,58,237,0.4)] hover:scale-110 active:scale-95 transition-all pointer-events-auto group relative">
       <div class="absolute -inset-2 bg-brand-500 blur-2xl opacity-40 group-hover:opacity-60 transition-opacity"></div>
       <i data-lucide="sparkles" class="w-8 h-8 relative z-10"></i>
     </button>
@@ -4764,7 +4764,7 @@
 <!-- Zen Study Overlay -->
 <div id="zenOverlay" class="fixed inset-0 z-[300] hidden bg-slate-950 flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
   <div class="absolute inset-0 opacity-20 pointer-events-none">
-    <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(61, 70, 184,0.1),transparent_70%)]"></div>
+    <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(124,58,237,0.1),transparent_70%)]"></div>
   </div>
   
   <div class="max-w-4xl w-full space-y-12 relative z-10">
@@ -4893,104 +4893,117 @@
           <button id="planBtnFREE" disabled class="w-full py-4 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-400 font-black uppercase tracking-widest text-[10px]">Current Plan</button>
         </div>
 
-        <!-- Exam Pass — single card, Season/Annual chosen via toggle (same
-             pattern as the Standard/Premium billing toggle below), instead
-             of two separate near-identical cards. -->
-        <div class="p-8 rounded-[2.5rem] bg-orange-600 text-white shadow-2xl shadow-orange-600/30 flex flex-col justify-between relative">
-          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white text-orange-600 text-[8px] font-black uppercase tracking-widest shadow-xl">Best Value</div>
+        <!-- Exam Pass — Season -->
+        <div class="p-8 rounded-[2.5rem] bg-amber-500 text-white shadow-2xl shadow-amber-500/30 flex flex-col justify-between">
           <div>
-            <h4 class="text-xl font-black mb-2">Exam Pass</h4>
-            <div class="flex items-baseline gap-1 mb-1">
-              <span class="text-3xl font-black"><span id="priceEXAM_PASS">₦2,500</span></span>
-              <span class="text-white/60 text-xs font-bold" id="periodEXAM_PASS">one-time · 12 months</span>
-            </div>
-            <div class="inline-flex items-center gap-1 p-1 rounded-xl bg-black/15 mb-5 mt-2">
-              <button id="examPassToggleSeason" onclick="window.setExamPassDuration('season')" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all text-white/70">6mo</button>
-              <button id="examPassToggleAnnual" onclick="window.setExamPassDuration('annual')" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all bg-white text-orange-600">12mo</button>
+            <h4 class="text-xl font-black mb-2">Exam Pass — Season</h4>
+            <div class="flex items-baseline gap-1 mb-6">
+              <span class="text-3xl font-black">₦2,000</span>
+              <span class="text-white/60 text-xs font-bold">one-time · 6 months</span>
             </div>
             <ul class="space-y-4 mb-8">
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
+                <i data-lucide="check" class="w-4 h-4 text-amber-200"></i>
                 <span>Unlimited Real Past Questions</span>
               </li>
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
+                <i data-lucide="check" class="w-4 h-4 text-amber-200"></i>
                 <span>Full JAMB UTME Simulator</span>
               </li>
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
+                <i data-lucide="check" class="w-4 h-4 text-amber-200"></i>
                 <span>Bookmarks, Analytics & World Ranking</span>
               </li>
             </ul>
           </div>
-          <button id="planBtnEXAM_PASS" onclick="window.upgradeSubscription(window.resolveExamPassTier())" class="w-full py-4 rounded-xl bg-white text-orange-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get Exam Pass</button>
+          <button id="planBtnEXAM_PASS_SEASON" onclick="window.upgradeSubscription('EXAM_PASS_SEASON')" class="w-full py-4 rounded-xl bg-white text-amber-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get Exam Pass</button>
+        </div>
+
+        <!-- Exam Pass — Annual -->
+        <div class="p-8 rounded-[2.5rem] bg-orange-600 text-white shadow-2xl shadow-orange-600/30 flex flex-col justify-between relative">
+          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white text-orange-600 text-[8px] font-black uppercase tracking-widest shadow-xl">Best Value</div>
+          <div>
+            <h4 class="text-xl font-black mb-2">Exam Pass — Annual</h4>
+            <div class="flex items-baseline gap-1 mb-6">
+              <span class="text-3xl font-black">₦2,500</span>
+              <span class="text-white/60 text-xs font-bold">one-time · 12 months</span>
+            </div>
+            <ul class="space-y-4 mb-8">
+              <li class="flex items-center gap-2 text-xs font-bold">
+                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
+                <span>Everything in Exam Pass — Season</span>
+              </li>
+              <li class="flex items-center gap-2 text-xs font-bold">
+                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
+                <span>Covers a Full Academic Year</span>
+              </li>
+              <li class="flex items-center gap-2 text-xs font-bold">
+                <i data-lucide="check" class="w-4 h-4 text-orange-200"></i>
+                <span>Just ₦500 More Than Season</span>
+              </li>
+            </ul>
+          </div>
+          <button id="planBtnEXAM_PASS_ANNUAL" onclick="window.upgradeSubscription('EXAM_PASS_ANNUAL')" class="w-full py-4 rounded-xl bg-white text-orange-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get Exam Pass</button>
         </div>
       </div>
-      <p class="text-center text-[9px] font-bold text-slate-400 mb-6 -mt-2">6-month pass is ₦2,000 · 12-month is just ₦500 more</p>
 
       <!-- University Pass: Hostel Finder + Lecture Recordings, gated by a
            monthly lecture-view quota (30 or 70). See university.js's
            hasUniversityAccess() / /api/lectures/:id/view for enforcement. -->
-      <p class="text-center text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 mt-12">University-Bound? Want Tutor Courses Only?</p>
+      <p class="text-center text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 mt-12">Going to University?</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-6">
-        <!-- University Pass — single card, lecture-view quota (30/70) chosen
-             via toggle, instead of two near-identical cards. -->
-        <div class="p-8 rounded-[2.5rem] bg-brand-600 text-white shadow-2xl shadow-brand-500/30 flex flex-col justify-between relative">
-          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white text-brand-600 text-[8px] font-black uppercase tracking-widest shadow-xl">For Admitted Students</div>
+        <!-- University Pass — 30 -->
+        <div class="p-8 rounded-[2.5rem] bg-violet-600 text-white shadow-2xl shadow-violet-600/30 flex flex-col justify-between relative">
+          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white text-violet-600 text-[8px] font-black uppercase tracking-widest shadow-xl">For Admitted Students</div>
           <div>
-            <h4 class="text-xl font-black mb-2">University Pass</h4>
-            <div class="flex items-baseline gap-1 mb-1">
-              <span class="text-3xl font-black"><span id="priceUNIVERSITY_PASS">₦5,000</span></span>
-              <span class="text-white/60 text-xs font-bold">/month</span>
-            </div>
-            <div class="inline-flex items-center gap-1 p-1 rounded-xl bg-black/15 mb-5 mt-2">
-              <button id="uniPassToggle30" onclick="window.setUniversityPassQuota(30)" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all bg-white text-brand-600">30/mo</button>
-              <button id="uniPassToggle70" onclick="window.setUniversityPassQuota(70)" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all text-white/70">70/mo</button>
-            </div>
-            <ul class="space-y-4 mb-8">
-              <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-brand-200"></i>
-                <span>Hostel Finder — Search Verified Listings</span>
-              </li>
-              <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-brand-200"></i>
-                <span id="uniPassQuotaLine">30 Lecture Views / Month</span>
-              </li>
-              <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-brand-200"></i>
-                <span>Cancel Anytime</span>
-              </li>
-            </ul>
-          </div>
-          <button id="planBtnUNIVERSITY_PASS" onclick="window.upgradeSubscription(window.resolveUniversityPassTier())" class="w-full py-4 rounded-xl bg-white text-brand-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get University Pass</button>
-        </div>
-
-        <!-- Tutor Course Pass — standalone access to the Tutor Hub course
-             catalog only, for students who want that section without the
-             full-platform Standard/Premium tiers below. -->
-        <div class="p-8 rounded-[2.5rem] bg-slate-800 text-white shadow-2xl shadow-slate-800/30 flex flex-col justify-between">
-          <div>
-            <h4 class="text-xl font-black mb-2">Tutor Course Pass</h4>
+            <h4 class="text-xl font-black mb-2">University Pass — 30</h4>
             <div class="flex items-baseline gap-1 mb-6">
               <span class="text-3xl font-black">₦5,000</span>
               <span class="text-white/60 text-xs font-bold">/month</span>
             </div>
             <ul class="space-y-4 mb-8">
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-slate-300"></i>
-                <span>Full Access to Tutor Hub Courses</span>
+                <i data-lucide="check" class="w-4 h-4 text-violet-200"></i>
+                <span>Hostel Finder — Search Verified Listings</span>
               </li>
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-slate-300"></i>
-                <span>Watch Lessons from Verified Tutors</span>
+                <i data-lucide="check" class="w-4 h-4 text-violet-200"></i>
+                <span>30 Lecture Views / Month</span>
               </li>
               <li class="flex items-center gap-2 text-xs font-bold">
-                <i data-lucide="check" class="w-4 h-4 text-slate-300"></i>
+                <i data-lucide="check" class="w-4 h-4 text-violet-200"></i>
                 <span>Cancel Anytime</span>
               </li>
             </ul>
           </div>
-          <button id="planBtnTUTOR_COURSE_PASS" onclick="window.upgradeSubscription('TUTOR_COURSE_PASS')" class="w-full py-4 rounded-xl bg-white text-slate-800 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get Tutor Course Pass</button>
+          <button id="planBtnUNIVERSITY_PASS_30" onclick="window.upgradeSubscription('UNIVERSITY_PASS_30')" class="w-full py-4 rounded-xl bg-white text-violet-600 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get University Pass</button>
+        </div>
+
+        <!-- University Pass — 70 -->
+        <div style="background-color:#4c1d95;color:#ffffff" class="p-8 rounded-[2.5rem] bg-violet-900 text-white shadow-2xl shadow-violet-900/30 flex flex-col justify-between relative">
+          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white text-violet-900 text-[8px] font-black uppercase tracking-widest shadow-xl">Heavy Course Load</div>
+          <div>
+            <h4 class="text-xl font-black mb-2">University Pass — 70</h4>
+            <div class="flex items-baseline gap-1 mb-6">
+              <span class="text-3xl font-black">₦10,000</span>
+              <span style="color:rgba(255,255,255,0.6)" class="text-white/60 text-xs font-bold">/month</span>
+            </div>
+            <ul class="space-y-4 mb-8">
+              <li class="flex items-center gap-2 text-xs font-bold">
+                <i data-lucide="check" class="w-4 h-4 text-violet-300"></i>
+                <span>Hostel Finder — Search Verified Listings</span>
+              </li>
+              <li class="flex items-center gap-2 text-xs font-bold">
+                <i data-lucide="check" class="w-4 h-4 text-violet-300"></i>
+                <span>70 Lecture Views / Month</span>
+              </li>
+              <li class="flex items-center gap-2 text-xs font-bold">
+                <i data-lucide="check" class="w-4 h-4 text-violet-300"></i>
+                <span>Cancel Anytime</span>
+              </li>
+            </ul>
+          </div>
+          <button id="planBtnUNIVERSITY_PASS_70" onclick="window.upgradeSubscription('UNIVERSITY_PASS_70')" class="w-full py-4 rounded-xl bg-white text-violet-900 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Get University Pass</button>
         </div>
       </div>
 
@@ -5231,7 +5244,7 @@
     }
     
     .bottom-nav-item.active {
-      color: #3d46b8;
+      color: #7c3aed;
     }
     
     .bottom-nav-item.active i {

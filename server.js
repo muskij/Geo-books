@@ -192,6 +192,13 @@ app.use(helmet({
         'https://cdn.tailwindcss.com', // see gap #2 above
         'https://www.googletagmanager.com',
       ],
+      // Helmet's default for this directive is 'none' and does NOT inherit
+      // from scriptSrc above — it has to be set separately, or every inline
+      // onclick="" handler in the app (hundreds of call sites, see gap #1)
+      // gets silently blocked by the browser even though scriptSrc already
+      // allows 'unsafe-inline'. Confirmed missing: this broke all button
+      // clicks in production until added.
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: [
         "'self'",
         "'unsafe-inline'", // inline style="" attributes + Tailwind CDN runtime's injected <style>
