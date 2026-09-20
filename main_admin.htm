@@ -1533,7 +1533,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
     import { getFirestore, collection, onSnapshot, query, orderBy, limit, addDoc, serverTimestamp, where, doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, increment, writeBatch } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-    import { extractTextFromPdf, generateQuestionsFromText, aiGenerateQuestionsFromPdf, aiChatCompletion, aiParsePastedQuestions, renderPdfPagesAsImages, aiParsePastPaperFromImages } from "./ai.js";
+    import { extractTextFromPdf, generateQuestionsFromText, aiGenerateQuestionsFromPdf, aiChatCompletion, aiParsePastedQuestions, renderPdfPagesAsImages, aiParsePastPaperFromImages, setAiUserContext } from "./ai.js";
     import { escapeHTML, renderRichInto, renderRichContent } from "./utils.js";
 
     // XSS fix: every value below (book titles, exam questions, usernames,
@@ -1614,6 +1614,19 @@
         }
 
         if (isAuthorized) {
+          // ai.js's AI helpers (aiGenerateQuestionsFromPdf, aiParsePastPaperFromImages,
+          // aiChatCompletion, ...) gate on a client-side subscription-tier check
+          // (assertAiAccess) meant for regular paying users — app.js sets this via
+          // setAiUserContext() right after loading a user's subscription doc. This
+          // admin page never called it, so every AI feature here (AI Gen (PDF),
+          // AI Gen (Past Paper), Smart Paste) threw "premium feature" for every
+          // admin, always, regardless of what plan (if any) the admin's own
+          // account has. ELITE_100K bypasses both hasAiAccess() and
+          // hasAnyPaidPlan() in utils.js — being an authorized admin here already
+          // implies full access; no admin should be blocked by a consumer paywall
+          // check on tools that manage the question bank itself.
+          setAiUserContext({ subscriptionLevel: 'ELITE_100K' });
+
           // Self-healing: Ensure admin documents exist
           try {
             const adminRef = doc(db, "admins", user.uid);

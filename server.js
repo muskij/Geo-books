@@ -204,8 +204,13 @@ app.use(helmet({
         "'unsafe-inline'", // inline style="" attributes + Tailwind CDN runtime's injected <style>
         'https://fonts.googleapis.com',
         'https://cdn.tailwindcss.com',
+        'https://cdn.jsdelivr.net', // KaTeX's stylesheet (math rendering — see ai.js/cbt.js/main_admin.htm)
       ],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      fontSrc: [
+        "'self'",
+        'https://fonts.gstatic.com',
+        'https://cdn.jsdelivr.net', // KaTeX ships its own .woff2 math fonts from the same CDN path as its CSS
+      ],
       imgSrc: [
         "'self'",
         'data:', // inline SVG icons (manifest.json, some UI art)
