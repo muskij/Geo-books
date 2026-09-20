@@ -11,6 +11,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest" defer></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
 <link rel="stylesheet" href="styles.css">
 <script type="module" src="cbt.js"></script>
@@ -84,7 +87,10 @@
           </div>
 
           <div class="min-h-[300px] py-6">
-            <h2 id="cbtQuestionText" class="text-3xl sm:text-4xl font-black tracking-tight leading-[1.1] mb-12"></h2>
+            <h2 id="cbtQuestionText" class="text-3xl sm:text-4xl font-black tracking-tight leading-[1.1] mb-6"></h2>
+            <div id="cbtQuestionImageWrap" class="hidden mb-8 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800">
+              <img src="" alt="Question diagram" class="w-full max-h-[420px] object-contain bg-slate-50 dark:bg-slate-800">
+            </div>
             <div id="cbtOptions" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
             <div id="cbtExplanationWrap" class="hidden mt-10 p-8 rounded-[3rem] bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-500/20 animate-in slide-in-from-bottom-6 duration-500">
               <div class="flex items-center gap-3 mb-4">

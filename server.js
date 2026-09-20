@@ -1173,6 +1173,95 @@ app.post('/api/ai/generate-quiz', requireAuth, async (req, res) => {
   }
 });
 
+// --- AI: past-paper extraction from page images (vision) -------------------
+// Admin-only (not the CBT_GENERATION_DAILY_CAP consumer quota above — this is
+// a content-ingestion tool for building the question bank, not a user-facing
+// feature, and vision requests cost meaningfully more than the text-only
+// /api/ai/generate-quiz route). Client renders each PDF page to an image
+// (ai.js's renderPdfPagesAsImages) and sends a small batch here at a time.
+//
+// IMPORTANT LIMITATIONS (surfaced to the admin in main_admin.htm, not hidden):
+// 1. Past-question PDFs almost never include the answer key in the same
+//    document — the model is instructed to leave correctAnswer null unless a
+//    marked/highlighted answer is visibly printed on the page, rather than
+//    guess. Most extracted questions will need an answer marked by hand.
+// 2. Precise per-question diagram cropping isn't reliable from a model's
+//    self-reported coordinates. When a question is flagged hasVisual, the
+//    client attaches the FULL page screenshot as reference (not a tight
+//    crop) so the admin can see the diagram in context and swap in a
+//    cleaner image if needed before publishing.
+app.post('/api/ai/parse-past-paper', requireAuth, requireAdmin, async (req, res) => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(503).json({ error: 'AI service not configured on server' });
+
+  const { images, subject, examType } = req.body || {};
+  if (!Array.isArray(images) || !images.length) {
+    return res.status(400).json({ error: 'images array (data URLs) is required' });
+  }
+  if (images.length > 4) {
+    return res.status(400).json({ error: 'Send at most 4 page images per request' });
+  }
+
+  const systemPrompt = [
+    'You transcribe exam past-question papers (JAMB/WAEC/NECO, Nigeria) from page images into structured JSON.',
+    'Extract each question EXACTLY as printed — verbatim wording, do not paraphrase, do not correct spelling.',
+    'Preserve every option exactly as printed too.',
+    'If a question or option contains a mathematical expression, represent it as LaTeX: $...$ for inline, $$...$$ for a standalone equation.',
+    'If a question contains tabular data, represent it as a GitHub-flavored markdown table embedded in the question text (| col | col |\\n|---|---|\\n| val | val |).',
+    'If a question depends on a diagram, chart, chemical structure, graph, or figure that cannot be captured as text or a simple table, set hasVisual true, visualType to one of "diagram"|"chart"|"chemical_structure"|"graph"|"photo"|"other", and visualNote to a short description of what it shows.',
+    'Detect the exam year from any header, footer, or watermark visible on the page. If no year is visible on this specific page, set year to null — do not guess or infer from context.',
+    'Only set correctAnswer (0-3, matching the option index) if an answer key, tick mark, circle, or other visible marking on THIS page indicates the correct option. If the page is just the question paper with no marked answers, leave correctAnswer null for every question on it — do not guess.',
+    'Return ONLY valid JSON, no markdown fences, no commentary, in exactly this shape:',
+    '{ "pages": [ { "year": string|null, "questions": [ { "number": number|null, "text": string, "options": [string,string,string,string], "correctAnswer": number|null, "hasVisual": boolean, "visualType": string|null, "visualNote": string|null } ] } ] }',
+    'One entry in "pages" per image you were given, in the same order.'
+  ].join('\n');
+
+  const userTextPrompt = `Subject: ${subject || 'Unknown'}. Exam type: ${examType || 'Unknown'}. Transcribe every question visible across these ${images.length} page image(s).`;
+
+  try {
+    const content = [
+      { type: 'text', text: userTextPrompt },
+      ...images.map((dataUrl) => ({ type: 'image_url', image_url: { url: dataUrl } }))
+    ];
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content }
+        ],
+        temperature: 0.1,
+        max_tokens: 4000,
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      console.error('parse-past-paper OpenAI error:', response.status, errBody);
+      return res.status(502).json({ error: 'AI provider error' });
+    }
+
+    const result = await response.json();
+    const rawContent = result.choices?.[0]?.message?.content;
+    if (!rawContent) return res.status(502).json({ error: 'Empty response from AI' });
+
+    let parsed;
+    try {
+      parsed = JSON.parse(rawContent);
+    } catch (e) {
+      return res.status(502).json({ error: 'AI returned invalid JSON' });
+    }
+    res.json(parsed);
+  } catch (error) {
+    console.error('parse-past-paper error:', error);
+    res.status(500).json({ error: 'Failed to parse past paper pages' });
+  }
+});
+
 // --- XP awarding (was awardXp) ---
 const RANK_TIERS = [
   { rank: 1, title: 'Scholar', minXp: 0, reward: 'Starter Badge' },

@@ -19,7 +19,7 @@
  * used for the AI Scan reward flow (see checkAIScanReward in app.js).
  */
 
-import { $, S, toText, escapeHTML, toast, getAppEntryUrl } from "./utils.js";
+import { $, S, toText, escapeHTML, toast, getAppEntryUrl, renderRichInto, renderRichContent } from "./utils.js";
 
 const SESSION_KEY = 'geoBooksCbtSession';
 
@@ -44,7 +44,11 @@ function getCorrectIndex(q) {
   const idx = q?.correct;
   if (Number.isInteger(idx)) return idx;
   const a = q?.a;
-  return Number.isInteger(a) ? a : 0;
+  // -1 (not 0) when no answer is known — an AI-extracted past-question paper
+  // often has no answer key attached (see aiParsePastPaperFromImages in
+  // ai.js). Defaulting to 0 would silently show option A as "correct" to a
+  // student, which is worse than showing no correct-answer highlight at all.
+  return Number.isInteger(a) ? a : -1;
 }
 
 function formatMMSS(totalSeconds) {
@@ -126,8 +130,22 @@ function renderQuestion() {
   const container = S('cbtQuestionContainer');
   if (!q || !container) return;
 
-  if (S('cbtQuestionText')) S('cbtQuestionText').textContent = q.q;
+  if (S('cbtQuestionText')) renderRichInto(S('cbtQuestionText'), q.q);
   if (S('cbtQuestionBadge')) S('cbtQuestionBadge').textContent = `Question ${String(cbt.i + 1).padStart(2, '0')} / ${cbt.questions.length}`;
+
+  // Past-paper questions can carry a diagram/table/chart the AI extraction
+  // couldn't turn into text (see aiParsePastPaperFromImages in ai.js) — it's
+  // attached as a full source-page screenshot via q.image, same field the
+  // manual question builder already uses for uploaded images.
+  const imgWrap = S('cbtQuestionImageWrap');
+  if (imgWrap) {
+    const hasImg = q.image && toText(q.image).trim();
+    imgWrap.classList.toggle('hidden', !hasImg);
+    if (hasImg) {
+      const imgEl = imgWrap.querySelector('img');
+      if (imgEl) imgEl.src = q.image;
+    }
+  }
   if (S('cbtSubject')) S('cbtSubject').textContent = toText(cbt.subject || 'General');
   if (S('cbtSubjectInitial')) S('cbtSubjectInitial').textContent = (cbt.subject || 'G')[0].toUpperCase();
 
@@ -160,12 +178,22 @@ function renderQuestion() {
       return `
         <button onclick="window.selectCbtOption(${idx})" class="w-full text-left p-6 rounded-3xl border-2 transition-all duration-300 flex items-center gap-6 group/opt ${btnClass}">
           <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-300 group-hover/opt:scale-110 ${iconClass}">${String.fromCharCode(65 + idx)}</div>
-          <span class="font-bold text-lg">${escapeHTML(opt)}</span>
+          <span class="font-bold text-lg">${renderRichContent(opt)}</span>
           ${reveal && isCorrect ? '<i data-lucide="check-circle" class="w-6 h-6 text-emerald-500 ml-auto"></i>' : ''}
           ${reveal && isSelected && !isCorrect ? '<i data-lucide="x-circle" class="w-6 h-6 text-rose-500 ml-auto"></i>' : ''}
         </button>
       `;
     }).join('');
+    // One typeset pass over all options (cheaper than per-option), same
+    // KaTeX auto-render extension renderRichInto uses on the question text.
+    try {
+      if (typeof window.renderMathInElement === 'function') {
+        window.renderMathInElement(optsWrap, {
+          delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }],
+          throwOnError: false
+        });
+      }
+    } catch (e) { console.warn('KaTeX render (options) failed:', e); }
   }
 
   const expWrap = S('cbtExplanationWrap');

@@ -1,5 +1,39 @@
 import { toText, readJson, writeJson, hasAiAccess, hasAnyPaidPlan } from "./utils.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-functions.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+
+// --- Server API bridge -----------------------------------------------------
+// The AI backend used to run on Firebase Cloud Functions (generateQuiz,
+// aiChatCompletion), called via httpsCallable(). Those Cloud Functions were
+// removed when the project moved off the Blaze plan — the same logic now
+// lives in server.js as Express routes (/api/ai/generate-quiz, /api/ai/chat),
+// served from the same Railway origin as the app itself. This helper calls
+// those routes with the signed-in user's Firebase ID token instead.
+async function callServerApi(path, body) {
+  const user = getAuth().currentUser;
+  if (!user) throw new Error('You must be signed in to use AI features.');
+  const idToken = await user.getIdToken();
+
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    },
+    body: JSON.stringify(body || {})
+  });
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
+    data = null;
+  }
+
+  if (!response.ok) {
+    throw new Error((data && data.error) || `Server error (${response.status})`);
+  }
+  return data;
+}
 
 const AI_SETTINGS_STORAGE_KEY = 'geo-books_ai_config';
 
@@ -62,18 +96,15 @@ export function getAiSettings() {
 
 export async function generateQuizFromNeuralCore(payload) { 
   assertAiAccess(hasAnyPaidPlan); // CBT/exam generation - any paid plan, not just Premium+Elite
-  const functions = getFunctions(); 
-  const callAiCore = httpsCallable(functions, 'generateQuiz'); 
-  
-  // The API Key is securely stored on the server via Google Secret Manager 
-  const result = await callAiCore({ 
-    text: payload.text, 
-    strict: payload.strict,
+  // Real enforcement (per-tier daily cap) also happens server-side in
+  // server.js's /api/ai/generate-quiz route via checkAndIncrementCbtGenerationQuota —
+  // this client-side check is just a fast UX gate, same as before.
+  return await callServerApi('/api/ai/generate-quiz', {
+    text: payload.text,
     count: payload.count,
     style: payload.style,
     intensity: payload.intensity
-  }); 
-  return result.data; 
+  });
 } 
 
 export async function aiChatCompletion({ messages, model, temperature, maxTokens, accessCheck } = {}) {
@@ -92,18 +123,15 @@ export async function aiChatCompletion({ messages, model, temperature, maxTokens
   // hasAnyPaidPlan so every paid tier gets through, while humanizer/
   // support/tutor keep using the default hasAiAccess (Premium+Elite only).
   assertAiAccess(accessCheck);
-  // Now routing through secure Cloud Function to protect API keys
-  const functions = getFunctions();
-  const callAiChat = httpsCallable(functions, 'aiChatCompletion');
-  
+  // Routes through server.js's /api/ai/chat (the OpenAI key stays server-side,
+  // same protection the old aiChatCompletion Cloud Function gave).
   try {
-    const result = await callAiChat({
+    return await callServerApi('/api/ai/chat', {
       messages: Array.isArray(messages) ? messages : [],
       model: model,
       temperature: temperature,
       maxTokens: maxTokens
     });
-    return result.data;
   } catch (error) {
     console.error("AI Chat Error:", error);
     throw error;
@@ -505,6 +533,107 @@ export function generateQuestionsFromText(text, { count = 20, style = 'balanced'
   }
 
   return { subject, questions: questions.slice(0, safeCount) };
+}
+
+/**
+ * Renders each page of a PDF to a JPEG data URL using the same pdf.js
+ * instance extractTextFromPdf() uses — needed because plain text extraction
+ * loses images, tables, and math layout entirely. A vision-capable AI call
+ * (see aiParsePastPaperFromImages below) reads these page images directly
+ * instead of relying on extracted text.
+ *
+ * scale 1.6 balances legibility of small print (options, subscripts) against
+ * payload size / vision token cost — most JAMB/WAEC scans are fine at this
+ * setting. quality 0.82 JPEG keeps a typical page under ~300KB.
+ */
+export async function renderPdfPagesAsImages(pdfData, { scale = 1.6, maxPages = 80, quality = 0.82 } = {}) {
+  const pdfjs = await loadPdfJs();
+  const pdf = await pdfjs.getDocument({ data: pdfData }).promise;
+  const pageCount = Math.min(pdf.numPages, maxPages);
+  const images = [];
+
+  for (let i = 1; i <= pageCount; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    images.push({ pageNumber: i, dataUrl: canvas.toDataURL('image/jpeg', quality) });
+    canvas.width = 0; canvas.height = 0; // release memory before next page
+  }
+  return images;
+}
+
+/**
+ * Full past-paper ingestion pipeline: renders a multi-year PDF's pages to
+ * images, sends them to /api/ai/parse-past-paper in small batches (vision
+ * calls are expensive — batchSize keeps each request's payload/token count
+ * reasonable), and groups the results by the year detected on each page.
+ *
+ * Returns { groups: { [year]: { year, subject, examType, questions: [...] } },
+ * pageImages } — pageImages is kept so the caller can attach a full source
+ * page as reference for any question flagged hasVisual (see file header note
+ * on /api/ai/parse-past-paper for why a full page, not a tight crop).
+ *
+ * A question's shape here is { q, opts, a, exp, year, hasVisual, visualType,
+ * visualNote, sourcePageNumber } — a superset of the builder's normal
+ * { q, opts, a, exp, image } shape; the caller (main_admin.htm) fills in
+ * `image` from sourcePageNumber only for flagged questions, then strips the
+ * extra fields before saving, keeping Firestore documents to the existing
+ * schema.
+ */
+export async function aiParsePastPaperFromImages(pageImages, { subject, examType = 'JAMB', batchSize = 2, onProgress } = {}) {
+  // No client-side assertAiAccess gate here — this is an admin-only tool and
+  // real enforcement is requireAdmin on the server route. A non-admin's call
+  // simply gets a 403 from the server.
+  const groups = {}; // year (or 'UNKNOWN') -> { year, subject, examType, questions: [] }
+
+  const addToGroup = (year, question, sourcePageNumber) => {
+    const key = year || 'UNKNOWN';
+    if (!groups[key]) groups[key] = { year: year || null, subject: subject || 'General', examType, questions: [] };
+    groups[key].questions.push({
+      q: question.text,
+      opts: Array.isArray(question.options) ? question.options.slice(0, 4) : [],
+      a: Number.isInteger(question.correctAnswer) ? question.correctAnswer : null,
+      exp: '',
+      hasVisual: !!question.hasVisual,
+      visualType: question.visualType || null,
+      visualNote: question.visualNote || null,
+      sourcePageNumber
+    });
+  };
+
+  for (let i = 0; i < pageImages.length; i += batchSize) {
+    const batch = pageImages.slice(i, i + batchSize);
+    if (typeof onProgress === 'function') {
+      onProgress({ processed: i, total: pageImages.length });
+    }
+    let result;
+    try {
+      result = await callServerApi('/api/ai/parse-past-paper', {
+        images: batch.map((p) => p.dataUrl),
+        subject,
+        examType
+      });
+    } catch (e) {
+      console.error(`parse-past-paper failed for pages ${batch.map(p => p.pageNumber).join(',')}:`, e);
+      continue; // skip this batch, keep going — partial results beat none
+    }
+    const pages = Array.isArray(result?.pages) ? result.pages : [];
+    pages.forEach((pageResult, idx) => {
+      const sourcePageNumber = batch[idx]?.pageNumber;
+      const year = toText(pageResult?.year || '').trim() || null;
+      const questions = Array.isArray(pageResult?.questions) ? pageResult.questions : [];
+      questions
+        .filter((q) => q && typeof q.text === 'string' && Array.isArray(q.options) && q.options.length >= 2)
+        .forEach((q) => addToGroup(year, q, sourcePageNumber));
+    });
+  }
+
+  if (typeof onProgress === 'function') onProgress({ processed: pageImages.length, total: pageImages.length });
+  return groups;
 }
 
 export async function extractTextFromPdf(pdfData) {

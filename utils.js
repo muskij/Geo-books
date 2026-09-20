@@ -38,6 +38,88 @@ export const escapeHTML = (value) =>
 
 export const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toText(value).trim());
 
+// --- Rich question content (tables, math, images) --------------------------
+// Past-paper questions often contain a table (comparison charts, data sets)
+// or math notation (equations, fractions, exponents) that plain textContent
+// can't show. The AI extraction pipeline is instructed to emit these inline
+// as GitHub-style markdown tables and $...$ / $$...$$ LaTeX delimiters.
+// renderRichContent() turns that into safe HTML: text is escaped first, then
+// table blocks are converted to real <table> markup. It leaves $...$ / $$...$$
+// untouched in the escaped output — call window.renderMathInElement(el, ...)
+// (KaTeX's auto-render extension, loaded via CDN) on the container right
+// after setting innerHTML to typeset that math in place.
+function isTableRow(line) {
+  const t = line.trim();
+  return t.startsWith('|') && t.endsWith('|') && t.length > 2;
+}
+function isTableDivider(line) {
+  return /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$/.test(line.trim());
+}
+function parseTableRow(line) {
+  return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+}
+function tableBlockToHtml(lines) {
+  const header = parseTableRow(lines[0]);
+  const bodyLines = lines.slice(2); // line[1] is the --- divider
+  const thead = `<thead><tr>${header.map((c) => `<th class="px-3 py-2 text-left font-black border-b border-slate-200">${escapeHTML(c)}</th>`).join('')}</tr></thead>`;
+  const tbody = `<tbody>${bodyLines.map((l) => {
+    const cells = parseTableRow(l);
+    return `<tr>${cells.map((c) => `<td class="px-3 py-2 border-b border-slate-100">${escapeHTML(c)}</td>`).join('')}</tr>`;
+  }).join('')}</tbody>`;
+  return `<table class="w-full text-sm my-3 border-collapse">${thead}${tbody}</table>`;
+}
+export function renderRichContent(rawText) {
+  const raw = toText(rawText);
+  const lines = raw.split('\n');
+  const htmlParts = [];
+  let i = 0;
+  let textBuf = [];
+  const flushText = () => {
+    if (!textBuf.length) return;
+    // Escape line-by-line, keep $...$ / $$...$$ delimiters intact (untouched by
+    // escaping since they contain no HTML-special chars in normal LaTeX use),
+    // join with <br> so plain line breaks still show.
+    htmlParts.push(textBuf.map((l) => escapeHTML(l)).join('<br>'));
+    textBuf = [];
+  };
+  while (i < lines.length) {
+    if (isTableRow(lines[i]) && isTableDivider(lines[i + 1] || '')) {
+      flushText();
+      let j = i + 2;
+      const block = [lines[i], lines[i + 1]];
+      while (j < lines.length && isTableRow(lines[j])) { block.push(lines[j]); j++; }
+      htmlParts.push(tableBlockToHtml(block));
+      i = j;
+    } else {
+      textBuf.push(lines[i]);
+      i++;
+    }
+  }
+  flushText();
+  return htmlParts.join('');
+}
+/** Renders rich content into a DOM element, then typesets any $...$/$$...$$
+ * math via KaTeX's auto-render extension if it's loaded on the page. Safe to
+ * call even if KaTeX isn't present (falls back to plain HTML, math delimiters
+ * show as literal text). */
+export function renderRichInto(el, rawText) {
+  if (!el) return;
+  el.innerHTML = renderRichContent(rawText);
+  try {
+    if (typeof window !== 'undefined' && typeof window.renderMathInElement === 'function') {
+      window.renderMathInElement(el, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false }
+        ],
+        throwOnError: false
+      });
+    }
+  } catch (e) {
+    console.warn('KaTeX render failed:', e);
+  }
+}
+
 export const isValidHttpUrl = (value) => {
   const raw = toText(value).trim();
   if (!raw) return false;
