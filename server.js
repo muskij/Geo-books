@@ -1199,13 +1199,19 @@ app.post('/api/ai/parse-past-paper', requireAuth, requireAdmin, async (req, res)
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(503).json({ error: 'AI service not configured on server' });
 
-  const { images, subject, examType } = req.body || {};
+  const { images, subject, examType, model } = req.body || {};
   if (!Array.isArray(images) || !images.length) {
     return res.status(400).json({ error: 'images array (data URLs) is required' });
   }
   if (images.length > 4) {
     return res.status(400).json({ error: 'Send at most 4 page images per request' });
   }
+  // 'gpt-4o' costs meaningfully more per token than 'gpt-4o-mini', but OpenAI's
+  // per-image tiling gives mini a much larger token count per picture — the
+  // two roughly wash out for vision-heavy calls like this one. Restricted to
+  // an allow-list so the client can't pass an arbitrary/expensive model name.
+  const ALLOWED_MODELS = ['gpt-4o-mini', 'gpt-4o'];
+  const selectedModel = ALLOWED_MODELS.includes(model) ? model : 'gpt-4o-mini';
 
   const systemPrompt = [
     'You transcribe exam past-question papers (JAMB/WAEC/NECO, Nigeria) from page images into structured JSON.',
@@ -1233,7 +1239,7 @@ app.post('/api/ai/parse-past-paper', requireAuth, requireAdmin, async (req, res)
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: selectedModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content }
