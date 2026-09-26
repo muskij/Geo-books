@@ -139,6 +139,9 @@
         <button onclick="window.showSection('cbt')" class="nav-link w-full flex items-center gap-4 px-5 py-4 rounded-3xl text-slate-500 hover:bg-slate-50 font-black text-sm" data-section="cbt">
           <i data-lucide="book-open" class="w-5 h-5"></i> CBT Suite
         </button>
+        <button onclick="window.showSection('past-papers')" class="nav-link w-full flex items-center gap-4 px-5 py-4 rounded-3xl text-slate-500 hover:bg-slate-50 font-black text-sm" data-section="past-papers">
+          <i data-lucide="layers" class="w-5 h-5"></i> Past Papers
+        </button>
         <button onclick="window.showSection('books')" class="nav-link w-full flex items-center gap-4 px-5 py-4 rounded-3xl text-slate-500 hover:bg-slate-50 font-black text-sm" data-section="books">
           <i data-lucide="library" class="w-5 h-5"></i> Books Library
         </button>
@@ -420,6 +423,80 @@
         </div>
       </div>
 
+      <!-- PAST PAPERS BULK IMPORT SECTION -->
+      <!-- Drop a PDF spanning multiple exam years; AI extracts questions per
+           page (renderPdfPagesAsImages + aiParsePastPaperFromImages in ai.js,
+           /api/ai/parse-past-paper in server.js), groups them by the year
+           detected on each page, and auto-fills a title/subject/year/duration
+           per group — reviewable and editable before creating each as its
+           own exam, or all at once. Separate state (ppGroups/ppPageImages)
+           from the in-modal "AI Gen (Past Paper)" flow inside the Exam
+           Builder — that one stays for reviewing a single year in detail;
+           this section is the bulk-import entry point. -->
+      <div id="section-past-papers" class="section h-full flex flex-col animate-in fade-in duration-700">
+        <div class="mb-8">
+          <h1 class="text-3xl font-black">Past Paper <span class="elite-text">Bulk Import</span></h1>
+          <p class="text-slate-400 font-bold text-sm mt-1">Drop a PDF spanning multiple years — each year becomes its own exam, auto-filled and ready to review.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="space-y-2">
+            <label class="text-[10px] font-black uppercase text-slate-500 ml-4">Subject Hint (optional)</label>
+            <input type="text" id="ppSubjectHint" placeholder="e.g. Mathematics" class="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 outline-none font-bold focus:border-brand-500 transition-colors">
+          </div>
+          <div class="space-y-2">
+            <label class="text-[10px] font-black uppercase text-slate-500 ml-4">Exam Type</label>
+            <div class="flex gap-2">
+              <label class="flex-1"><input type="radio" name="ppExamType" id="ppExamTypeJAMB" value="JAMB" class="peer hidden" checked><div class="px-4 py-4 rounded-2xl border border-slate-200 peer-checked:bg-slate-900 peer-checked:text-white font-black text-center text-xs cursor-pointer transition-colors">JAMB</div></label>
+              <label class="flex-1"><input type="radio" name="ppExamType" id="ppExamTypeOther" value="Other" class="peer hidden"><div class="px-4 py-4 rounded-2xl border border-slate-200 peer-checked:bg-slate-900 peer-checked:text-white font-black text-center text-xs cursor-pointer transition-colors">Other</div></label>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <label class="text-[10px] font-black uppercase text-slate-500 ml-4">Standard Time (mins) — default per exam</label>
+            <input type="number" id="ppDefaultDuration" value="40" class="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 outline-none font-bold focus:border-brand-500 transition-colors">
+          </div>
+          <div class="space-y-2">
+            <label class="text-[10px] font-black uppercase text-slate-500 ml-4">AI Model</label>
+            <div class="flex gap-2">
+              <label class="flex-1" title="Cheaper per token, but images cost more of them — usually washes out to a similar price"><input type="radio" name="ppModel" id="ppModelMini" value="gpt-4o-mini" class="peer hidden" checked><div class="px-3 py-4 rounded-2xl border border-slate-200 peer-checked:bg-slate-900 peer-checked:text-white font-black text-center text-[10px] cursor-pointer transition-colors">Fast (mini)</div></label>
+              <label class="flex-1" title="Better at dense text, small print, and diagrams"><input type="radio" name="ppModel" id="ppModelFull" value="gpt-4o" class="peer hidden"><div class="px-3 py-4 rounded-2xl border border-slate-200 peer-checked:bg-slate-900 peer-checked:text-white font-black text-center text-[10px] cursor-pointer transition-colors">Accurate (4o)</div></label>
+            </div>
+          </div>
+        </div>
+
+        <div id="ppDropZone" class="border-4 border-dashed border-slate-200 rounded-[32px] p-16 text-center cursor-pointer hover:border-brand-400 hover:bg-brand-50/30 transition-all mb-6 shrink-0">
+          <input type="file" id="ppFileInput" class="hidden" accept=".pdf" onchange="window.handlePastPaperDrop(event.target.files[0]); event.target.value='';">
+          <i data-lucide="upload-cloud" class="w-14 h-14 mx-auto text-slate-300 mb-4"></i>
+          <p class="font-black text-slate-600">Drop a multi-year past-paper PDF here</p>
+          <p class="text-xs font-bold text-slate-400 mt-1">or click to browse — one file, any number of years</p>
+        </div>
+
+        <!-- Cost estimate gate: pages are rendered and counted BEFORE any AI
+             call, so the admin sees an approximate $ cost and confirms
+             before anything billable happens — instead of finding out after
+             the fact. See estimatePastPaperCost() in ai.js. -->
+        <div id="ppCostEstimateWrap" class="hidden mb-6 shrink-0 p-6 rounded-3xl border border-amber-200 bg-amber-50/60">
+          <p class="text-sm font-black text-slate-800 mb-1"><span id="ppEstimatePageCount">0</span> pages detected</p>
+          <p class="text-xs font-bold text-slate-500 mb-4">Estimated cost to analyze: <span id="ppEstimateCost" class="text-slate-800">$0.00</span> using <span id="ppEstimateModel">gpt-4o-mini</span> — a rough estimate based on OpenAI's published rates, not a guarantee.</p>
+          <div class="flex gap-3">
+            <button onclick="window.startPastPaperAnalysis()" class="px-6 py-3 rounded-2xl elite-gradient text-white text-[10px] font-black uppercase">Start Analysis</button>
+            <button onclick="window.cancelPastPaperEstimate()" class="px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-500 text-[10px] font-black uppercase">Cancel</button>
+          </div>
+        </div>
+
+        <div id="ppProgressWrap" class="hidden mb-6 shrink-0">
+          <p id="ppProgressText" class="text-xs font-black text-slate-500 mb-2">Processing...</p>
+          <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div id="ppProgressBar" class="h-full bg-brand-500 transition-all" style="width:0%"></div></div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4 shrink-0" id="ppResultsHeader" style="display:none;">
+          <h3 class="text-lg font-black">Detected Year Groups</h3>
+          <button onclick="window.createAllPastPaperExams()" class="px-6 py-3 rounded-2xl elite-gradient text-white text-[10px] font-black uppercase">Create All As Exams</button>
+        </div>
+
+        <div id="ppGroupsList" class="space-y-4 overflow-y-auto flex-1 custom-scrollbar pr-2"></div>
+      </div>
+
       <!-- BOOKS SECTION -->
       <div id="section-books" class="section h-full flex flex-col animate-in fade-in duration-700">
         <header class="h-24 bg-white/80 backdrop-blur-xl border-b border-slate-200 flex items-center justify-between px-12 shrink-0">
@@ -495,6 +572,9 @@
           <div class="flex gap-3">
             <button onclick="window.openAdminAssessmentModal()" class="px-8 py-4 rounded-3xl bg-emerald-600 text-white text-xs font-black uppercase tracking-widest shadow-xl">Create Test</button>
             <button onclick="window.openCourseDesignModal()" class="px-8 py-4 rounded-3xl bg-slate-800 text-white text-xs font-black uppercase tracking-widest shadow-xl">Course Designs</button>
+            <button onclick="window.openAiTopicGenModal()" class="px-8 py-4 rounded-3xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-xs font-black uppercase tracking-widest shadow-xl flex items-center gap-2" title="Ported from MedPhysio's admin — draft a whole topic (lesson text + optional starter quiz) in one AI call">
+              <i data-lucide="sparkles" class="w-4 h-4"></i> Generate Topic (AI)
+            </button>
             <button onclick="window.openAdminTopicModal()" class="px-8 py-4 rounded-3xl bg-indigo-600 text-white text-xs font-black uppercase tracking-widest shadow-xl">Add Topic</button>
             <button onclick="window.openGrantModal()" class="px-8 py-4 rounded-3xl elite-gradient text-white text-xs font-black uppercase tracking-widest shadow-xl">Grant Lecturer Access</button>
           </div>
@@ -775,6 +855,60 @@
 
             <p id="adminTopicStatus" class="text-xs font-bold text-slate-400"></p>
             <button id="submitAdminTopicBtn" onclick="window.submitAdminTopic()" class="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black uppercase tracking-widest text-xs">Save Topic</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Topic Generator — ported from MedPhysio's admin (AITopicCreator.js
+           + /api/topics/generate). One form: title (+ description if you want
+           the lesson body drafted), optional video/answer link flags, optional
+           mini-text, and a starter-quiz count. /api/ai/generate-topic drafts
+           whatever's missing; this modal then writes the actual
+           courseTopics/tutorTopics doc (+ an assessments doc if a quiz was
+           generated) — same "AI drafts, admin's code commits" split as every
+           other AI feature in this file. Target picker (University/Tutor Hub)
+           is the one thing MedPhysio didn't need, since Geo-Books splits those
+           into separate collections (courseTopics vs tutorTopics). -->
+      <div id="aiTopicGenModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-[2.5rem] max-w-2xl w-full p-10 relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <button onclick="window.closeAiTopicGenModal()" class="absolute top-8 right-8 text-slate-300 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+          <h3 class="text-2xl font-black mb-1 flex items-center gap-2"><i data-lucide="sparkles" class="w-6 h-6 text-fuchsia-500"></i> Generate Topic <span class="text-fuchsia-500">with AI</span></h3>
+          <p class="text-xs font-bold text-slate-400 mb-6">Creates one topic with lesson content — give it a title and description, and it drafts the mini-text and any video/answer blurb copy. You can edit everything after.</p>
+
+          <div class="space-y-4">
+            <div class="flex gap-2">
+              <label class="flex-1"><input type="radio" name="aiTopicTarget" id="aiTopicTargetUni" value="university" class="peer hidden" checked><div class="px-4 py-3 rounded-2xl border border-slate-200 peer-checked:bg-slate-900 peer-checked:text-white font-black text-center text-xs cursor-pointer transition-colors">University Lectures</div></label>
+              <label class="flex-1"><input type="radio" name="aiTopicTarget" id="aiTopicTargetTutor" value="tutor" class="peer hidden"><div class="px-4 py-3 rounded-2xl border border-slate-200 peer-checked:bg-slate-900 peer-checked:text-white font-black text-center text-xs cursor-pointer transition-colors">Tutor Hub (Study Tools)</div></label>
+            </div>
+
+            <div id="aiTopicUniFields" class="grid grid-cols-2 gap-3">
+              <input id="aiTopicCourseInput" type="text" placeholder="Course ID" class="px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-brand-500">
+              <input id="aiTopicInstitutionInput" type="text" placeholder="Institution ID" class="px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-brand-500">
+            </div>
+            <div id="aiTopicTutorFields" class="hidden">
+              <input id="aiTopicTutorCourseInput" type="text" placeholder="Tutor Course ID" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-brand-500">
+            </div>
+
+            <input id="aiTopicNumberInput" type="number" placeholder="Topic number (e.g. 1)" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-brand-500">
+            <input id="aiTopicTitleInput" type="text" placeholder="Topic / lesson title (e.g. Cardiac Output)" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none focus:border-brand-500">
+            <textarea id="aiTopicDescriptionInput" rows="3" placeholder="What should this lesson cover? (used by the AI to draft the lesson text — be as specific as you like)" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-brand-500"></textarea>
+
+            <div class="grid grid-cols-1 gap-3">
+              <input id="aiTopicVideoLinkInput" type="url" placeholder="Full lecture video link (optional)" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-brand-500">
+              <input id="aiTopicVoiceLinkInput" type="url" placeholder="Voice note link (optional)" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-brand-500">
+              <input id="aiTopicAnswerLinkInput" type="url" placeholder="Structured-answer video link (optional)" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-brand-500">
+            </div>
+
+            <textarea id="aiTopicMiniTextInput" rows="3" placeholder="Mini-text (optional — leave blank and the AI drafts this from your description)" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-brand-500"></textarea>
+
+            <div class="flex items-center gap-3">
+              <label class="text-xs font-black uppercase text-slate-500">Starter quiz questions</label>
+              <input id="aiTopicQuizCountInput" type="number" min="0" max="10" value="5" class="w-20 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold outline-none focus:border-brand-500">
+              <span class="text-[10px] text-slate-400 font-bold">0 to skip</span>
+            </div>
+
+            <p id="aiTopicGenStatus" class="text-xs font-bold text-slate-400"></p>
+            <button id="aiTopicGenSubmitBtn" onclick="window.submitAiTopicGen()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-black uppercase tracking-widest text-xs">✨ Generate &amp; Save Topic</button>
           </div>
         </div>
       </div>
@@ -1533,7 +1667,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
     import { getFirestore, collection, onSnapshot, query, orderBy, limit, addDoc, serverTimestamp, where, doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, increment, writeBatch } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-    import { extractTextFromPdf, generateQuestionsFromText, aiGenerateQuestionsFromPdf, aiChatCompletion, aiParsePastedQuestions, renderPdfPagesAsImages, aiParsePastPaperFromImages, setAiUserContext } from "./ai.js";
+    import { extractTextFromPdf, generateQuestionsFromText, aiGenerateQuestionsFromPdf, aiChatCompletion, aiParsePastedQuestions, renderPdfPagesAsImages, aiParsePastPaperFromImages, estimatePastPaperCost, aiGenerateTopic, setAiUserContext } from "./ai.js";
     import { escapeHTML, renderRichInto, renderRichContent } from "./utils.js";
 
     // XSS fix: every value below (book titles, exam questions, usernames,
@@ -2029,6 +2163,123 @@
         status.textContent = e.message || 'Failed to save.';
       } finally {
         btn.disabled = false;
+      }
+    };
+
+    // --- AI Topic Generator (ported from MedPhysio's AITopicCreator) -------
+    window.openAiTopicGenModal = () => {
+      ['aiTopicCourseInput', 'aiTopicInstitutionInput', 'aiTopicTutorCourseInput', 'aiTopicNumberInput', 'aiTopicTitleInput', 'aiTopicDescriptionInput', 'aiTopicVideoLinkInput', 'aiTopicVoiceLinkInput', 'aiTopicAnswerLinkInput', 'aiTopicMiniTextInput'].forEach((id) => document.getElementById(id).value = '');
+      document.getElementById('aiTopicQuizCountInput').value = 5;
+      document.getElementById('aiTopicTargetUni').checked = true;
+      window.toggleAiTopicTarget();
+      document.getElementById('aiTopicGenStatus').textContent = '';
+      const btn = document.getElementById('aiTopicGenSubmitBtn');
+      btn.disabled = false; btn.textContent = '✨ Generate & Save Topic';
+      document.getElementById('aiTopicGenModal').classList.replace('hidden', 'flex');
+      if (window.lucide) window.lucide.createIcons();
+    };
+    window.closeAiTopicGenModal = () => document.getElementById('aiTopicGenModal').classList.replace('flex', 'hidden');
+
+    window.toggleAiTopicTarget = () => {
+      const isUni = document.getElementById('aiTopicTargetUni').checked;
+      document.getElementById('aiTopicUniFields').classList.toggle('hidden', !isUni);
+      document.getElementById('aiTopicTutorFields').classList.toggle('hidden', isUni);
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      const uniRadio = document.getElementById('aiTopicTargetUni');
+      const tutorRadio = document.getElementById('aiTopicTargetTutor');
+      if (uniRadio) uniRadio.addEventListener('change', window.toggleAiTopicTarget);
+      if (tutorRadio) tutorRadio.addEventListener('change', window.toggleAiTopicTarget);
+    });
+
+    window.submitAiTopicGen = async () => {
+      const status = document.getElementById('aiTopicGenStatus');
+      const isUni = document.getElementById('aiTopicTargetUni').checked;
+      const topicNumber = Number(document.getElementById('aiTopicNumberInput').value);
+      const title = document.getElementById('aiTopicTitleInput').value.trim();
+      const description = document.getElementById('aiTopicDescriptionInput').value.trim();
+      const videoLink = document.getElementById('aiTopicVideoLinkInput').value.trim();
+      const voiceLink = document.getElementById('aiTopicVoiceLinkInput').value.trim();
+      const answerLink = document.getElementById('aiTopicAnswerLinkInput').value.trim();
+      const miniTextInput = document.getElementById('aiTopicMiniTextInput').value.trim();
+      const quizCount = parseInt(document.getElementById('aiTopicQuizCountInput').value) || 0;
+      const courseId = document.getElementById('aiTopicCourseInput').value.trim();
+      const institutionId = document.getElementById('aiTopicInstitutionInput').value.trim();
+      const tutorCourseId = document.getElementById('aiTopicTutorCourseInput').value.trim();
+
+      if (!topicNumber) return (status.textContent = 'Enter a topic number.');
+      if (!title) return (status.textContent = 'Enter a topic title.');
+      if (isUni && !courseId) return (status.textContent = 'Enter a course ID.');
+      if (!isUni && !tutorCourseId) return (status.textContent = 'Enter a tutor course ID.');
+      if (!miniTextInput && description.length < 10) return (status.textContent = 'Add a longer description, or write the mini-text yourself — the AI needs one or the other.');
+
+      const btn = document.getElementById('aiTopicGenSubmitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Generating... this can take a moment';
+      status.textContent = '';
+
+      try {
+        const generated = await aiGenerateTopic({
+          title, description,
+          hasVideo: !!videoLink, hasAnswer: !!answerLink,
+          miniText: miniTextInput, quizCount
+        });
+
+        const miniTextHtml = miniTextInput || generated.miniTextHtml || '';
+
+        // Starter quiz (if any) becomes its own assessments doc first, so
+        // the topic doc below can link to it via quizAssessmentId — same
+        // order main_admin.htm's other topic-creation paths already use.
+        let quizAssessmentId = null;
+        if (generated.questions && generated.questions.length) {
+          const assessmentRef = await addDoc(collection(db, 'assessments'), {
+            title: `${title} — Starter Quiz`,
+            courseId: isUni ? courseId : null,
+            institutionId: isUni ? institutionId : null,
+            tutorCourseId: isUni ? null : tutorCourseId,
+            contentType: 'AI_GENERATED',
+            questions: generated.questions.map(q => ({ q: q.q, opts: q.opts, a: q.correct, exp: q.exp || '' })),
+            createdBy: auth.currentUser?.uid || null,
+            uploadedByRole: 'admin',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+          quizAssessmentId = assessmentRef.id;
+        }
+
+        const topicDoc = {
+          topicNumber, title,
+          description,
+          miniText: miniTextHtml,
+          miniTextBlocks: [],
+          miniTextKicker: '',
+          voiceNote: voiceLink || null,
+          fullLecture: videoLink || null,
+          structuredAnswer: answerLink || null,
+          quizAssessmentId,
+          createdBy: auth.currentUser?.uid || null,
+          uploadedByRole: 'admin',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+
+        if (isUni) {
+          topicDoc.courseId = courseId;
+          topicDoc.institutionId = institutionId;
+          await addDoc(collection(db, 'courseTopics'), topicDoc);
+        } else {
+          topicDoc.tutorCourseId = tutorCourseId;
+          await addDoc(collection(db, 'tutorTopics'), topicDoc);
+        }
+
+        window.toast(`Topic created${generated.questions?.length ? ` with ${generated.questions.length} starter question(s)` : ''}!`, 'success');
+        window.closeAiTopicGenModal();
+      } catch (e) {
+        console.error('AI topic generation failed:', e);
+        status.textContent = e.message || 'Failed to generate topic.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✨ Generate & Save Topic';
       }
     };
 
@@ -2584,6 +2835,7 @@
       if (sectionId === 'overview') { renderExams(); renderSellers(); initSubscriptionListener(); renderBooks(); }
       if (sectionId === 'analytics') window.refreshAnalytics();
       if (sectionId === 'cbt') { window.loadExamAttemptStats(); renderExams(); }
+      if (sectionId === 'past-papers') window.initPastPapersAdmin();
       if (sectionId === 'books') renderBooks();
       if (sectionId === 'hostels') window.initHostelsAdmin?.();
       if (sectionId === 'lectures') window.initLecturesAdmin?.();
@@ -4001,7 +4253,7 @@
         pastPaperPageImages = await renderPdfPagesAsImages(new Uint8Array(buf));
         window.toast(`Rendered ${pastPaperPageImages.length} pages. Analyzing with AI...`, "info");
 
-        pastPaperGroups = await aiParsePastPaperFromImages(pastPaperPageImages, {
+        const { groups, failedPageBatches } = await aiParsePastPaperFromImages(pastPaperPageImages, {
           subject: subjectHint,
           examType: examTypeHint,
           batchSize: 2,
@@ -4009,10 +4261,14 @@
             btn.innerHTML = `<span class="animate-pulse">Analyzing page ${Math.min(processed + 1, total)}/${total}...</span>`;
           }
         });
+        pastPaperGroups = groups;
 
         const yearCount = Object.keys(pastPaperGroups).length;
         if (!yearCount) {
           throw new Error("No questions could be extracted from this PDF.");
+        }
+        if (failedPageBatches.length) {
+          window.toast(`${failedPageBatches.flat().length} page(s) failed to process and were skipped: ${failedPageBatches.flat().join(', ')}`, "error");
         }
 
         window.renderPastPaperGroups();
@@ -4066,16 +4322,18 @@
     // admin can see the figure in context and swap in a cleaner crop later
     // if they want. This upload only happens for the group being opened, not
     // every group, to avoid burning R2 storage on years the admin skips.
-    window.loadPastPaperGroupIntoBuilder = async (key) => {
-      const group = pastPaperGroups[key];
-      if (!group) return;
-
-      window.toast("Loading group into builder...", "info");
-      const preparedQuestions = [];
+    // Shared by both past-paper entry points (the in-modal single-group flow
+    // above, and the Past Papers bulk-import section below): uploads a
+    // flagged question's full source page to R2 as a reference image and
+    // strips extraction-only fields down to the builder's normal question
+    // shape. See the limitation note on /api/ai/parse-past-paper server-side
+    // for why this is a full page, not a tight crop of just the diagram.
+    async function prepareQuestionsForBuilder(group, pageImagesSource) {
+      const prepared = [];
       for (const q of group.questions) {
         let image = null;
         if (q.hasVisual && q.sourcePageNumber) {
-          const page = pastPaperPageImages.find(p => p.pageNumber === q.sourcePageNumber);
+          const page = pageImagesSource.find(p => p.pageNumber === q.sourcePageNumber);
           if (page) {
             try {
               const blob = dataUrlToBlob(page.dataUrl);
@@ -4085,10 +4343,17 @@
             }
           }
         }
-        // Strip the extraction-only fields (hasVisual/visualType/visualNote/
-        // sourcePageNumber/year) down to the builder's normal question shape.
-        preparedQuestions.push({ q: q.q, opts: q.opts, a: q.a, exp: q.exp || '', image });
+        prepared.push({ q: q.q, opts: q.opts, a: q.a, exp: q.exp || '', image });
       }
+      return prepared;
+    }
+
+    window.loadPastPaperGroupIntoBuilder = async (key) => {
+      const group = pastPaperGroups[key];
+      if (!group) return;
+
+      window.toast("Loading group into builder...", "info");
+      const preparedQuestions = await prepareQuestionsForBuilder(group, pastPaperPageImages);
 
       builderQuestions = [...builderQuestions, ...preparedQuestions];
       document.getElementById('newExamSubject').value = group.subject || '';
@@ -4106,6 +4371,387 @@
       window.closePastPaperReviewModal();
       window.openExamModal();
       window.toast(`Loaded ${preparedQuestions.length} questions. Review answers flagged "needed" before finalizing.`, "success");
+    };
+
+    // --- Past Papers bulk-import section (drop zone) -----------------------
+    // Separate state from pastPaperGroups/pastPaperPageImages above — that
+    // pair belongs to the in-modal single-group flow inside Exam Builder;
+    // this section is a standalone drop-and-batch-create workflow that lives
+    // on its own nav tab, per the request for "a separate system in a
+    // separate new section."
+    let ppGroups = {};     // { [year|'UNKNOWN']: { year, subject, examType, title, duration, questions: [...], created?: true } }
+    let ppPageImages = []; // [{ pageNumber, dataUrl }]
+    let ppFailedPages = []; // page numbers that failed AI analysis and can be retried
+
+    window.initPastPapersAdmin = () => {
+      const zone = document.getElementById('ppDropZone');
+      if (!zone || zone.dataset.wired) return; // wire drag/drop listeners once
+      zone.dataset.wired = '1';
+      zone.addEventListener('click', (e) => {
+        if (e.target.id !== 'ppFileInput') document.getElementById('ppFileInput').click();
+      });
+      zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.classList.add('border-brand-500', 'bg-brand-50/50');
+      });
+      zone.addEventListener('dragleave', () => {
+        zone.classList.remove('border-brand-500', 'bg-brand-50/50');
+      });
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('border-brand-500', 'bg-brand-50/50');
+        const file = e.dataTransfer.files[0];
+        if (file) window.handlePastPaperDrop(file);
+      });
+    };
+
+    window.handlePastPaperDrop = async (file) => {
+      if (!file) return;
+      if (file.type !== 'application/pdf') {
+        window.toast("Please drop a valid PDF file", "error");
+        return;
+      }
+
+      const progressWrap = document.getElementById('ppProgressWrap');
+      const progressText = document.getElementById('ppProgressText');
+      const progressBar = document.getElementById('ppProgressBar');
+      document.getElementById('ppCostEstimateWrap').classList.add('hidden');
+      progressWrap.classList.remove('hidden');
+      progressText.textContent = 'Reading PDF pages...';
+      progressBar.style.width = '10%';
+
+      try {
+        const buf = await file.arrayBuffer();
+        ppPageImages = await renderPdfPagesAsImages(new Uint8Array(buf));
+        if (!ppPageImages.length) throw new Error("Could not read any pages from this PDF.");
+
+        progressWrap.classList.add('hidden');
+
+        // Cost estimate gate — nothing billable has happened yet at this
+        // point (page rendering is local, no AI call made). The admin sees
+        // page count + estimated $ and picks Start Analysis or Cancel.
+        const model = document.getElementById('ppModelFull').checked ? 'gpt-4o' : 'gpt-4o-mini';
+        const estimate = estimatePastPaperCost(ppPageImages.length, model);
+        document.getElementById('ppEstimatePageCount').textContent = estimate.pageCount;
+        document.getElementById('ppEstimateCost').textContent = `~$${estimate.total.toFixed(2)}`;
+        document.getElementById('ppEstimateModel').textContent = model;
+        document.getElementById('ppCostEstimateWrap').classList.remove('hidden');
+      } catch (err) {
+        console.error("Past paper drop (page render) error:", err);
+        window.toast(err.message || "Failed to read PDF", "error");
+        progressWrap.classList.add('hidden');
+      }
+    };
+
+    window.cancelPastPaperEstimate = () => {
+      ppPageImages = [];
+      document.getElementById('ppCostEstimateWrap').classList.add('hidden');
+    };
+
+    window.startPastPaperAnalysis = async () => {
+      if (!ppPageImages.length) return;
+
+      const subjectHint = document.getElementById('ppSubjectHint').value.trim() || null;
+      const examTypeHint = document.getElementById('ppExamTypeJAMB').checked ? 'JAMB' : 'Other';
+      const defaultDuration = parseInt(document.getElementById('ppDefaultDuration').value) || 40;
+      const model = document.getElementById('ppModelFull').checked ? 'gpt-4o' : 'gpt-4o-mini';
+      const progressWrap = document.getElementById('ppProgressWrap');
+      const progressText = document.getElementById('ppProgressText');
+      const progressBar = document.getElementById('ppProgressBar');
+
+      document.getElementById('ppCostEstimateWrap').classList.add('hidden');
+      progressWrap.classList.remove('hidden');
+      progressText.textContent = 'Analyzing with AI...';
+      progressBar.style.width = '5%';
+
+      try {
+        const { groups, failedPageBatches } = await aiParsePastPaperFromImages(ppPageImages, {
+          subject: subjectHint,
+          examType: examTypeHint,
+          model,
+          batchSize: 2,
+          onProgress: ({ processed, total }) => {
+            const pct = 5 + Math.round((processed / total) * 90);
+            progressBar.style.width = `${pct}%`;
+            progressText.textContent = `Analyzing page ${Math.min(processed + 1, total)}/${total}...`;
+          }
+        });
+        ppGroups = groups;
+
+        const yearKeys = Object.keys(ppGroups);
+        if (!yearKeys.length) throw new Error("No questions could be extracted from this PDF.");
+
+        // Auto-fill title + standard time per group; admin can edit either
+        // before creating (see renderPastPaperSectionGroups inputs below).
+        yearKeys.forEach((key) => {
+          const g = ppGroups[key];
+          g.title = `${g.subject || 'Exam'} ${g.year || ''}`.trim();
+          g.duration = defaultDuration;
+        });
+
+        progressText.textContent = `Done — ${yearKeys.length} year group(s) detected.`;
+        progressBar.style.width = '100%';
+        setTimeout(() => progressWrap.classList.add('hidden'), 1200);
+
+        if (failedPageBatches.length) {
+          const failedPages = failedPageBatches.flat();
+          ppFailedPages = failedPages;
+          window.toast(`${failedPages.length} page(s) failed and were skipped (${failedPages.join(', ')}). Use "Retry failed pages" below.`, "error");
+        } else {
+          ppFailedPages = [];
+        }
+
+        document.getElementById('ppResultsHeader').style.display = 'flex';
+        window.renderPastPaperSectionGroups();
+        yearKeys.forEach((key) => window.checkPastPaperDuplicate(key)); // async, re-renders each group as results land
+        window.toast(`Extracted ${yearKeys.length} year group(s). Review and create below.`, "success");
+      } catch (err) {
+        console.error("Past paper analysis error:", err);
+        window.toast(err.message || "Failed to process PDF", "error");
+        progressWrap.classList.add('hidden');
+      }
+    };
+
+    window.retryFailedPastPaperPages = async () => {
+      if (!ppFailedPages.length) return;
+      const model = document.getElementById('ppModelFull').checked ? 'gpt-4o' : 'gpt-4o-mini';
+      const subjectHint = document.getElementById('ppSubjectHint').value.trim() || null;
+      const examTypeHint = document.getElementById('ppExamTypeJAMB').checked ? 'JAMB' : 'Other';
+      const defaultDuration = parseInt(document.getElementById('ppDefaultDuration').value) || 40;
+      const retryPages = ppPageImages.filter(p => ppFailedPages.includes(p.pageNumber));
+
+      window.toast(`Retrying ${retryPages.length} page(s)...`, "info");
+      const { groups, failedPageBatches } = await aiParsePastPaperFromImages(retryPages, {
+        subject: subjectHint, examType: examTypeHint, model, batchSize: 2
+      });
+
+      // Merge retried results into the existing ppGroups rather than replacing them.
+      Object.keys(groups).forEach((key) => {
+        if (!ppGroups[key]) {
+          ppGroups[key] = groups[key];
+          ppGroups[key].title = `${ppGroups[key].subject || 'Exam'} ${ppGroups[key].year || ''}`.trim();
+          ppGroups[key].duration = defaultDuration;
+        } else {
+          ppGroups[key].questions.push(...groups[key].questions);
+        }
+      });
+
+      ppFailedPages = failedPageBatches.flat();
+      window.renderPastPaperSectionGroups();
+      window.toast(ppFailedPages.length ? `${ppFailedPages.length} page(s) still failing.` : "All pages recovered.", ppFailedPages.length ? "error" : "success");
+    };
+
+    window.renderPastPaperSectionGroups = () => {
+      const list = document.getElementById('ppGroupsList');
+      const years = Object.keys(ppGroups).sort((a, b) => (a === 'UNKNOWN' ? 1 : b === 'UNKNOWN' ? -1 : b.localeCompare(a)));
+
+      const retryBanner = ppFailedPages.length ? `
+        <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-between gap-4">
+          <p class="text-xs font-bold text-rose-700">${ppFailedPages.length} page(s) failed to analyze: ${ppFailedPages.join(', ')}</p>
+          <button onclick="window.retryFailedPastPaperPages()" class="shrink-0 px-4 py-2 rounded-xl bg-rose-600 text-white text-[10px] font-black uppercase">Retry Failed Pages</button>
+        </div>
+      ` : '';
+
+      list.innerHTML = retryBanner + years.map((key) => {
+        const g = ppGroups[key];
+        const visualCount = g.questions.filter(q => q.hasVisual).length;
+        const needsAnswerCount = g.questions.filter(q => q.a === null || q.a === undefined).length;
+        const created = !!g.created;
+        // Unique source pages behind this group's flagged questions — for the
+        // "Preview pages" toggle so the admin can actually see the diagrams
+        // instead of trusting the hasVisual flag blindly.
+        const flaggedPageNumbers = [...new Set(g.questions.filter(q => q.hasVisual && q.sourcePageNumber).map(q => q.sourcePageNumber))];
+        const duplicateWarning = g.duplicateOf ? `<span class="text-amber-600">⚠ An exam matching "${escapeHTML(g.duplicateOf)}" already exists — creating this will add a second one</span>` : '';
+        return `
+          <div class="p-6 rounded-3xl border ${created ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-100'}">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+              <div class="space-y-1 md:col-span-2">
+                <label class="text-[9px] font-black uppercase text-slate-400">Exam Title</label>
+                <input type="text" value="${jsAttr(g.title)}" ${created ? 'disabled' : ''} onchange="window.updatePastPaperGroupField('${key}', 'title', this.value)" class="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold outline-none focus:border-brand-500 disabled:opacity-60">
+              </div>
+              <div class="space-y-1">
+                <label class="text-[9px] font-black uppercase text-slate-400">Subject</label>
+                <input type="text" value="${jsAttr(g.subject)}" ${created ? 'disabled' : ''} onchange="window.updatePastPaperGroupField('${key}', 'subject', this.value); window.checkPastPaperDuplicate('${key}')" class="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold outline-none focus:border-brand-500 disabled:opacity-60">
+              </div>
+              <div class="space-y-1">
+                <label class="text-[9px] font-black uppercase text-slate-400">Year</label>
+                <input type="text" value="${jsAttr(g.year || '')}" ${created ? 'disabled' : ''} onchange="window.updatePastPaperGroupField('${key}', 'year', this.value); window.checkPastPaperDuplicate('${key}')" class="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold outline-none focus:border-brand-500 disabled:opacity-60">
+              </div>
+              <div class="space-y-1">
+                <label class="text-[9px] font-black uppercase text-slate-400">Time (mins)</label>
+                <input type="number" value="${g.duration}" ${created ? 'disabled' : ''} onchange="window.updatePastPaperGroupField('${key}', 'duration', parseInt(this.value) || 40)" class="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold outline-none focus:border-brand-500 disabled:opacity-60">
+              </div>
+            </div>
+            ${duplicateWarning ? `<p class="text-[10px] font-bold mt-2">${duplicateWarning}</p>` : ''}
+            <div class="flex items-center gap-3 text-[10px] font-bold text-slate-400 mt-4 flex-wrap">
+              <span>${g.questions.length} question(s)</span>
+              ${visualCount ? `<button onclick="window.togglePastPaperPreview('${key}')" class="text-amber-600 underline">${visualCount} with a diagram/table — preview pages</button>` : ''}
+              ${needsAnswerCount ? `<span class="text-rose-500">${needsAnswerCount} need an answer marked</span>` : ''}
+              <button onclick="window.openPastPaperGroupInBuilder('${key}')" class="text-slate-500 hover:text-slate-700 underline">Review questions in builder</button>
+              <div class="ml-auto">
+                ${created
+                  ? `<span class="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase"><i data-lucide="check" class="w-3 h-3"></i> Created</span>`
+                  : `<button onclick="window.createExamFromPastPaperGroup('${key}')" class="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase">Create Exam</button>`
+                }
+              </div>
+            </div>
+            <div id="ppPreview-${key}" class="hidden mt-4 flex gap-3 overflow-x-auto custom-scrollbar pb-2">
+              ${flaggedPageNumbers.map((pn) => {
+                const page = ppPageImages.find(p => p.pageNumber === pn);
+                return page ? `<img src="${page.dataUrl}" alt="Source page ${pn}" class="h-40 rounded-xl border border-slate-200 shrink-0" title="Page ${pn}">` : '';
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    window.updatePastPaperGroupField = (key, field, value) => {
+      if (ppGroups[key]) ppGroups[key][field] = value;
+    };
+
+    window.togglePastPaperPreview = (key) => {
+      const el = document.getElementById(`ppPreview-${key}`);
+      if (el) el.classList.toggle('hidden');
+    };
+
+    // Duplicate-year guard: warns (doesn't block) if an exam with the same
+    // subject+year+examType already exists in Firestore, so a re-upload or a
+    // second source PDF for the same year doesn't silently create a second
+    // copy without the admin noticing. Runs once per group right after
+    // extraction, and again if the admin edits subject/year by hand.
+    window.checkPastPaperDuplicate = async (key) => {
+      const g = ppGroups[key];
+      if (!g || g.created || !g.subject.trim() || !g.year) { if (g) { g.duplicateOf = null; } return; }
+      try {
+        const examType = document.getElementById('ppExamTypeJAMB').checked ? 'JAMB' : 'Other';
+        const q = query(
+          collection(db, "exams"),
+          where("jambSubject", "==", g.subject.trim()),
+          where("jambYear", "==", g.year),
+          where("examType", "==", examType)
+        );
+        const snap = await getDocs(q);
+        g.duplicateOf = !snap.empty ? (snap.docs[0].data().title || `${g.subject} ${g.year}`) : null;
+      } catch (err) {
+        console.warn("Duplicate check failed:", err); // non-fatal — just skip the warning silently
+      }
+      window.renderPastPaperSectionGroups();
+    };
+
+    // Opens one group in the normal Exam Builder for detailed per-question
+    // review/editing (reuses the same prepareQuestionsForBuilder pipeline as
+    // the in-modal flow) without creating it directly — useful when a group
+    // has diagram-flagged or answer-missing questions that need a closer look
+    // before publishing.
+    window.openPastPaperGroupInBuilder = async (key) => {
+      const group = ppGroups[key];
+      if (!group) return;
+      window.toast("Loading group into builder...", "info");
+      const preparedQuestions = await prepareQuestionsForBuilder(group, ppPageImages);
+      builderQuestions = [...builderQuestions, ...preparedQuestions];
+      document.getElementById('newExamSubject').value = group.subject || '';
+      document.getElementById('newExamTitle').value = group.title || '';
+      document.getElementById('newExamDuration').value = group.duration || '';
+      if (group.examType === 'JAMB') {
+        document.getElementById('examTypeJAMB').checked = true;
+        window.toggleExamTypeFields();
+        const yearSelect = document.getElementById('jambYear');
+        if (yearSelect && group.year) yearSelect.value = group.year;
+      }
+      window.renderBuilderQuestions();
+      window.openExamModal();
+      window.toast(`Loaded ${preparedQuestions.length} questions into the builder.`, "success");
+    };
+
+    // Core creation logic shared by the single-group "Create Exam" button and
+    // the "Create All As Exams" bulk action below — writes directly to the
+    // exams collection (same shape as window.createExam()'s addDoc call),
+    // skipping the modal/builder entirely for the common case where a group
+    // doesn't need per-question editing.
+    async function createPastPaperExamCore(key) {
+      const g = ppGroups[key];
+      if (!g) return false;
+      try {
+        const preparedQuestions = await prepareQuestionsForBuilder(g, ppPageImages);
+        const examType = document.getElementById('ppExamTypeJAMB').checked ? 'JAMB' : 'Other';
+
+        await addDoc(collection(db, "exams"), {
+          title: g.title.trim(),
+          subject: g.subject.trim(),
+          duration: parseInt(g.duration) || 40,
+          questions: preparedQuestions,
+          examType,
+          jambSubject: examType === 'JAMB' ? g.subject.trim() : null,
+          jambYear: examType === 'JAMB' ? (g.year || null) : null,
+          createdAt: serverTimestamp()
+        });
+
+        try {
+          await addDoc(collection(db, "activity_logs"), {
+            title: "New Exam Created (Past Paper Bulk Import): " + g.title,
+            user: auth.currentUser.email,
+            tag: "CBT",
+            timestamp: serverTimestamp()
+          });
+        } catch (logErr) { console.warn("Activity log failed:", logErr); }
+
+        g.created = true;
+        return true;
+      } catch (err) {
+        console.error(`Create exam from past paper group "${key}" error:`, err);
+        window.toast(err.message || `Failed to create exam for ${g.title}`, "error");
+        return false;
+      }
+    }
+
+    window.createExamFromPastPaperGroup = async (key) => {
+      const g = ppGroups[key];
+      if (!g) return;
+      if (!g.title.trim() || !g.subject.trim() || !g.duration) {
+        window.toast("Fill in title, subject, and time before creating", "error");
+        return;
+      }
+      if (g.duplicateOf) {
+        if (!confirm(`An exam matching "${g.duplicateOf}" already exists. Create "${g.title}" as a second exam anyway?`)) return;
+      }
+      const needsAnswerCount = g.questions.filter(q => q.a === null || q.a === undefined).length;
+      if (needsAnswerCount > 0) {
+        if (!confirm(`${needsAnswerCount} question(s) in "${g.title}" have no correct answer marked (common — the answer key usually isn't in the same PDF). Create anyway? You can mark answers later from Exams.`)) return;
+      }
+      window.toast(`Creating ${g.title}...`, "info");
+      const ok = await createPastPaperExamCore(key);
+      if (ok) {
+        window.renderPastPaperSectionGroups();
+        window.toast(`${g.title} created!`, "success");
+      }
+    };
+
+    window.createAllPastPaperExams = async () => {
+      const pending = Object.keys(ppGroups).filter(k => !ppGroups[k].created);
+      if (!pending.length) { window.toast("Nothing left to create", "info"); return; }
+
+      const incomplete = pending.filter(k => !ppGroups[k].title.trim() || !ppGroups[k].subject.trim() || !ppGroups[k].duration);
+      if (incomplete.length) {
+        window.toast(`${incomplete.length} group(s) are missing a title, subject, or time — fill those in first`, "error");
+        return;
+      }
+
+      const totalNeedsAnswer = pending.reduce((sum, k) => sum + ppGroups[k].questions.filter(q => q.a === null || q.a === undefined).length, 0);
+      const duplicateGroups = pending.filter(k => ppGroups[k].duplicateOf);
+      const warnParts = [`Create ${pending.length} exam(s) now?`];
+      if (duplicateGroups.length) warnParts.push(`${duplicateGroups.length} of them look like duplicates of exams that already exist.`);
+      if (totalNeedsAnswer > 0) warnParts.push(`${totalNeedsAnswer} question(s) across them have no correct answer marked — you can fix those later from Exams.`);
+      if (!confirm(warnParts.join(' '))) return;
+
+      let created = 0;
+      for (const key of pending) {
+        window.toast(`Creating ${ppGroups[key].title} (${created + 1}/${pending.length})...`, "info");
+        if (await createPastPaperExamCore(key)) created++;
+      }
+      window.renderPastPaperSectionGroups();
+      window.toast(`Created ${created}/${pending.length} exam(s).`, created === pending.length ? "success" : "error");
     };
 
     let editingQuestionIdx = null;

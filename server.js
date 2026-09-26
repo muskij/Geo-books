@@ -192,6 +192,14 @@ app.use(helmet({
         'https://cdn.tailwindcss.com', // see gap #2 above
         'https://www.googletagmanager.com',
       ],
+      // pdf.js (renderPdfPagesAsImages in ai.js, used by both the Past Papers
+      // section and the older PDF-to-text flow) creates its parsing worker
+      // from a blob: URL. Helmet has no default for worker-src, and per spec
+      // an unset worker-src falls back to scriptSrc — which doesn't include
+      // 'blob:', so the browser silently blocked the worker and pdf.js fell
+      // back to parsing on the main thread ("Setting up fake worker" in the
+      // console). Not fatal, but slower and worth fixing directly.
+      workerSrc: ["'self'", 'blob:'],
       // Helmet's default for this directive is 'none' and does NOT inherit
       // from scriptSrc above — it has to be set separately, or every inline
       // onclick="" handler in the app (hundreds of call sites, see gap #1)
@@ -396,7 +404,13 @@ const questionImportLimiter = rateLimit({
 });
 
 // Middleware
-app.use(express.json());
+// Default express.json() caps request bodies at 100kb — fine for every other
+// route here, but /api/ai/parse-past-paper sends 1-4 base64-encoded page
+// screenshots per call (renderPdfPagesAsImages in ai.js), each comfortably
+// several hundred KB to a couple MB. Every single batch was hitting a 413
+// before this fix — a 70-page PDF produced zero extracted questions, not a
+// partial result, since 100kb doesn't even fit one page image alone.
+app.use(express.json({ limit: '20mb' }));
 app.use(express.static(__dirname, { index: 'index.htm' })); // Serve static files from project root; landing page is index.htm, not the express.static default of index.html
 
 // ---------------------------------------------------------------------------
@@ -1178,7 +1192,116 @@ app.post('/api/ai/generate-quiz', requireAuth, async (req, res) => {
   }
 });
 
-// --- AI: past-paper extraction from page images (vision) -------------------
+// --- AI: one-shot topic generation (ported from MedPhysio's AITopicCreator) -
+// MedPhysio's admin panel (app/admin/courses/[id]/AITopicCreator.js +
+// app/api/topics/generate/route.js) has a single "Generate topic with AI"
+// form: title + description + optional video/voice/answer links + optional
+// mini-text + a starter quiz count, and it drafts whatever's missing in one
+// call. This is that same flow, adapted to Geo-Books' courseTopics/tutorTopics
+// schema (main_admin.htm writes the actual Firestore doc after this returns —
+// this route only drafts content, matching the read-only-then-admin-commits
+// pattern the rest of this file already uses for AI features).
+// Admin-only: this drafts lesson content for the question/lecture bank, not a
+// per-user consumer feature, same reasoning as /api/ai/parse-past-paper above.
+app.post('/api/ai/generate-topic', requireAuth, requireAdmin, async (req, res) => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(503).json({ error: 'AI service not configured on server' });
+
+  const { title, description, hasVideo, hasAnswer, miniText, quizCount } = req.body || {};
+  if (!title || !String(title).trim()) return res.status(400).json({ error: 'A topic title is required.' });
+
+  const needsMiniText = !miniText || !String(miniText).trim();
+  const safeQuizCount = Math.max(0, Math.min(10, Math.floor(Number(quizCount) || 0)));
+
+  if (needsMiniText && (!description || String(description).trim().length < 10)) {
+    return res.status(400).json({ error: "Add a short description of what this topic should cover — the AI needs a starting point." });
+  }
+
+  try {
+    let miniTextHtml = needsMiniText ? '' : String(miniText).trim();
+    let videoTitle = '', videoDesc = '', answerTitle = '', answerDesc = '';
+
+    if (needsMiniText || hasVideo || hasAnswer) {
+      const draftPrompt = [
+        'You write concise study-lesson content for a Nigerian JAMB/WAEC/university exam-prep platform.',
+        'Return ONLY valid JSON, no markdown fences, in exactly this shape:',
+        '{ "miniTextHtml": string, "videoTitle": string, "videoDesc": string, "answerTitle": string, "answerDesc": string }',
+        needsMiniText
+          ? 'miniTextHtml: write the lesson body as simple HTML (<p> paragraphs, <ul>/<li> where useful) covering the topic from the title+description given. Keep it focused and exam-relevant, roughly 150-350 words.'
+          : 'miniTextHtml: leave as an empty string — the admin already supplied lesson text.',
+        hasVideo ? 'videoTitle/videoDesc: a short title and one-sentence description for an embedded lecture video on this topic.' : 'videoTitle/videoDesc: leave as empty strings — no video was provided.',
+        hasAnswer ? 'answerTitle/answerDesc: a short title and one-sentence description for an embedded worked-answer/solution video on this topic.' : 'answerTitle/answerDesc: leave as empty strings — no answer video was provided.'
+      ].join('\n');
+
+      const draftResp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: draftPrompt },
+            { role: 'user', content: `Topic title: ${title}\nDescription: ${description || '(none — mini-text was supplied manually)'}` }
+          ],
+          temperature: 0.4,
+          max_tokens: 1200,
+          response_format: { type: 'json_object' }
+        })
+      });
+      if (!draftResp.ok) {
+        console.error('generate-topic draft error:', draftResp.status, await draftResp.text());
+        return res.status(502).json({ error: 'AI provider error while drafting lesson content' });
+      }
+      const draftResult = await draftResp.json();
+      const draft = JSON.parse(draftResult.choices?.[0]?.message?.content || '{}');
+      if (needsMiniText) miniTextHtml = draft.miniTextHtml || '';
+      videoTitle = draft.videoTitle || '';
+      videoDesc = draft.videoDesc || '';
+      answerTitle = draft.answerTitle || '';
+      answerDesc = draft.answerDesc || '';
+    }
+
+    let questions = [];
+    if (safeQuizCount > 0 && miniTextHtml) {
+      const quizPrompt = [
+        'You write CBT-style practice questions for a Nigerian exam-prep platform, based on the lesson text given.',
+        'Return ONLY valid JSON: { "questions": [ { "q": string, "opts": [string,string,string,string], "correct": 0|1|2|3, "exp": string } ] }'
+      ].join('\n');
+      const quizResp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: quizPrompt },
+            { role: 'user', content: `Lesson title: ${title}\nLesson content:\n${miniTextHtml.replace(/<[^>]+>/g, ' ').slice(0, 8000)}\n\nGenerate ${safeQuizCount} question(s).` }
+          ],
+          temperature: 0.3,
+          max_tokens: 2000,
+          response_format: { type: 'json_object' }
+        })
+      });
+      if (quizResp.ok) {
+        const quizResult = await quizResp.json();
+        try {
+          const parsed = JSON.parse(quizResult.choices?.[0]?.message?.content || '{}');
+          questions = Array.isArray(parsed.questions) ? parsed.questions : [];
+        } catch (e) { console.warn('generate-topic quiz JSON parse failed:', e); }
+      } else {
+        console.warn('generate-topic quiz generation failed, continuing without it:', quizResp.status);
+        // Matches MedPhysio's behavior: a failed quiz step doesn't fail the
+        // whole request — the topic/lesson content is more important than
+        // the starter quiz, and the admin can add questions manually after.
+      }
+    }
+
+    res.json({ miniTextHtml, videoTitle, videoDesc, answerTitle, answerDesc, questions, usedAi: needsMiniText || !!hasVideo || !!hasAnswer });
+  } catch (error) {
+    console.error('generate-topic error:', error);
+    res.status(500).json({ error: 'Failed to generate topic content' });
+  }
+});
+
+
 // Admin-only (not the CBT_GENERATION_DAILY_CAP consumer quota above — this is
 // a content-ingestion tool for building the question bank, not a user-facing
 // feature, and vision requests cost meaningfully more than the text-only
@@ -1199,13 +1322,19 @@ app.post('/api/ai/parse-past-paper', requireAuth, requireAdmin, async (req, res)
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(503).json({ error: 'AI service not configured on server' });
 
-  const { images, subject, examType } = req.body || {};
+  const { images, subject, examType, model } = req.body || {};
   if (!Array.isArray(images) || !images.length) {
     return res.status(400).json({ error: 'images array (data URLs) is required' });
   }
   if (images.length > 4) {
     return res.status(400).json({ error: 'Send at most 4 page images per request' });
   }
+  // 'gpt-4o' costs meaningfully more per token than 'gpt-4o-mini', but OpenAI's
+  // per-image tiling gives mini a much larger token count per picture — the
+  // two roughly wash out for vision-heavy calls like this one. Restricted to
+  // an allow-list so the client can't pass an arbitrary/expensive model name.
+  const ALLOWED_MODELS = ['gpt-4o-mini', 'gpt-4o'];
+  const selectedModel = ALLOWED_MODELS.includes(model) ? model : 'gpt-4o-mini';
 
   const systemPrompt = [
     'You transcribe exam past-question papers (JAMB/WAEC/NECO, Nigeria) from page images into structured JSON.',
@@ -1233,7 +1362,7 @@ app.post('/api/ai/parse-past-paper', requireAuth, requireAdmin, async (req, res)
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: selectedModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content }

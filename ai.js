@@ -584,11 +584,12 @@ export async function renderPdfPagesAsImages(pdfData, { scale = 1.6, maxPages = 
  * extra fields before saving, keeping Firestore documents to the existing
  * schema.
  */
-export async function aiParsePastPaperFromImages(pageImages, { subject, examType = 'JAMB', batchSize = 2, onProgress } = {}) {
+export async function aiParsePastPaperFromImages(pageImages, { subject, examType = 'JAMB', model = 'gpt-4o-mini', batchSize = 2, onProgress } = {}) {
   // No client-side assertAiAccess gate here — this is an admin-only tool and
   // real enforcement is requireAdmin on the server route. A non-admin's call
   // simply gets a 403 from the server.
   const groups = {}; // year (or 'UNKNOWN') -> { year, subject, examType, questions: [] }
+  const failedPageBatches = []; // [[pageNumber, ...], ...] — surfaced so the caller can offer a retry instead of silently losing pages
 
   const addToGroup = (year, question, sourcePageNumber) => {
     const key = year || 'UNKNOWN';
@@ -615,10 +616,12 @@ export async function aiParsePastPaperFromImages(pageImages, { subject, examType
       result = await callServerApi('/api/ai/parse-past-paper', {
         images: batch.map((p) => p.dataUrl),
         subject,
-        examType
+        examType,
+        model
       });
     } catch (e) {
       console.error(`parse-past-paper failed for pages ${batch.map(p => p.pageNumber).join(',')}:`, e);
+      failedPageBatches.push(batch.map((p) => p.pageNumber));
       continue; // skip this batch, keep going — partial results beat none
     }
     const pages = Array.isArray(result?.pages) ? result.pages : [];
@@ -633,7 +636,36 @@ export async function aiParsePastPaperFromImages(pageImages, { subject, examType
   }
 
   if (typeof onProgress === 'function') onProgress({ processed: pageImages.length, total: pageImages.length });
-  return groups;
+  return { groups, failedPageBatches };
+}
+
+// Rough per-page cost estimate for /api/ai/parse-past-paper, shown to the
+// admin BEFORE they spend anything (see renderPastPaperCostEstimate in
+// main_admin.htm) — not pulled from a live pricing API, just OpenAI's
+// published per-token rates combined with their documented image-tiling
+// token counts as of late 2026. Real cost varies with page density/scan
+// quality; treat this as "in the right ballpark," and check the OpenAI
+// usage dashboard for ground truth after a real run.
+const PAST_PAPER_COST_PER_PAGE_USD = {
+  'gpt-4o-mini': 0.006, // mini's per-image tiling uses a much larger token multiplier than gpt-4o despite the lower per-token price — these roughly wash out
+  'gpt-4o': 0.003
+};
+export function estimatePastPaperCost(pageCount, model = 'gpt-4o-mini') {
+  const perPage = PAST_PAPER_COST_PER_PAGE_USD[model] ?? PAST_PAPER_COST_PER_PAGE_USD['gpt-4o-mini'];
+  return { perPage, total: perPage * pageCount, pageCount, model };
+}
+
+/**
+ * One-shot topic generation — ported from MedPhysio's AITopicCreator flow.
+ * Give it a title (+ description if you want the lesson body AI-drafted),
+ * optionally note whether a video/answer link is attached, and how many
+ * starter quiz questions to draft. Returns drafted content only; the caller
+ * (main_admin.htm) writes the actual courseTopics/tutorTopics + assessments
+ * Firestore docs, same "AI drafts, admin's own code commits" split every
+ * other AI feature here uses.
+ */
+export async function aiGenerateTopic({ title, description, hasVideo, hasAnswer, miniText, quizCount }) {
+  return await callServerApi('/api/ai/generate-topic', { title, description, hasVideo, hasAnswer, miniText, quizCount });
 }
 
 export async function extractTextFromPdf(pdfData) {

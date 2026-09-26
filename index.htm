@@ -501,9 +501,10 @@
 
     <form onsubmit="event.preventDefault(); window.handleAuthSubmit()" class="space-y-5">
       <div id="authNameWrap" class="space-y-2">
-        <label class="text-xs font-bold uppercase tracking-wider text-ink-soft/50 dark:text-paper/40 ml-0.5">Full name</label>
-        <input type="text" id="authName" placeholder="Tunde Adebayo"
+        <label class="text-xs font-bold uppercase tracking-wider text-ink-soft/50 dark:text-paper/40 ml-0.5">Display name</label>
+        <input type="text" id="authName" placeholder="Tunde A. (or any name you like)"
           class="w-full px-5 py-4 rounded-xl border border-ink/10 dark:border-paper/15 bg-ink/[0.02] dark:bg-paper/[0.04] focus:ring-2 focus:ring-mark-500 outline-none transition-all font-medium text-base">
+        <p class="text-[11px] text-ink-soft/40 dark:text-paper/30 ml-0.5">This is what shows on your profile, leaderboard, and listings — pick anything.</p>
       </div>
       <div class="space-y-2">
         <label class="text-xs font-bold uppercase tracking-wider text-ink-soft/50 dark:text-paper/40 ml-0.5">School email</label>
@@ -676,7 +677,7 @@
     const originalText = textSpan?.textContent;
 
     if (!email || !password) return showToast('Please enter your email and password.', 'error');
-    if (!isLogin && (!name || name.length < 2)) return showToast('Please enter your full name.', 'error');
+    if (!isLogin && (!name || name.length < 2)) return showToast('Please enter a display name.', 'error');
 
     if (btn) {
       btn.disabled = true;
