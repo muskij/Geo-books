@@ -542,11 +542,14 @@ export function generateQuestionsFromText(text, { count = 20, style = 'balanced'
  * (see aiParsePastPaperFromImages below) reads these page images directly
  * instead of relying on extracted text.
  *
- * scale 1.6 balances legibility of small print (options, subscripts) against
- * payload size / vision token cost — most JAMB/WAEC scans are fine at this
- * setting. quality 0.82 JPEG keeps a typical page under ~300KB.
+ * scale 2.2 favors legibility of small print, subscripts, and cramped
+ * chemical/math notation over payload size — OpenAI's vision pipeline
+ * normalizes every image to a fixed resolution before tiling anyway, so this
+ * doesn't meaningfully change token cost, just how much detail survives
+ * before that normalization happens. quality 0.88 JPEG keeps a typical page
+ * a few hundred KB to ~1MB, comfortably inside the 20MB request limit.
  */
-export async function renderPdfPagesAsImages(pdfData, { scale = 1.6, maxPages = 80, quality = 0.82 } = {}) {
+export async function renderPdfPagesAsImages(pdfData, { scale = 2.2, maxPages = 80, quality = 0.88 } = {}) {
   const pdfjs = await loadPdfJs();
   const pdf = await pdfjs.getDocument({ data: pdfData }).promise;
   const pageCount = Math.min(pdf.numPages, maxPages);
@@ -591,14 +594,34 @@ export async function aiParsePastPaperFromImages(pageImages, { subject, examType
   const groups = {}; // year (or 'UNKNOWN') -> { year, subject, examType, questions: [] }
   const failedPageBatches = []; // [[pageNumber, ...], ...] — surfaced so the caller can offer a retry instead of silently losing pages
 
-  const addToGroup = (year, question, sourcePageNumber) => {
+  // Carry-forward: most compiled past-paper PDFs only print the year/subject
+  // header on the FIRST page of each section — every page after it has
+  // nothing for the model to detect, which without this was dumping the
+  // majority of pages into 'UNKNOWN'/'General' instead of the year/subject
+  // they actually belong to. Pages are processed in order (the outer loop
+  // below awaits each batch sequentially), so carrying the last confirmed
+  // value forward across a null reads the same way a person flipping through
+  // the PDF would. Still honest: a page before ANY year/subject has been
+  // seen yet has genuinely nothing to carry forward, so it still lands in
+  // UNKNOWN/General rather than guessing from nothing.
+  let lastKnownYear = null;
+  let lastKnownSubject = subject || null;
+
+  const addToGroup = (year, pageSubject, question, sourcePageNumber) => {
     const key = year || 'UNKNOWN';
-    if (!groups[key]) groups[key] = { year: year || null, subject: subject || 'General', examType, questions: [] };
+    if (!groups[key]) groups[key] = { year: year || null, subject: pageSubject || 'General', examType, questions: [] };
     groups[key].questions.push({
       q: question.text,
       opts: Array.isArray(question.options) ? question.options.slice(0, 4) : [],
       a: Number.isInteger(question.correctAnswer) ? question.correctAnswer : null,
-      exp: '',
+      // answerSource: "page" (a printed answer key confirmed this), "ai_solved"
+      // (the model worked it out itself — real but not guaranteed accuracy),
+      // or "unknown" (rare — model couldn't determine one at all). Lets the
+      // admin UI flag ai_solved answers for review without treating them as
+      // equally trustworthy as a page-confirmed one.
+      answerSource: question.answerSource || (Number.isInteger(question.correctAnswer) ? 'ai_solved' : 'unknown'),
+      confidence: question.confidence || null, // "high"|"medium"|"low" for ai_solved answers — lets the admin prioritize review instead of treating every ai_solved answer as equally uncertain
+      exp: question.explanation || '',
       hasVisual: !!question.hasVisual,
       visualType: question.visualType || null,
       visualNote: question.visualNote || null,
@@ -627,11 +650,16 @@ export async function aiParsePastPaperFromImages(pageImages, { subject, examType
     const pages = Array.isArray(result?.pages) ? result.pages : [];
     pages.forEach((pageResult, idx) => {
       const sourcePageNumber = batch[idx]?.pageNumber;
-      const year = toText(pageResult?.year || '').trim() || null;
+      const detectedYear = toText(pageResult?.year || '').trim() || null;
+      const detectedSubject = toText(pageResult?.subject || '').trim() || null;
+      if (detectedYear) lastKnownYear = detectedYear;
+      if (detectedSubject) lastKnownSubject = detectedSubject;
+      const effectiveYear = detectedYear || lastKnownYear;
+      const effectiveSubject = detectedSubject || lastKnownSubject;
       const questions = Array.isArray(pageResult?.questions) ? pageResult.questions : [];
       questions
         .filter((q) => q && typeof q.text === 'string' && Array.isArray(q.options) && q.options.length >= 2)
-        .forEach((q) => addToGroup(year, q, sourcePageNumber));
+        .forEach((q) => addToGroup(effectiveYear, effectiveSubject, q, sourcePageNumber));
     });
   }
 

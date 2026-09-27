@@ -4297,6 +4297,7 @@
         const g = pastPaperGroups[key];
         const visualCount = g.questions.filter(q => q.hasVisual).length;
         const needsAnswerCount = g.questions.filter(q => q.a === null || q.a === undefined).length;
+        const aiSolvedCount = g.questions.filter(q => q.answerSource === 'ai_solved').length;
         const label = key === 'UNKNOWN' ? 'Year not detected' : key;
         return `
           <div class="p-5 rounded-2xl border border-slate-100 flex items-center justify-between gap-4">
@@ -4305,6 +4306,7 @@
               <p class="text-[11px] font-bold text-slate-400 mt-1">
                 ${g.questions.length} question(s)
                 ${visualCount ? ` · <span class="text-amber-600">${visualCount} with a diagram/table needing review</span>` : ''}
+                ${aiSolvedCount ? ` · <span class="text-amber-600">${aiSolvedCount} AI-solved (no answer key found) — worth spot-checking</span>` : ''}
                 ${needsAnswerCount ? ` · <span class="text-rose-500">${needsAnswerCount} need an answer marked</span>` : ''}
               </p>
             </div>
@@ -4556,6 +4558,8 @@
         const g = ppGroups[key];
         const visualCount = g.questions.filter(q => q.hasVisual).length;
         const needsAnswerCount = g.questions.filter(q => q.a === null || q.a === undefined).length;
+        const aiSolvedCount = g.questions.filter(q => q.answerSource === 'ai_solved').length;
+        const lowConfidenceCount = g.questions.filter(q => q.answerSource === 'ai_solved' && q.confidence === 'low').length;
         const created = !!g.created;
         // Unique source pages behind this group's flagged questions — for the
         // "Preview pages" toggle so the admin can actually see the diagrams
@@ -4586,6 +4590,7 @@
             <div class="flex items-center gap-3 text-[10px] font-bold text-slate-400 mt-4 flex-wrap">
               <span>${g.questions.length} question(s)</span>
               ${visualCount ? `<button onclick="window.togglePastPaperPreview('${key}')" class="text-amber-600 underline">${visualCount} with a diagram/table — preview pages</button>` : ''}
+              ${aiSolvedCount ? `<span class="text-amber-600">${aiSolvedCount} AI-solved${lowConfidenceCount ? ` (${lowConfidenceCount} low-confidence — check these first)` : ''}</span>` : ''}
               ${needsAnswerCount ? `<span class="text-rose-500">${needsAnswerCount} need an answer marked</span>` : ''}
               <button onclick="window.openPastPaperGroupInBuilder('${key}')" class="text-slate-500 hover:text-slate-700 underline">Review questions in builder</button>
               <div class="ml-auto">
@@ -4717,8 +4722,11 @@
         if (!confirm(`An exam matching "${g.duplicateOf}" already exists. Create "${g.title}" as a second exam anyway?`)) return;
       }
       const needsAnswerCount = g.questions.filter(q => q.a === null || q.a === undefined).length;
+      const aiSolvedCount = g.questions.filter(q => q.answerSource === 'ai_solved').length;
       if (needsAnswerCount > 0) {
-        if (!confirm(`${needsAnswerCount} question(s) in "${g.title}" have no correct answer marked (common — the answer key usually isn't in the same PDF). Create anyway? You can mark answers later from Exams.`)) return;
+        if (!confirm(`${needsAnswerCount} question(s) in "${g.title}" couldn't be answered at all (garbled/incomplete text). Create anyway? You can mark those later from Exams.`)) return;
+      } else if (aiSolvedCount > 0) {
+        if (!confirm(`${aiSolvedCount} of ${g.questions.length} question(s) in "${g.title}" had no printed answer key — the AI worked out the answer itself. These aren't guaranteed correct. Create anyway? You can spot-check them from Exams afterward.`)) return;
       }
       window.toast(`Creating ${g.title}...`, "info");
       const ok = await createPastPaperExamCore(key);
@@ -4739,10 +4747,12 @@
       }
 
       const totalNeedsAnswer = pending.reduce((sum, k) => sum + ppGroups[k].questions.filter(q => q.a === null || q.a === undefined).length, 0);
+      const totalAiSolved = pending.reduce((sum, k) => sum + ppGroups[k].questions.filter(q => q.answerSource === 'ai_solved').length, 0);
       const duplicateGroups = pending.filter(k => ppGroups[k].duplicateOf);
       const warnParts = [`Create ${pending.length} exam(s) now?`];
       if (duplicateGroups.length) warnParts.push(`${duplicateGroups.length} of them look like duplicates of exams that already exist.`);
-      if (totalNeedsAnswer > 0) warnParts.push(`${totalNeedsAnswer} question(s) across them have no correct answer marked — you can fix those later from Exams.`);
+      if (totalAiSolved > 0) warnParts.push(`${totalAiSolved} question(s) across them had no answer key — the AI worked those out itself and they're worth spot-checking.`);
+      if (totalNeedsAnswer > 0) warnParts.push(`${totalNeedsAnswer} question(s) couldn't be answered at all — you can fix those later from Exams.`);
       if (!confirm(warnParts.join(' '))) return;
 
       let created = 0;
@@ -4908,6 +4918,10 @@
               <span class="w-8 h-8 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-[10px] font-black">${i + 1}</span>
               <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Question</span>
               ${(q.a === null || q.a === undefined) ? '<span class="px-2 py-1 rounded-full bg-rose-50 text-rose-600 text-[9px] font-black uppercase">Answer needed</span>' : ''}
+              ${q.answerSource === 'ai_solved' ? (q.confidence === 'low'
+                ? `<span title="${jsAttr(q.exp || '')}" class="px-2 py-1 rounded-full bg-rose-50 text-rose-600 text-[9px] font-black uppercase cursor-help">AI-solved · low confidence</span>`
+                : `<span title="${jsAttr(q.exp || '')}" class="px-2 py-1 rounded-full bg-amber-50 text-amber-600 text-[9px] font-black uppercase cursor-help">AI-solved${q.confidence ? ` · ${q.confidence} confidence` : ''}</span>`
+              ) : ''}
             </div>
             <div class="flex items-center gap-1">
               <button onclick="window.moveQuestion(${i}, -1)" class="p-2 text-slate-400 hover:text-brand-500 transition-colors ${i === 0 ? 'opacity-20 pointer-events-none' : ''}"><i data-lucide="chevron-up" class="w-4 h-4"></i></button>
@@ -4968,8 +4982,11 @@
       }
 
       const needsAnswerCount = builderQuestions.filter(q => q.a === null || q.a === undefined).length;
+      const aiSolvedCount = builderQuestions.filter(q => q.answerSource === 'ai_solved').length;
       if (needsAnswerCount > 0) {
-        if (!confirm(`${needsAnswerCount} question(s) have no correct answer marked (common with AI-extracted past papers — the answer key usually isn't in the same PDF). Publish anyway? Students won't see a "correct" highlight for those until you mark one.`)) return;
+        if (!confirm(`${needsAnswerCount} question(s) have no correct answer at all. Publish anyway? Students won't see a "correct" highlight for those until you mark one.`)) return;
+      } else if (aiSolvedCount > 0) {
+        if (!confirm(`${aiSolvedCount} question(s) had no printed answer key — the AI worked out the answer itself. Publish anyway? Worth spot-checking these against a real answer key when you can.`)) return;
       }
 
       try {

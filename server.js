@@ -1310,9 +1310,15 @@ app.post('/api/ai/generate-topic', requireAuth, requireAdmin, async (req, res) =
 //
 // IMPORTANT LIMITATIONS (surfaced to the admin in main_admin.htm, not hidden):
 // 1. Past-question PDFs almost never include the answer key in the same
-//    document — the model is instructed to leave correctAnswer null unless a
-//    marked/highlighted answer is visibly printed on the page, rather than
-//    guess. Most extracted questions will need an answer marked by hand.
+//    document. When no marked answer is visible on the page, the model now
+//    SOLVES the question itself using its own subject knowledge (rather than
+//    leaving it blank) and tags the question answerSource: "ai_solved" so
+//    the admin panel can visibly distinguish "confirmed by a printed answer
+//    key" from "the AI's best attempt" — accuracy on the latter is real but
+//    not guaranteed, especially on ambiguous or visual-dependent questions,
+//    so ai_solved answers are flagged for review rather than presented as
+//    equally trustworthy. answerSource is "unknown" only in the rare case
+//    the model can't determine an answer at all (garbled/incomplete text).
 // 2. Precise per-question diagram cropping isn't reliable from a model's
 //    self-reported coordinates. When a question is flagged hasVisual, the
 //    client attaches the FULL page screenshot as reference (not a tight
@@ -1344,9 +1350,13 @@ app.post('/api/ai/parse-past-paper', requireAuth, requireAdmin, async (req, res)
     'If a question contains tabular data, represent it as a GitHub-flavored markdown table embedded in the question text (| col | col |\\n|---|---|\\n| val | val |).',
     'If a question depends on a diagram, chart, chemical structure, graph, or figure that cannot be captured as text or a simple table, set hasVisual true, visualType to one of "diagram"|"chart"|"chemical_structure"|"graph"|"photo"|"other", and visualNote to a short description of what it shows.',
     'Detect the exam year from any header, footer, or watermark visible on the page. If no year is visible on this specific page, set year to null — do not guess or infer from context.',
-    'Only set correctAnswer (0-3, matching the option index) if an answer key, tick mark, circle, or other visible marking on THIS page indicates the correct option. If the page is just the question paper with no marked answers, leave correctAnswer null for every question on it — do not guess.',
+    'Detect the subject (e.g. "Chemistry", "Physics", "Mathematics", "English Language") from any header visible on the page. If no subject is visible on this specific page, set subject to null — do not guess.',
+    'For the correct answer: if an answer key, tick mark, circle, or other visible marking on THIS page indicates the correct option, use that and set answerSource to "page".',
+    'If no answer is marked on the page, solve the question yourself. Before committing to an option, work through it step by step internally: eliminate options you can rule out, redo any calculation at least once to catch arithmetic slips, and check the option you land on actually answers what was asked (not a related but different quantity/concept). Only after that reasoning should you set the final correctAnswer. Set answerSource to "ai_solved", set "confidence" to "high" (certain, e.g. a direct factual recall or a calculation you verified), "medium" (reasoned it out but some ambiguity in the question/options), or "low" (had to guess between two plausible options), and put your key reasoning step in "explanation" (1-2 sentences — e.g. the calculation or the fact you relied on, not just "I calculated it").',
+    'Only if you genuinely cannot determine an answer at all (badly garbled text, missing information the question depends on) should correctAnswer be null, answerSource "unknown", and confidence null — this should be rare.',
     'Return ONLY valid JSON, no markdown fences, no commentary, in exactly this shape:',
-    '{ "pages": [ { "year": string|null, "questions": [ { "number": number|null, "text": string, "options": [string,string,string,string], "correctAnswer": number|null, "hasVisual": boolean, "visualType": string|null, "visualNote": string|null } ] } ] }',
+    '{ "pages": [ { "year": string|null, "subject": string|null, "questions": [ { "number": number|null, "text": string, "options": [string,string,string,string], "explanation": string|null, "confidence": "high"|"medium"|"low"|null, "answerSource": "page"|"ai_solved"|"unknown", "correctAnswer": number|null, "hasVisual": boolean, "visualType": string|null, "visualNote": string|null } ] } ] }',
+    'Field order in that JSON matters: write "explanation" (your reasoning) BEFORE "correctAnswer" for every question, even though correctAnswer appears later in this list — reason first, then decide, not the other way round.',
     'One entry in "pages" per image you were given, in the same order.'
   ].join('\n');
 
@@ -1367,8 +1377,8 @@ app.post('/api/ai/parse-past-paper', requireAuth, requireAdmin, async (req, res)
           { role: 'system', content: systemPrompt },
           { role: 'user', content }
         ],
-        temperature: 0.1,
-        max_tokens: 4000,
+        temperature: 0,
+        max_tokens: 8000,
         response_format: { type: 'json_object' }
       })
     });
@@ -1389,6 +1399,33 @@ app.post('/api/ai/parse-past-paper', requireAuth, requireAdmin, async (req, res)
     } catch (e) {
       return res.status(502).json({ error: 'AI returned invalid JSON' });
     }
+
+    // Basic sanity net, independent of the model's own judgment: drop
+    // questions with malformed structure (wrong option count, duplicate
+    // options, an out-of-range or otherwise inconsistent correctAnswer)
+    // rather than silently passing garbage through to the admin panel.
+    // These conditions are cheap to catch here and would otherwise show up
+    // as a confusing "correct" highlight on the wrong option, or a question
+    // with fewer than 4 real choices, deep in the review UI.
+    if (Array.isArray(parsed?.pages)) {
+      parsed.pages.forEach((page) => {
+        if (!Array.isArray(page?.questions)) return;
+        page.questions = page.questions.filter((q) => {
+          if (!q || typeof q.text !== 'string' || !q.text.trim()) return false;
+          if (!Array.isArray(q.options) || q.options.length !== 4) return false;
+          if (q.options.some((o) => typeof o !== 'string' || !o.trim())) return false;
+          const uniqueOptions = new Set(q.options.map((o) => o.trim().toLowerCase()));
+          if (uniqueOptions.size < 4) return false; // duplicate options — extraction likely misread the page
+          if (q.correctAnswer !== null && q.correctAnswer !== undefined) {
+            if (!Number.isInteger(q.correctAnswer) || q.correctAnswer < 0 || q.correctAnswer > 3) {
+              q.correctAnswer = null; q.answerSource = 'unknown'; q.confidence = null; // don't drop the question over a bad index, just discard the untrustworthy answer
+            }
+          }
+          return true;
+        });
+      });
+    }
+
     res.json(parsed);
   } catch (error) {
     console.error('parse-past-paper error:', error);
