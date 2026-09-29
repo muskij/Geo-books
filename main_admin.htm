@@ -1576,6 +1576,10 @@
                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">D</span>
                     <input type="text" id="builderQOptD" placeholder="Option D" class="w-full pl-8 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none font-bold text-sm focus:border-brand-500 transition-colors">
                   </div>
+                  <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">E</span>
+                    <input type="text" id="builderQOptE" placeholder="Option E (optional)" class="w-full pl-8 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none font-bold text-sm focus:border-brand-500 transition-colors">
+                  </div>
                 </div>
                 <div class="flex gap-4">
                   <select id="builderQCorrect" class="flex-1 px-5 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none font-black text-xs uppercase focus:border-brand-500 transition-colors">
@@ -1583,6 +1587,7 @@
                     <option value="1">Correct: Option B</option>
                     <option value="2">Correct: Option C</option>
                     <option value="3">Correct: Option D</option>
+                    <option value="4">Correct: Option E</option>
                   </select>
                   <button id="builderAddBtn" onclick="window.addQuestionToBuilder()" class="px-8 py-3 rounded-xl bg-slate-900 text-white font-black uppercase text-[10px] hover:scale-105 transition-all shadow-lg shadow-slate-900/20">Add to List</button>
                   <button id="builderCancelEditBtn" onclick="window.cancelQuestionEdit()" class="px-6 py-3 rounded-xl bg-slate-100 text-slate-400 font-black uppercase text-[10px] hover:bg-slate-200 transition-all hidden">Cancel</button>
@@ -4363,8 +4368,12 @@
   - One <exam-paper> block = one exam. Paste several blocks to create several years at once.
   - Required on <exam-paper>: subject, year. Optional: type (JAMB or Other, default JAMB),
     duration in minutes (default 40), title (default "<subject> <year>").
-  - Each <question> needs answer="A", "B", "C" or "D", question-text, and all four choices.
-  - <explanation> and <image-url> are optional - delete the line if unused.
+  - Each <question> needs answer="A", "B", "C", "D" or "E", question-text, and choices A-D.
+  - <choice-e> is OPTIONAL - only add a 5th option if the question needs one. Delete the
+    line entirely (or leave it empty) for a normal 4-option question.
+  - <explanation> and <image-url> are optional too - delete the line if unused.
+  - Formulas: write LaTeX between $...$ for inline math, or $$...$$ for a centered block,
+    e.g. "If $2x + 3 = 11$" or "$$\\frac{a}{b} = c$$". Works in question text, choices and explanation.
   - To type < > or & inside text, write &lt; &gt; &amp;
   - This comment is ignored - leave it or delete it.
 -->
@@ -4372,12 +4381,13 @@
 <exam-paper subject="Mathematics" year="2019" type="JAMB" duration="40" title="Mathematics 2019">
 
   <question answer="B">
-    <question-text>If 2x + 3 = 11, what is the value of x?</question-text>
-    <choice-a>3</choice-a>
-    <choice-b>4</choice-b>
-    <choice-c>5</choice-c>
-    <choice-d>6</choice-d>
-    <explanation>2x = 11 - 3 = 8, so x = 4.</explanation>
+    <question-text>If $2x + 3 = 11$, what is the value of $x$?</question-text>
+    <choice-a>$3$</choice-a>
+    <choice-b>$4$</choice-b>
+    <choice-c>$5$</choice-c>
+    <choice-d>$6$</choice-d>
+    <choice-e></choice-e>
+    <explanation>$2x = 11 - 3 = 8$, so $x = 4$.</explanation>
     <image-url></image-url>
   </question>
 
@@ -4387,6 +4397,7 @@
     <choice-b></choice-b>
     <choice-c></choice-c>
     <choice-d></choice-d>
+    <choice-e></choice-e>
     <explanation></explanation>
   </question>
 
@@ -4404,6 +4415,7 @@
     <choice-b></choice-b>
     <choice-c></choice-c>
     <choice-d></choice-d>
+    <choice-e></choice-e>
     <explanation></explanation>
   </question>
 
@@ -4441,7 +4453,7 @@
           seen.add(dupKey);
         }
 
-        const letters = ['a', 'b', 'c', 'd'];
+        const letters = ['a', 'b', 'c', 'd', 'e']; // 'e' is optional per-question, see below
         const questions = [];
         const qNodes = [...node.querySelectorAll('question')];
         if (!qNodes.length) errors.push(`${label}: no <question> elements`);
@@ -4451,19 +4463,23 @@
         qNodes.forEach((qn, qi) => {
           const n = qi + 1;
           const q = clean(qn.querySelector('question-text'));
-          const opts = letters.map(l => clean(qn.querySelector(`choice-${l}`)));
+          const allOpts = letters.map(l => clean(qn.querySelector(`choice-${l}`)));
           const ansRaw = (qn.getAttribute('answer') || '').trim().toUpperCase();
-          const a = ['A', 'B', 'C', 'D'].indexOf(ansRaw);
+          const a = ['A', 'B', 'C', 'D', 'E'].indexOf(ansRaw);
+          // choice-e is optional: keep it only if it has text, or if it's the marked
+          // correct answer (in which case its absence is a real error, caught below).
+          const hasE = !!allOpts[4] || a === 4;
+          const opts = hasE ? allOpts : allOpts.slice(0, 4);
           const exp = clean(qn.querySelector('explanation'));
           const image = clean(qn.querySelector('image-url')) || null;
           const problems = [];
 
           if (!q) problems.push('missing question-text');
           opts.forEach((o, oi) => { if (!o) problems.push(`choice-${letters[oi]} is empty`); });
-          if (!ansRaw) problems.push('missing answer="A-D"');
-          else if (a === -1) problems.push(`answer "${ansRaw}" must be A, B, C or D`);
+          if (!ansRaw) problems.push('missing answer="A-E"');
+          else if (a === -1) problems.push(`answer "${ansRaw}" must be A, B, C, D or E`);
           if (image && !/^https?:\/\//i.test(image)) problems.push('image-url must start with http(s)://');
-          if (opts.every(Boolean) && new Set(opts.map(o => o.toLowerCase())).size < 4) warnings.push(`Q${n}: two choices are identical`);
+          if (opts.every(Boolean) && new Set(opts.map(o => o.toLowerCase())).size < opts.length) warnings.push(`Q${n}: two choices are identical`);
           if (q) {
             const k = q.toLowerCase();
             if (seenText.has(k)) warnings.push(`Q${n} repeats the text of Q${seenText.get(k)}`);
@@ -4591,7 +4607,7 @@
                   <p class="text-xs font-bold text-slate-700 mb-2"><span class="text-slate-400">${qi + 1}.</span> ${escapeHTML(q.q)}</p>
                   ${q.image ? `<p class="text-[10px] font-bold text-slate-400 mb-2">🖼 ${escapeHTML(q.image)}</p>` : ''}
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    ${q.opts.map((o, oi) => `<div class="text-[11px] font-bold px-3 py-1.5 rounded-lg ${oi === q.a ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-50 text-slate-500'}">${'ABCD'[oi]}. ${escapeHTML(o)}</div>`).join('')}
+                    ${q.opts.map((o, oi) => `<div class="text-[11px] font-bold px-3 py-1.5 rounded-lg ${oi === q.a ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-50 text-slate-500'}">${'ABCDE'[oi]}. ${escapeHTML(o)}</div>`).join('')}
                   </div>
                   ${q.exp ? `<p class="text-[10px] font-bold text-slate-400 mt-2">💡 ${escapeHTML(q.exp)}</p>` : ''}
                 </div>`).join('')}
@@ -4722,11 +4738,15 @@
             bInput = document.getElementById('builderQOptB'), 
             cInput = document.getElementById('builderQOptC'), 
             dInput = document.getElementById('builderQOptD'),
+            eInput = document.getElementById('builderQOptE'),
             correctInput = document.getElementById('builderQCorrect');
       
-      const q = qInput.value.trim(), 
-            opts = [aInput.value.trim(), bInput.value.trim(), cInput.value.trim(), dInput.value.trim()], 
+      const q = qInput.value.trim(),
+            // Option E is optional: only kept if filled in, or if it's the marked correct answer.
+            eVal = eInput.value.trim(),
+            opts = [aInput.value.trim(), bInput.value.trim(), cInput.value.trim(), dInput.value.trim()],
             a = parseInt(correctInput.value);
+      if (eVal || a === 4) opts.push(eVal);
 
       if (!q || opts.some(o => !o)) {
         window.toast("Please fill all question fields", "error");
@@ -4744,7 +4764,7 @@
         window.toast("Question added to list", "success");
       }
 
-      qInput.value = ""; aInput.value = ""; bInput.value = ""; cInput.value = ""; dInput.value = "";
+      qInput.value = ""; aInput.value = ""; bInput.value = ""; cInput.value = ""; dInput.value = ""; eInput.value = "";
       window.clearBuilderImage();
       window.renderBuilderQuestions();
     };
@@ -4758,6 +4778,7 @@
       document.getElementById('builderQOptB').value = q.opts[1];
       document.getElementById('builderQOptC').value = q.opts[2];
       document.getElementById('builderQOptD').value = q.opts[3];
+      document.getElementById('builderQOptE').value = q.opts[4] || '';
       document.getElementById('builderQCorrect').value = q.a;
       
       if (q.image) {
@@ -4785,6 +4806,7 @@
       document.getElementById('builderQOptB').value = "";
       document.getElementById('builderQOptC').value = "";
       document.getElementById('builderQOptD').value = "";
+      document.getElementById('builderQOptE').value = "";
       document.getElementById('builderQCorrect').value = "0";
       window.clearBuilderImage();
 
