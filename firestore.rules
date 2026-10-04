@@ -118,8 +118,12 @@ service cloud.firestore {
       // updateDoc() could be called directly with verified:true to grant
       // free premium access.
       function isAllowedSubscriptionSelfUpdate() {
-        let hasSub = request.resource.data.keys().hasAny(['subscription']);
-        return !hasSub || isSelfServiceSubscription(request.resource.data.subscription);
+        // Only validate the subscription field when this write actually
+        // changes it. Previously ANY update (streak, lastActive, profile
+        // edits...) by a user whose existing subscription isn't FREE/pending
+        // (e.g. a verified paid tier) was rejected as well.
+        let subChanged = request.resource.data.diff(resource.data).changedKeys().hasAny(['subscription']);
+        return !subChanged || isSelfServiceSubscription(request.resource.data.subscription);
       }
 
       function isSelfServiceSubscription(s) {

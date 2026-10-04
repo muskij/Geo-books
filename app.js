@@ -73,8 +73,6 @@ const analytics = getAnalytics(firebaseApp);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const functionsApi = getFunctions(firebaseApp);
-const callAwardXp = httpsCallable(functionsApi, 'awardXp');
-const callConfirmEscrowPayment = httpsCallable(functionsApi, 'confirmEscrowPayment');
 
 // --- Utilities ---
 window.S = S;
@@ -328,8 +326,7 @@ async function addXP(userId, amount) {
   if (app.state.user?.uid && uid === app.state.user.uid) {
     const safeDelta = Math.floor(delta);
     try {
-      const resp = await callAwardXp({ amount: safeDelta });
-      const data = resp?.data || {};
+      const data = await callServerApi('/api/xp/award', { amount: safeDelta });
       const oldTitle = toText(data.oldRankTitle || data.oldTitle || '');
       const newRank = data.newRank || null;
       const rankUp = !!data.rankUp;
@@ -414,6 +411,28 @@ const API_BASE_URL = window.GEO_BOOKS_API_URL ||
   (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
     ? 'http://localhost:3007'
     : '');
+
+// Authenticated POST to server.js. Replaces the old httpsCallable() Cloud
+// Function calls, which can't work now that those functions were migrated
+// into Express routes (no Blaze plan).
+async function callServerApi(path, body) {
+  const user = auth?.currentUser;
+  if (!user) throw new Error('You must be signed in.');
+  const idToken = await user.getIdToken();
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+    body: JSON.stringify(body || {})
+  });
+  let data = null;
+  try { data = await response.json(); } catch (_) {}
+  if (!response.ok) {
+    const err = new Error(data?.error || `Request failed (${response.status})`);
+    err.status = response.status;
+    throw err;
+  }
+  return data || {};
+}
 
 const dispatchAssetToCloudflare = async (fileObject, destinationKey) => {
   if (!fileObject || !destinationKey) {
@@ -2717,7 +2736,7 @@ const updateActivity = async () => {
 const rewardXP = async (amount, event = null) => {
   if (!app.state.user) return;
   
-  updateActivity(); // Update streak and last active time
+  updateActivity().catch(e => console.warn('updateActivity failed:', e?.code || '', e?.message || e)); // Update streak and last active time
   const x = event?.clientX || (event?.target ? event.target.getBoundingClientRect().left : window.innerWidth / 2);
   const y = event?.clientY || (event?.target ? event.target.getBoundingClientRect().top : window.innerHeight / 2);
   
@@ -4749,7 +4768,8 @@ window.startJambExam = async () => {
       options: q.opts,
       correct: q.correct,
       explanation: q.exp || '',
-      topic: q.topic || ''
+      topic: q.topic || '',
+      image: q.image || null
     }));
     jambState.questionIndex[subject] = 0;
     jambState.selectedAnswers[subject] = {};
@@ -9644,7 +9664,12 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled Promise Rejection:', event.reason);
   // Don't toast for everything, only if it looks like a user-facing error
   const msg = event.reason?.message || event.reason;
-  if (msg && typeof msg === 'string' && msg.length < 100) {
+  const code = String(event.reason?.code || '');
+  // Firestore permission/background-sync failures are handled (or logged)
+  // where they happen; a generic toast on every one just confuses students.
+  const isFirebaseNoise = code.startsWith('permission-denied') || code.startsWith('unavailable') ||
+    /Missing or insufficient permissions/i.test(String(msg || ''));
+  if (!isFirebaseNoise && msg && typeof msg === 'string' && msg.length < 100) {
     toast(`Something went wrong: ${msg}`, 'error');
   }
 });
@@ -11211,7 +11236,7 @@ window.confirmPayment = async () => {
     const price = Math.floor(Number(app.state.currentEscrowItemPrice) || 0);
     if (!itemId || price <= 0) throw new Error('Missing escrow details');
 
-    await callConfirmEscrowPayment({ itemId, price });
+    await callServerApi('/api/escrow/confirm', { itemId, price });
 
     toast('Payment recorded! Funds held in escrow.', 'success');
     window.toggleEscrow(false);
@@ -11604,7 +11629,7 @@ const inferCbtSubject = (text) => {
 // Offline-first: if the browser is offline, or the network fetch fails, this
 // falls back to whatever was previously downloaded into IndexedDB via
 // window.downloadQuestionPackForOffline() below.
-async function fetchRealQuestionBank({ examType = 'GENERAL', subject, year = null, topic = null, count = 20 } = {}) {
+async function fetchQuestionsCollectionBank({ examType = 'GENERAL', subject, year = null, topic = null, count = 20 } = {}) {
   const normalizedExamType = toText(examType).trim().toUpperCase() || 'GENERAL';
   const normalizedSubject = toText(subject).trim();
   const normalizedTopic = toText(topic).trim();
@@ -11623,7 +11648,11 @@ async function fetchRealQuestionBank({ examType = 'GENERAL', subject, year = nul
   try {
     const constraints = [
       where('examType', '==', normalizedExamType),
-      where('subject', '==', normalizedSubject)
+      where('subject', '==', normalizedSubject),
+      // firestore.rules only lets clients read isActive questions; a query
+      // must prove that constraint or Firestore rejects it with
+      // permission-denied (which this function's catch silently swallowed).
+      where('isActive', '==', true)
     ];
     if (year) constraints.push(where('year', '==', Number(year)));
     if (normalizedTopic) constraints.push(where('topic', '==', normalizedTopic));
@@ -11661,6 +11690,65 @@ async function fetchRealQuestionBank({ examType = 'GENERAL', subject, year = nul
     const cached = await getCachedQuestionPack(packKey);
     return (cached && cached.length) ? shuffleAndTrim(cached, count) : null;
   }
+}
+
+
+// Subject labels differ between the CBT picker ("English") and how admins
+// label imported papers ("English Language", "Use of English").
+const JAMB_SUBJECT_ALIASES = {
+  English: ['English', 'English Language', 'Use of English'],
+  Mathematics: ['Mathematics', 'Maths', 'Math'],
+  CRS: ['CRS', 'C.R.S', 'Christian Religious Studies'],
+  Government: ['Government', 'Govt'],
+  Literature: ['Literature', 'Literature in English', 'Literature-in-English']
+};
+
+// Past papers imported through main_admin.htm's <exam-paper> template are
+// stored in the `exams` collection (questions embedded, `a` = 0-based answer
+// index), NOT in `questions`. This lets the JAMB simulation draw from them.
+async function fetchJambQuestionsFromExams({ subject, year = null, count = 20 } = {}) {
+  const name = toText(subject).trim();
+  if (!name) return null;
+  const aliases = JAMB_SUBJECT_ALIASES[name] || [name];
+  try {
+    const constraints = [
+      where('examType', '==', 'JAMB'),
+      where('jambSubject', 'in', aliases.slice(0, 10))
+    ];
+    if (year) constraints.push(where('jambYear', '==', Number(year)));
+    const snap = await getDocs(query(collection(db, 'exams'), ...constraints));
+    if (snap.empty) return null;
+
+    const pool = [];
+    snap.docs.forEach(docSnap => {
+      const d = docSnap.data();
+      (Array.isArray(d.questions) ? d.questions : []).forEach(q => {
+        const opts = Array.isArray(q?.opts) ? q.opts.map(o => toText(o)) : [];
+        const a = Number.isInteger(q?.a) ? q.a : -1;
+        // Skip rows with no answer key (Physics 1983-87 imports may have gaps)
+        if (!toText(q?.q) || opts.length < 2 || opts.some(o => !o) || a < 0 || a >= opts.length) return;
+        pool.push({
+          q: toText(q.q), opts, correct: a, exp: toText(q.exp), topic: '',
+          year: d.jambYear || null, image: q.image || null
+        });
+      });
+    });
+    return pool.length ? shuffleAndTrim(pool, count) : null;
+  } catch (e) {
+    console.warn('fetchJambQuestionsFromExams failed:', e?.code || '', e);
+    return null;
+  }
+}
+
+async function fetchRealQuestionBank(opts = {}) {
+  const primary = await fetchQuestionsCollectionBank(opts);
+  if (primary && primary.length) return primary;
+  const isJamb = toText(opts.examType).trim().toUpperCase() === 'JAMB';
+  if (isJamb && !opts.topic && navigator.onLine) {
+    const fromExams = await fetchJambQuestionsFromExams(opts);
+    if (fromExams && fromExams.length) return fromExams;
+  }
+  return primary;
 }
 
 // Topic-by-topic practice (a feature myschool.ng's app has that Geo-Books

@@ -1512,8 +1512,19 @@ app.post('/api/escrow/confirm', requireAuth, async (req, res) => {
       const itemSnap = await tx.get(itemRef);
       if (!itemSnap.exists) throw new Error('NOT_FOUND');
       const item = itemSnap.data() || {};
-      const expectedPrice = Math.floor(Number(item.price) || 0);
-      if (expectedPrice !== price) throw new Error('PRICE_MISMATCH');
+      const listPrice = Number(item.price) || 0;
+      // Master rank (8,500+ XP) gets 10% off marketplace purchases. Derive
+      // eligibility from the buyer's stored XP, never from the client.
+      const buyerSnap = await tx.get(db.collection('users').doc(uid));
+      const buyerXp = Number(buyerSnap.exists ? (buyerSnap.data() || {}).xp : 0) || 0;
+      const discountOk = buyerXp >= 8500;
+      const allowed = new Set([Math.floor(listPrice)]);
+      if (discountOk) {
+        allowed.add(Math.floor(listPrice * 0.9));
+        allowed.add(Math.round(listPrice * 0.9));
+        allowed.add(Math.ceil(listPrice * 0.9));
+      }
+      if (!allowed.has(price)) throw new Error('PRICE_MISMATCH');
 
       tx.set(payRef, {
         buyerId: uid, itemId, price,
