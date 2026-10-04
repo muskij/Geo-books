@@ -3745,6 +3745,11 @@ window.submitRating = async () => {
   }
 };
 
+window.setMarketCategory = (cat) => {
+  const sel = S('filterCategory');
+  if (sel) sel.value = cat;
+  filterMarket(app.state.marketplace);
+};
 window.resetMarketFilters = () => {
   const search = S('marketSearch');
   const cat = S('filterCategory');
@@ -3916,6 +3921,7 @@ function filterMarket(marketplaceItems) {
   }
 
   if (resultsEl) resultsEl.textContent = `${items.length.toLocaleString()} result${items.length === 1 ? '' : 's'}`;
+  document.querySelectorAll('#marketChips [data-cat]').forEach(b => b.classList.toggle('is-on', b.dataset.cat === categoryFilter));
   const hasFilters = categoryFilter !== 'All' || locationFilter !== 'All' || priceSort !== 'latest' || favoritesOnly || Boolean(searchQuery.trim());
   if (clearBtn) clearBtn.classList.toggle('hidden', !hasFilters);
 
@@ -3923,89 +3929,35 @@ function filterMarket(marketplaceItems) {
     const imgFallback = `https://picsum.photos/seed/${encodeURIComponent(item.id || Date.now())}/400/300`;
     const imgSrc = escapeHTML(safeUrl(item.img, imgFallback));
     const safeTitle = escapeHTML(item.title);
-    const safeLoc = escapeHTML(item.loc);
+    const safeLoc = escapeHTML(item.loc || '');
     const safeCat = escapeHTML(item.category || 'Item');
-    const sellerName = escapeHTML(item.sellerName || 'Student Seller');
+    const sellerName = escapeHTML(item.sellerName || 'Student seller');
     const isFav = window.isMarketFavorite(item.id);
-    const ratingCount = Number(item.ratingCount) || 0;
-    const ratingSum = Number(item.ratingSum) || 0;
-    const avgRating = ratingCount > 0 ? (ratingSum / ratingCount) : 0;
     const views = Number(item.views) || 0;
-    const createdAt = toMillis(item.createdAt);
-    const now = Date.now();
-    const isNew = (now - createdAt) < 24 * 60 * 60 * 1000; // last 24h
-    const isHot = views > 100;
-    const isPopular = views > 50;
-
+    const isNew = (Date.now() - toMillis(item.createdAt)) < 24 * 60 * 60 * 1000;
+    const tags = [
+      item.isEliteSeller ? '<span class="ux-tag gold">Verified</span>' : '',
+      item.boosted ? '<span class="ux-tag">Boosted</span>' : '',
+      isNew ? '<span class="ux-tag new">New</span>' : '',
+      views > 100 ? '<span class="ux-tag hot">Hot</span>' : ''
+    ].filter(Boolean).slice(0, 2).join('');
     return `
-    <div onclick="window.openMarketItem('${item.id}')" class="premium-card p-5 rounded-[2.5rem] group relative overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300 ${item.isEliteSeller ? 'elite-border-glow border-elite-gold/50' : ''}">
-      <div class="absolute inset-0 bg-gradient-to-br from-brand-500/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-      ${item.isEliteSeller ? `
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-elite-gold to-yellow-200 z-20"></div>
-        <div class="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-xl bg-emerald-950/80 backdrop-blur-md border border-elite-gold/30 flex items-center gap-1.5">
-          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-elite-gold"></i>
-          <span class="text-[9px] font-black text-elite-gold uppercase tracking-widest">Verified Elite</span>
-        </div>
-      ` : ''}
-      <div class="absolute top-4 right-4 z-20 flex gap-2">
-        ${item.boosted ? `
-          <span class="px-3 py-1 rounded-xl bg-gradient-to-r from-brand-500 to-indigo-600 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-brand-500/30 flex items-center gap-1">
-            <i data-lucide="rocket" class="w-3 h-3"></i> Boosted
-          </span>
-        ` : ''}
-        ${isNew ? `
-          <span class="px-3 py-1 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/30">New</span>
-        ` : ''}
-        ${isHot ? `
-          <span class="px-3 py-1 rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/30">Hot</span>
-        ` : ''}
-        ${isPopular && !isHot ? `
-          <span class="px-3 py-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/30">Popular</span>
-        ` : ''}
+    <article onclick="window.openMarketItem('${item.id}')" class="ux-item ${item.isEliteSeller ? 'is-elite' : ''}">
+      <div class="ux-item-img">
+        <img src="${imgSrc}" onerror="this.onerror=null;this.src='${escapeHTML(imgFallback)}'" alt="${safeTitle}" loading="lazy">
+        <div class="ux-tags">${tags}</div>
+        <button onclick="event.stopPropagation(); window.toggleMarketFavorite('${item.id}')" class="ux-fav ${isFav ? 'is-on' : ''}" aria-label="${isFav ? 'Remove from saved' : 'Save item'}"><i data-lucide="heart"></i></button>
       </div>
-      <button onclick="event.stopPropagation(); window.toggleMarketFavorite('${item.id}')" class="absolute top-4 left-4 z-20 p-3 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md transition-all shadow-xl ${isFav ? 'text-rose-600 bg-rose-50 dark:bg-rose-900/30' : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30'}">
-        <i data-lucide="heart" class="w-5 h-5"></i>
-      </button>
-      <div class="aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 mb-5 relative shadow-xl shadow-slate-200/30 dark:shadow-black/30">
-        <img src="${imgSrc}" onerror="this.onerror=null;this.src='${escapeHTML(imgFallback)}'" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy">
-        <div class="absolute bottom-4 left-4 px-4 py-2 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-xl flex items-center gap-2">
-          <span class="text-sm font-black text-brand-700 dark:text-brand-300">₦${item.price.toLocaleString()}</span>
-          <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 border-l border-slate-300 dark:border-slate-700 pl-2">${safeCat}</span>
+      <div class="ux-item-body">
+        <p class="ux-price">₦${(Number(item.price) || 0).toLocaleString()}</p>
+        <h4 class="ux-item-title">${safeTitle}</h4>
+        <p class="ux-item-meta">${safeCat}${safeLoc ? ' · ' + safeLoc : ''}</p>
+        <div class="ux-item-foot">
+          <span class="ux-seller">${sellerName}</span>
+          <button onclick="event.stopPropagation(); window.contactSeller('${item.id}')" class="ux-msg"><i data-lucide="message-square"></i> Chat</button>
         </div>
       </div>
-      <h4 class="font-black text-lg leading-snug line-clamp-2">${safeTitle}</h4>
-      <div class="mt-4 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-brand-500/30">
-            ${sellerName.charAt(0).toUpperCase()}
-          </div>
-          <div class="text-left">
-            <p class="text-sm font-bold text-slate-700 dark:text-slate-200">${sellerName}</p>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-              <i data-lucide="map-pin" class="w-3 h-3"></i> ${safeLoc}
-            </p>
-          </div>
-        </div>
-        <div class="flex flex-col items-end gap-1">
-          <span class="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-            <i data-lucide="eye" class="w-3 h-3"></i> ${views.toLocaleString()}
-          </span>
-          <div class="flex items-center gap-1">
-            <i data-lucide="star" class="w-3 h-3 text-amber-400 fill-amber-400"></i>
-            <span class="text-[10px] font-bold text-slate-600 dark:text-slate-300">${avgRating.toFixed(1)}</span>
-            <span class="text-[9px] font-bold text-slate-400">(${ratingCount})</span>
-          </div>
-        </div>
-      </div>
-      <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-        <button onclick="event.stopPropagation(); window.contactSeller('${item.id}')" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-2">
-          <i data-lucide="message-square" class="w-4 h-4"></i> Contact
-        </button>
-        <button onclick="event.stopPropagation(); window.openMarketItem('${item.id}')" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-brand-500/30 hover:from-brand-700 hover:to-indigo-700 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
-          View <i data-lucide="arrow-right" class="w-4 h-4"></i>
-        </button>
-      </div>
-    </div>
+    </article>
   `;
   }).join('');
 
@@ -4351,11 +4303,25 @@ function initBooksUI() {
     cat.dataset.bound = '1';
     cat.onchange = () => renderBooks();
   }
+  const sortSel = S('bookSort');
+  if (sortSel && !sortSel.dataset.bound) { sortSel.dataset.bound = '1'; sortSel.onchange = () => renderBooks(); }
   if (type && !type.dataset.bound) {
     type.dataset.bound = '1';
     type.onchange = () => renderBooks();
   }
 }
+
+window.setBookLevel = (lvl) => {
+  const sel = S('filterBookCategory');
+  if (sel) sel.value = lvl;
+  renderBooks();
+};
+
+window.clearBookFilters = () => {
+  if (S('bookSearch')) S('bookSearch').value = '';
+  if (S('filterBookCategory')) S('filterBookCategory').value = 'All';
+  renderBooks();
+};
 
 function renderBooks() {
   const grid = S('booksGrid');
@@ -4364,6 +4330,7 @@ function renderBooks() {
   const searchQuery = toText(S('bookSearch')?.value || '').toLowerCase().trim();
   const categoryFilter = S('filterBookCategory')?.value || 'All';
   const typeFilter = S('filterBookType')?.value || 'All';
+  const sortBy = S('bookSort')?.value || 'newest';
 
   let books = Array.isArray(app.state.books) ? app.state.books.slice() : [];
   // Filter out blocked books
@@ -4379,41 +4346,52 @@ function renderBooks() {
     });
   }
 
+  const when = (b) => toMillis(b.createdAt) || 0;
+  if (sortBy === 'name') books.sort((x, y) => toText(x.title).localeCompare(toText(y.title)));
+  else if (sortBy === 'oldest') books.sort((x, y) => when(x) - when(y));
+  else books.sort((x, y) => when(y) - when(x));
+
   if (books.length === 0) {
+    const filtered = !!searchQuery || categoryFilter !== 'All' || typeFilter !== 'All';
+    const cnt0 = S('booksCount'); if (cnt0) cnt0.textContent = '0 books';
+    document.querySelectorAll('#bookLevelChips [data-level]').forEach(c => c.classList.toggle('is-on', c.dataset.level === categoryFilter));
     grid.innerHTML = `
-      <div class="col-span-full p-12 text-center text-slate-400 font-bold">
-        No books found. Try a different search or filter.
+      <div class="col-span-full p-12 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+        <h3 class="text-xl font-black">${filtered ? 'No matching books' : 'No books yet'}</h3>
+        <p class="mt-2 text-sm font-medium text-slate-500">${filtered ? 'Try fewer words or switch the level filter to “All Levels”.' : 'Be the first to share a PDF with your classmates.'}</p>
+        ${filtered ? '<button onclick="window.clearBookFilters()" class="mt-6 px-6 py-3 rounded-2xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest">Clear filters</button>' : ''}
       </div>
     `;
     return;
   }
 
+  const lvlColor = { JAMB: 'linear-gradient(135deg,#f59e0b,#ea580c)', WAEC: 'linear-gradient(135deg,#10b981,#0d9488)', 'Post-UTME': 'linear-gradient(135deg,#ec4899,#be185d)' };
   grid.innerHTML = books.map(b => {
     const title = escapeHTML(toText(b.title || 'Book'));
-    const category = escapeHTML(toText(b.category || 'University'));
+    const rawCat = toText(b.category || 'University');
+    const category = escapeHTML(rawCat);
     const type = escapeHTML(toText(b.type || 'Textbook'));
-    const fileUrl = safeUrl(b.fileUrl, '');
+    const author = escapeHTML(toText(b.author || '').trim());
+    const desc = escapeHTML(toText(b.description || '').trim());
+    const bg = lvlColor[rawCat] || 'linear-gradient(135deg,#6366f1,#7c3aed)';
     return `
-      <div class="premium-card p-6 rounded-[2.5rem] group relative overflow-hidden hover:shadow-2xl transition-all duration-300">
-        <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/0 via-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:via-transparent group-hover:to-teal-500/5 transition-all duration-500"></div>
-        <div class="relative z-10">
-          <div class="aspect-[3/2.2] rounded-[1.5rem] overflow-hidden bg-slate-100 dark:bg-slate-800 mb-6 border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/30 dark:shadow-black/20">
-            <img src="book-cover.jpeg" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy">
-          </div>
-          <p class="text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-300 mb-2">${category} • ${type}</p>
-          <h4 class="font-black text-lg leading-snug line-clamp-2 text-slate-900 dark:text-white mb-4">${title}</h4>
-          <div class="flex items-center gap-2">
-            <button onclick="window.openBook('${escapeHTML(b.id)}')" class="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-center font-black uppercase text-[10px] hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-              View
-            </button>
-            <button onclick="window.openReportModal('${escapeHTML(b.id)}', '${escapeHTML(title)}')" class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-colors">
-              <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-            </button>
+      <article class="ux-book">
+        <div class="ux-book-cover" style="background:${bg}"><i data-lucide="book-open"></i><span>${category} · ${type}</span></div>
+        <div class="ux-book-body">
+          <h4 class="ux-book-title">${title}</h4>
+          ${author ? `<p class="ux-book-by">by ${author}</p>` : ''}
+          ${desc ? `<p class="ux-book-desc">${desc}</p>` : ''}
+          <div class="ux-book-act">
+            <button onclick="window.openBook('${escapeHTML(b.id)}')" class="ux-btn ux-btn-primary"><i data-lucide="book-open"></i> Read</button>
+            <button onclick="window.openReportModal('${escapeHTML(b.id)}', '${escapeHTML(title)}')" class="ux-icon-btn" title="Report a problem" aria-label="Report a problem with this book"><i data-lucide="flag"></i></button>
           </div>
         </div>
-      </div>
+      </article>
     `;
   }).join('');
+  const cnt = S('booksCount');
+  if (cnt) cnt.textContent = `${books.length} book${books.length === 1 ? '' : 's'}`;
+  document.querySelectorAll('#bookLevelChips [data-level]').forEach(c => c.classList.toggle('is-on', c.dataset.level === categoryFilter));
 
   if (window.lucide) window.lucide.createIcons();
 }
@@ -5366,7 +5344,7 @@ function renderCbtQuestion() {
     container.classList.add('slide-out');
     setTimeout(() => {
       if (S('cbtQuestionText')) S('cbtQuestionText').textContent = q.q;
-      if (S('cbtQuestionBadge')) S('cbtQuestionBadge').textContent = `Protocol Step ${String(studyState.cbt.i + 1).padStart(2, '0')} / ${studyState.cbt.questions.length}`;
+      if (S('cbtQuestionBadge')) S('cbtQuestionBadge').textContent = `Question ${studyState.cbt.i + 1} of ${studyState.cbt.questions?.length || studyState.cbt.total || ''}`;
       if (S('cbtSubject')) S('cbtSubject').textContent = toText(studyState.cbt.subject || 'General');
       if (S('cbtSubjectInitial')) S('cbtSubjectInitial').textContent = (studyState.cbt.subject || 'G')[0].toUpperCase();
 
@@ -5440,7 +5418,7 @@ function renderCbtQuestion() {
         setTimeout(() => S('cbtProgressBar').classList.remove('progress-pulse-active'), 2000);
       }
       if (S('cbtProgressText')) S('cbtProgressText').textContent = `Neural Sync: ${progress}%`;
-      if (S('cbtProgressMeta')) S('cbtProgressMeta').textContent = `Vector ${studyState.cbt.i + 1} / ${studyState.cbt.questions.length}`;
+      if (S('cbtProgressMeta')) S('cbtProgressMeta').textContent = `Question ${studyState.cbt.i + 1} / ${studyState.cbt.questions.length}`;
 
       updateCbtStats();
       updateCbtFlagUI();
@@ -9040,7 +9018,7 @@ function renderCampusPulse() {
 
   const me = app.state.userData?.displayName || app.state.user?.displayName || app.state.user?.email || 'U';
   const initials = me.split(' ').map(s => s[0]).join('').toUpperCase().slice(0, 2) || 'U';
-  if (S('postAvatar')) S('postAvatar').textContent = initials;
+  if (S('postAvatarInitial')) S('postAvatarInitial').textContent = initials;
 
   const postBtn = S('campusPostBtn');
   const postInput = S('campusPostInput');
@@ -9379,17 +9357,7 @@ window.setCampusTab = (tab) => {
   const btnLatest = S('campusTabLatest');
   const btnBookmarks = S('campusTabBookmarks');
 
-  const setActive = (btn, active) => {
-    if (!btn) return;
-    btn.classList.toggle('bg-slate-900', active);
-    btn.classList.toggle('dark:bg-white', active);
-    btn.classList.toggle('text-white', active);
-    btn.classList.toggle('dark:text-slate-900', active);
-    btn.classList.toggle('bg-slate-100', !active);
-    btn.classList.toggle('dark:bg-slate-900', !active);
-    btn.classList.toggle('text-slate-700', !active);
-    btn.classList.toggle('dark:text-slate-200', !active);
-  };
+  const setActive = (btn, active) => { if (btn) btn.classList.toggle('is-active', active); };
 
   setActive(btnForYou, app.state.campusTab === 'forYou');
   setActive(btnLatest, app.state.campusTab === 'latest');
@@ -12421,26 +12389,11 @@ window.setCbtView = (view) => {
   // picked they get out of the way so that mode occupies the section on
   // its own (full-screen within the CBT tab) instead of sharing scroll
   // space with them. They come back the moment the user hits "Back" to hub.
-  const topCards = S('cbtTopCards');
   const intro = S('cbtIntro');
-  if (topCards) topCards.classList.toggle('hidden', !isHub);
   if (intro) intro.classList.toggle('hidden', !isHub);
 
-  // Let the active mode use the full width/height of the section instead
-  // of the hub's boxed-in card container.
   const cbtSetup = S('cbtSetup');
-  if (cbtSetup) {
-    cbtSetup.classList.toggle('max-w-6xl', isHub);
-    cbtSetup.classList.toggle('p-12', isHub);
-    cbtSetup.classList.toggle('rounded-[4rem]', isHub);
-    cbtSetup.classList.toggle('border', isHub);
-    cbtSetup.classList.toggle('shadow-soft', isHub);
-    cbtSetup.classList.toggle('max-w-full', !isHub);
-    cbtSetup.classList.toggle('w-full', !isHub);
-    cbtSetup.classList.toggle('p-4', !isHub);
-    cbtSetup.classList.toggle('sm:p-6', !isHub);
-    cbtSetup.classList.toggle('rounded-2xl', !isHub);
-  }
+  if (cbtSetup) cbtSetup.classList.toggle('is-hub', isHub);
 
   if (view === 'jamb') {
     jambState.mode = 'jamb';
