@@ -4753,53 +4753,32 @@ window.startJambExam = async () => {
     return;
   }
 
-  // Initialize state
-  jambState.activeSubject = jambState.selectedSubjects[0];
-  jambState.remainingTime = jambState.totalTime;
-  jambState.selectedAnswers = {};
-  jambState.questionIndex = {};
-  jambState.questions = {};
-  jambState.paused = false;
-  jambState.startedAtMs = Date.now();
-
-  fetched.forEach(({ subject, questions }) => {
-    jambState.questions[subject] = questions.map(q => ({
-      question: q.q,
-      options: q.opts,
+  // The simulation itself now runs on cbt.htm like every other exam. We
+  // only flatten the fetched banks (tagging each question with its subject)
+  // and hand off; cbt.js groups them back into subject tabs. Saving the
+  // attempt + XP happens back here when the student returns (checkCbtReward).
+  const questions = [];
+  fetched.forEach(({ subject, questions: qs }) => {
+    qs.forEach(q => questions.push({
+      q: q.q,
+      opts: q.opts,
       correct: q.correct,
-      explanation: q.exp || '',
+      exp: q.exp || '',
       topic: q.topic || '',
-      image: q.image || null
+      image: q.image || null,
+      jambSubject: subject
     }));
-    jambState.questionIndex[subject] = 0;
-    jambState.selectedAnswers[subject] = {};
   });
 
-  // Switch UI to exam mode
-  const setup = S('cbtSetup');
-  const examArea = S('cbtExamArea');
-  const subjectNav = S('subjectNavSidebar');
-  const jambKeyLegend = S('jambKeyLegend');
-
-  if (setup) setup.classList.add('hidden');
-  if (examArea) examArea.classList.remove('hidden');
-  if (subjectNav) subjectNav.classList.remove('hidden');
-  if (jambKeyLegend) jambKeyLegend.classList.remove('hidden');
-
-  // Render subject navigation
-  renderSubjectNav();
-
-  // Start timer
-  startJambTimer();
-
-  // Render first question
-  renderCurrentJambQuestion();
-
-  // Add keyboard listeners
-  document.addEventListener('keydown', handleJambKeyPress);
-
-  // Go fullscreen for the exam — matches a real CBT center experience.
-  requestCbtFullscreen();
+  jambState.startedAtMs = Date.now();
+  launchCbtExamPage({
+    mode: 'jamb',
+    subject: 'JAMB UTME Simulation',
+    subjects: [...jambState.selectedSubjects],
+    questions,
+    durationSec: jambState.totalTime,
+    examType: 'JAMB'
+  });
 };
 
 function renderSubjectNav() {
@@ -5597,6 +5576,10 @@ function launchCbtExamPage(payload) {
       questions: payload.questions || [],
       durationSec: Number(payload.durationSec) || 1800,
       examType: payload.examType || 'GENERAL',
+      // JAMB UTME simulation: cbt.js groups the flat question list by
+      // q.jambSubject (in this order) and runs it as a multi-subject exam.
+      mode: payload.mode || 'single',
+      subjects: Array.isArray(payload.subjects) ? payload.subjects : [],
       startedAtMs: Date.now()
     }));
   } catch (e) {
@@ -9743,6 +9726,57 @@ const checkAIScanReward = () => {
 // an exam and navigates back here with the result in the query string.
 // This is where the actual Firestore writes + XP reward happen, since
 // only the main app has the signed-in user/db context.
+// Return leg of the JAMB simulation: cbt.htm sends per-subject results in the
+// query string (same trust model as the single-subject flow above — the
+// score is client-reported). We clamp/validate everything, save the attempt,
+// award XP and show the familiar JAMB result modal.
+function handleJambReturn(params, sid) {
+  const safeJson = (key, fallback) => { try { return JSON.parse(params.get(key) || ''); } catch (_) { return fallback; } };
+  const knownSubjects = new Set(jambSubjectsList.map(sj => sj.name));
+  const rawPer = safeJson('cbtPer', {});
+  const perSubject = {};
+  let totalCorrect = 0, totalQuestions = 0;
+  Object.entries(rawPer && typeof rawPer === 'object' ? rawPer : {}).forEach(([name, v]) => {
+    if (!knownSubjects.has(name)) return;
+    const total = Math.max(0, Math.min(200, Math.floor(Number(v?.total) || 0)));
+    const correct = Math.max(0, Math.min(total, Math.floor(Number(v?.correct) || 0)));
+    perSubject[name] = { correct, total, scorePct: total > 0 ? Math.round((correct / total) * 100) : 0 };
+    totalCorrect += correct;
+    totalQuestions += total;
+  });
+  const subjects = Object.keys(perSubject);
+  if (!subjects.length) { toast('Exam submitted, but the results could not be read.', 'warning'); return; }
+
+  const aggregate400 = Object.values(perSubject).reduce((sum, p) => sum + p.scorePct, 0);
+  const overallPct = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+  const durationSec = Math.max(0, Math.floor(Number(params.get('cbtDur')) || 7200));
+  const usedSec = Math.max(0, Math.min(durationSec, Math.floor(Number(params.get('cbtUsed')) || 0)));
+  const wrongTopics = (Array.isArray(safeJson('cbtTopics', [])) ? safeJson('cbtTopics', []) : [])
+    .slice(0, 5)
+    .map(t => ({ topic: toText(t?.topic).slice(0, 120), count: Math.max(0, Math.floor(Number(t?.count) || 0)) }))
+    .filter(t => t.topic);
+  const result = { perSubject, totalCorrect, totalQuestions, overallPct, aggregate400, usedSec, wrongTopics };
+
+  store.set('last_cbt_reward', sid); // dedupe on refresh
+  jambState.selectedSubjects = subjects;
+
+  (async () => {
+    try {
+      await saveCbtAttempt({
+        mode: 'jamb', examType: 'JAMB', subjects, perSubject,
+        totalCorrect, totalQuestions, pct: overallPct, jambAggregate: aggregate400,
+        durationSec, usedSec, wrongTopics
+      });
+    } catch (e) {
+      console.error('Failed to save JAMB attempt:', e);
+      toast("Results are shown, but we couldn't save this attempt to your history.", 'warning');
+    }
+    rewardXP(150 + Math.round(overallPct * 2));
+    renderJambResultModal(result);
+    if (typeof renderCbtHistory === 'function') renderCbtHistory();
+  })();
+}
+
 const checkCbtReward = () => {
   const params = new URLSearchParams(window.location.search);
   const sid = params.get('cbtSid');
@@ -9763,6 +9797,12 @@ const checkCbtReward = () => {
   const correct = Math.max(0, Math.floor(Number(params.get('cbtCorrect')) || 0));
   const total = Math.max(0, Math.floor(Number(params.get('cbtTotal')) || 0));
   const subject = toText(params.get('cbtSubject') || 'your exam');
+
+  if (params.get('cbtMode') === 'jamb') {
+    handleJambReturn(params, sid);
+    cleanUrl();
+    return;
+  }
 
   if (app.state.user) {
     const userRef = doc(db, "users", app.state.user.uid);

@@ -24,6 +24,9 @@ import { $, S, toText, escapeHTML, toast, getAppEntryUrl, renderRichInto, render
 const SESSION_KEY = 'geoBooksCbtSession';
 
 const cbt = {
+  mode: 'single', // 'single' | 'jamb' (multi-subject UTME simulation)
+  subjects: [],
+  activeSubject: null,
   subject: 'General',
   examType: 'GENERAL',
   questions: [],
@@ -40,6 +43,11 @@ const cbt = {
 };
 
 // --- Helpers ---
+const isJamb = () => cbt.mode === 'jamb';
+const subjectOf = (i) => cbt.questions[i]?.jambSubject || cbt.subject;
+const subjectIndices = (subject) =>
+  cbt.questions.reduce((acc, q, i) => { if (q.jambSubject === subject) acc.push(i); return acc; }, []);
+
 function getCorrectIndex(q) {
   const idx = q?.correct;
   if (Number.isInteger(idx)) return idx;
@@ -131,7 +139,16 @@ function renderQuestion() {
   if (!q || !container) return;
 
   if (S('cbtQuestionText')) renderRichInto(S('cbtQuestionText'), q.q);
-  if (S('cbtQuestionBadge')) S('cbtQuestionBadge').textContent = `Question ${String(cbt.i + 1).padStart(2, '0')} / ${cbt.questions.length}`;
+  const activeSubject = isJamb() ? subjectOf(cbt.i) : toText(cbt.subject || 'General');
+  cbt.activeSubject = activeSubject;
+  if (S('cbtQuestionBadge')) {
+    if (isJamb()) {
+      const idxs = subjectIndices(activeSubject);
+      S('cbtQuestionBadge').textContent = `Question ${String(idxs.indexOf(cbt.i) + 1).padStart(2, '0')} / ${idxs.length}`;
+    } else {
+      S('cbtQuestionBadge').textContent = `Question ${String(cbt.i + 1).padStart(2, '0')} / ${cbt.questions.length}`;
+    }
+  }
 
   // Past-paper questions can carry a diagram/table/chart the AI extraction
   // couldn't turn into text (see aiParsePastPaperFromImages in ai.js) — it's
@@ -146,8 +163,8 @@ function renderQuestion() {
       if (imgEl) imgEl.src = q.image;
     }
   }
-  if (S('cbtSubject')) S('cbtSubject').textContent = toText(cbt.subject || 'General');
-  if (S('cbtSubjectInitial')) S('cbtSubjectInitial').textContent = (cbt.subject || 'G')[0].toUpperCase();
+  if (S('cbtSubject')) S('cbtSubject').textContent = activeSubject;
+  if (S('cbtSubjectInitial')) S('cbtSubjectInitial').textContent = (activeSubject || 'G')[0].toUpperCase();
 
   const selected = cbt.answers[cbt.i];
   const correct = getCorrectIndex(q);
@@ -204,7 +221,8 @@ function renderQuestion() {
 
   if (S('prevQuestion')) S('prevQuestion').disabled = cbt.i === 0;
   if (S('nextQuestion')) S('nextQuestion').classList.toggle('hidden', cbt.i === cbt.questions.length - 1);
-  if (S('submitExam')) S('submitExam').classList.toggle('hidden', cbt.i !== cbt.questions.length - 1);
+  // A real UTME lets the candidate submit from any subject; single-subject drills only on the last question.
+  if (S('submitExam')) S('submitExam').classList.toggle('hidden', isJamb() ? false : cbt.i !== cbt.questions.length - 1);
 
   const progress = Math.round(((cbt.i + 1) / cbt.questions.length) * 100);
   if (S('cbtProgressBar')) S('cbtProgressBar').style.width = `${progress}%`;
@@ -212,24 +230,58 @@ function renderQuestion() {
   if (S('cbtProgressMeta')) S('cbtProgressMeta').textContent = `Question ${cbt.i + 1}/${cbt.questions.length}`;
 
   updateFlagUI();
+  renderSubjectTabs();
   refreshIcons();
 }
 
 function renderQuestionMap() {
   const map = S('questionMap');
   if (!map) return;
-  map.innerHTML = cbt.questions.map((_, idx) => `
-    <button onclick="window.jumpToCbtQuestion(${idx})" class="aspect-square rounded-xl border-2 flex items-center justify-center font-black text-xs transition-all ${
+  const indices = isJamb()
+    ? subjectIndices(subjectOf(cbt.i))
+    : cbt.questions.map((_, idx) => idx);
+  map.innerHTML = indices.map((idx, pos) => `
+    <button onclick="window.jumpToCbtQuestion(${idx})" class="aspect-square w-12 rounded-xl border-2 flex items-center justify-center font-black text-xs transition-all ${
       cbt.i === idx
         ? 'border-brand-500 bg-brand-50 text-brand-600'
         : cbt.answers[idx] !== null && cbt.answers[idx] !== undefined
           ? 'bg-emerald-500 border-emerald-500 text-white'
           : 'border-slate-100 dark:border-slate-800 text-slate-400'
     } ${cbt.flags[idx] ? 'ring-2 ring-amber-400/60' : ''}">
-      ${idx + 1}
+      ${pos + 1}
     </button>
   `).join('');
 }
+
+// JAMB mode: one tab per subject, with answered/total counts.
+function renderSubjectTabs() {
+  const wrap = S('cbtSubjectTabs');
+  if (!wrap) return;
+  if (!isJamb()) { wrap.classList.add('hidden'); wrap.classList.remove('flex'); return; }
+  wrap.classList.remove('hidden');
+  wrap.classList.add('flex');
+  const active = subjectOf(cbt.i);
+  wrap.innerHTML = cbt.subjects.map((subject) => {
+    const idxs = subjectIndices(subject);
+    const answered = idxs.filter(i => cbt.answers[i] !== null && cbt.answers[i] !== undefined).length;
+    const isActive = subject === active;
+    return `
+      <button onclick="window.switchCbtSubject(${JSON.stringify(subject).replace(/"/g, '&quot;')})"
+        class="px-5 py-3 rounded-2xl border-2 text-xs font-black uppercase tracking-widest transition-all ${
+          isActive ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-200'
+                   : 'border-slate-100 dark:border-slate-800 text-slate-500 hover:border-brand-200'}">
+        ${escapeHTML(subject)} <span class="ml-1 opacity-60">${answered}/${idxs.length}</span>
+      </button>`;
+  }).join('');
+}
+
+window.switchCbtSubject = (subject) => {
+  const idxs = subjectIndices(subject);
+  if (!idxs.length) return;
+  cbt.i = idxs[0];
+  renderQuestion();
+  renderQuestionMap();
+};
 
 function updateFlagUI() {
   const count = cbt.flags.filter(Boolean).length;
@@ -336,7 +388,31 @@ function computeResult() {
   }
   const pct = total > 0 ? Math.round((correctCount / total) * 100) : 0;
   const usedSec = Math.max(0, (cbt.durationSec || 1800) - (Number(cbt.timeLeft) || 0));
-  return { total, correctCount, wrongCount, unanswered, pct, usedSec };
+  const result = { total, correctCount, wrongCount, unanswered, pct, usedSec };
+
+  if (isJamb()) {
+    // Same scoring as the old in-app simulation: each subject scaled to
+    // 0-100, summed for the familiar "aggregate out of 400".
+    const perSubject = {};
+    const wrongTopics = {};
+    cbt.subjects.forEach((subject) => {
+      const idxs = subjectIndices(subject);
+      let correct = 0;
+      idxs.forEach((i) => {
+        const ans = cbt.answers[i];
+        if (ans === getCorrectIndex(cbt.questions[i])) correct++;
+        else if (ans !== null && ans !== undefined && cbt.questions[i].topic) {
+          const t = cbt.questions[i].topic;
+          wrongTopics[t] = (wrongTopics[t] || 0) + 1;
+        }
+      });
+      perSubject[subject] = { correct, total: idxs.length, scorePct: idxs.length ? Math.round((correct / idxs.length) * 100) : 0 };
+    });
+    result.perSubject = perSubject;
+    result.aggregate400 = Object.values(perSubject).reduce((sum, p) => sum + p.scorePct, 0);
+    result.wrongTopics = Object.entries(wrongTopics).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([topic, count]) => ({ topic, count }));
+  }
+  return result;
 }
 
 function handleTimeoutSubmit() {
@@ -381,6 +457,7 @@ function finishExam() {
   if (S('cbtTimeUsed')) S('cbtTimeUsed').textContent = formatMMSS(result.usedSec);
 
   cbt.lastResult = result;
+  renderSubjectBreakdown(result);
 
   // The session's job is done — clear it so a stray refresh doesn't
   // silently restart the same exam from scratch mid-review.
@@ -389,6 +466,26 @@ function finishExam() {
   setModalOpen('cbtResultModal', true);
   renderQuestion();
   renderQuestionMap();
+}
+
+function renderSubjectBreakdown(result) {
+  const box = S('cbtSubjectBreakdown');
+  if (!box) return;
+  if (!isJamb() || !result.perSubject) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  box.innerHTML = `
+    <div class="flex items-center justify-between p-4 rounded-3xl bg-brand-50 dark:bg-brand-900/20 border border-brand-500/20">
+      <span class="text-[10px] font-black uppercase tracking-widest text-brand-600">Aggregate</span>
+      <span class="text-xl font-black text-brand-600">${result.aggregate400}<span class="text-xs text-slate-400">/400</span></span>
+    </div>
+  ` + cbt.subjects.map((subject) => {
+    const p = result.perSubject[subject] || { correct: 0, total: 0, scorePct: 0 };
+    return `
+      <div class="flex items-center justify-between p-3 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+        <span class="text-sm font-black">${escapeHTML(subject)}</span>
+        <span class="text-xs font-bold text-slate-500">${p.correct}/${p.total} · <span class="${p.scorePct >= 50 ? 'text-emerald-600' : 'text-rose-600'} font-black">${p.scorePct}/100</span></span>
+      </div>`;
+  }).join('');
 }
 
 function reviewAnswers() {
@@ -409,6 +506,15 @@ function finishAndReturn() {
     cbtTotal: String(result.total),
     cbtSubject: cbt.subject || 'General'
   });
+  if (isJamb()) {
+    // The main app (which has Firestore access) saves the attempt and awards XP.
+    params.set('cbtMode', 'jamb');
+    params.set('cbtUsed', String(result.usedSec));
+    params.set('cbtDur', String(cbt.durationSec));
+    params.set('cbtAgg', String(result.aggregate400));
+    params.set('cbtPer', JSON.stringify(result.perSubject));
+    params.set('cbtTopics', JSON.stringify(result.wrongTopics || []));
+  }
   window.location.href = `${getAppEntryUrl()}?${params.toString()}`;
 }
 
@@ -484,10 +590,24 @@ function init() {
   cbt.subject = session.subject || 'General';
   cbt.examType = session.examType || 'GENERAL';
   cbt.questions = session.questions.map(q => ({ ...q, correct: Number.isInteger(q.correct) ? q.correct : q.a }));
+  cbt.mode = 'single';
+  cbt.subjects = [];
+  if (session.mode === 'jamb' && Array.isArray(session.subjects) && session.subjects.length) {
+    // Group the flat question list by subject, in the order the student picked them.
+    const order = session.subjects.map(String);
+    const known = new Set(order);
+    const grouped = cbt.questions.filter(q => known.has(String(q.jambSubject)));
+    if (grouped.length) {
+      cbt.mode = 'jamb';
+      cbt.subjects = order.filter(sub => grouped.some(q => q.jambSubject === sub));
+      cbt.questions = cbt.subjects.flatMap(sub => grouped.filter(q => q.jambSubject === sub));
+      cbt.examType = 'JAMB';
+    }
+  }
   cbt.answers = new Array(cbt.questions.length).fill(null);
   cbt.flags = new Array(cbt.questions.length).fill(false);
   cbt.i = 0;
-  cbt.durationSec = Number(session.durationSec) || 1800;
+  cbt.durationSec = Number(session.durationSec) || (cbt.mode === 'jamb' ? 7200 : 1800);
   cbt.timeLeft = cbt.durationSec;
   cbt.paused = false;
   cbt.submitted = false;

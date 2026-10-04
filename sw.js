@@ -1,7 +1,7 @@
 // Geo-Books Service Worker for Offline Support
 
-const STATIC_CACHE = 'geo-books-static-v7';
-const DYNAMIC_CACHE = 'geo-books-dynamic-v7';
+const STATIC_CACHE = 'geo-books-static-v8';
+const DYNAMIC_CACHE = 'geo-books-dynamic-v8';
 const APP_SHELL_FILES = [
   'index.htm', 
   'geo-books.htm', 
