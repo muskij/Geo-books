@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson — Geo-Books</title>
+<link rel="icon" href="data:,">
+<!-- MedPhysio's own stylesheet: the lesson workspace, mini-text components and quiz are styled by it -->
+<link rel="stylesheet" href="medphysio.css">
+<style>
+  [hidden]{display:none!important}
+  .student-chip{border:0;background:#f3faf7;border-radius:30px;padding:6px 14px 6px 6px;display:flex;align-items:center;gap:9px;cursor:pointer;justify-self:end}
+  .student-chip>span{width:30px;height:30px;border-radius:50%;background:var(--teal);color:white;display:grid;place-items:center;font-size:10px;font-weight:800}
+  .student-chip p{margin:0;text-align:left}.student-chip strong,.student-chip small{display:block}.student-chip strong{font-size:11px;color:var(--navy)}.student-chip small{font-size:8px;color:#8a9b9d}
+  .lesson-breadcrumb{display:flex;align-items:center;gap:8px;font-size:11px;color:#7c9195;min-width:0}
+  .lesson-breadcrumb a{color:var(--teal);font-weight:700;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .empty-state{padding:80px 20px;text-align:center;color:#8a9b9d}.empty-state h3{color:var(--navy);font-size:20px;margin-bottom:8px}
+  .lesson-tabs button[disabled]{opacity:.45;cursor:not-allowed}
+  /* Quiz + extras the MedPhysio sheet leaves to inline styles */
+  .quiz-nav{margin-top:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .quiz-nav .complete-button.ghost{background:#e8efed;color:#526a6f}
+  .related{margin-top:22px}
+  .related h4{margin:0 0 10px;color:var(--navy);font-size:13px}
+  .related-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .related-card{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid var(--line);border-radius:12px;background:white;text-align:left;cursor:pointer;font:inherit;color:var(--ink)}
+  .related-card:hover{border-color:#89ccc3;background:#f1fbf8}
+  .related-card strong{font-size:11px;line-height:1.4;color:var(--navy)}.related-card small{font-size:9px;color:#8a9b9d}
+  .related-card.active{border-color:var(--teal);background:#effbf8}
+  .ai-msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+  .ai-msg.user{align-self:flex-end;background:var(--teal);color:white}.ai-msg.bot{align-self:flex-start;background:#f4faf8;color:#40595e}
+  .state-box{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px}
+  .state-box h2{color:var(--navy);margin:0 0 10px}.state-box p{color:#718589;margin:0 0 22px;max-width:420px}
+</style>
+</head>
+<body>
+<div id="stateBox" class="state-box"><div><h2>Loading lesson…</h2></div></div>
+
+<main class="lesson-page" id="page" hidden>
+  <header class="lesson-topbar">
+    <a class="logo" href="geo-books.htm" aria-label="Geo-Books home">
+      <span class="logo-mark">G<span>+</span></span>
+      <span class="logo-copy"><strong>Geo-Books</strong><small id="logoSub">Subjects</small></span>
+    </a>
+    <div class="lesson-breadcrumb"><a id="crumbCourse" href="subject.htm">Course</a><span>›</span><strong id="crumbTopic">Topic</strong></div>
+    <button class="student-chip" id="studentChip" type="button"><span id="studentInitials">ST</span><p><strong>Student</strong><small>Learning mode</small></p></button>
+  </header>
+
+  <div class="lesson-shell">
+    <aside class="lesson-sidebar">
+      <a class="sidebar-back" id="sidebarBack" href="subject.htm">← Course overview</a>
+      <span class="topic-label" id="topicLabel">Topic</span>
+      <h1 id="sidebarTitle">Lesson</h1>
+      <div class="overall-progress">
+        <div><span>Lesson progress</span><strong id="progressCount">0/5</strong></div>
+        <div class="overall-bar"><span id="progressBar" style="width:0%"></span></div>
+      </div>
+      <nav class="lesson-tabs" id="lessonTabs" aria-label="Lesson materials"></nav>
+    </aside>
+    <section class="lesson-workspace" id="workspace"></section>
+  </div>
+</main>
+
+<script type="module">
+  import {
+    auth, db, escapeHTML, apiPost, sanitizeLessonHtml, estimateReadMinutes, safeHttpsUrl,
+    checkSubjectAccess, loadCourseTopics, readProgress, writeProgress, KIND
+  } from './subject-shared.js';
+  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js';
+  import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const kind = params.get('kind') === 'tutor' ? 'tutor' : 'uni';
+  const courseKeyParam = params.get('course') || '';
+  const topicId = params.get('topic') || '';
+  const initialTab = params.get('tab');
+
+  // Same five tabs as MedPhysio's LessonWorkspace (TAB_META)
+  const TAB_META = [
+    { id: 'mini', icon: '◫', caption: 'Start here', label: 'Mini-text' },
+    { id: 'voice', icon: '♫', caption: 'Listen and revise', label: 'Voice note', duration: 'Audio lesson' },
+    { id: 'full', icon: '▶', caption: 'Detailed lesson', label: 'Full lecture', duration: 'Video lesson' },
+    { id: 'answer', icon: '✎', caption: 'Exam preparation', label: 'Structured answer', duration: 'Model answer' },
+    { id: 'quiz', icon: '✓', caption: 'Test yourself', label: 'Quick quiz' }
+  ];
+
+  let user = null, topic = null, siblings = [], idx = 0, courseKey = courseKeyParam;
+  let active = 'mini', showAi = false, done = new Set();
+  let chat = [];                       // Ask-AI history
+  let quiz = { i: 0, answers: [], submitted: false };
+  let playing = null;                  // video id currently in the player (full tab)
+
+  const showState = (title, body, btn) => {
+    $('page').hidden = true; $('stateBox').hidden = false;
+    $('stateBox').innerHTML = `<div><h2>${escapeHTML(title)}</h2><p>${escapeHTML(body || '')}</p>${btn || ''}</div>`;
+  };
+  const backBtn = () => `<a class="button" href="${courseKeyParam ? `subject.htm?kind=${kind}&course=${encodeURIComponent(courseKeyParam)}` : 'geo-books.htm'}">Back to course</a>`;
+
+  if (!topicId) showState('Lesson not found', 'Open a lesson from the course page.', '<a class="button" href="geo-books.htm">Back to Geo-Books</a>');
+
+  onAuthStateChanged(auth, async (u) => {
+    if (!topicId) return;
+    if (!u) { location.href = 'geo-books.htm'; return; }
+    user = u;
+    const nm = u.displayName || u.email || 'Student';
+    $('studentInitials').textContent = nm.trim().split(/\s+/).map((s) => s[0]).slice(0, 2).join('').toUpperCase() || 'ST';
+    $('studentChip').querySelector('strong').textContent = nm.split(/[\s@]/)[0];
+    $('studentChip').onclick = () => { location.href = 'geo-books.htm'; };
+    $('logoSub').textContent = kind === 'tutor' ? 'Tutor Courses' : 'University';
+
+    try {
+      const snap = await getDoc(doc(db, KIND[kind].collection, topicId));
+      if (!snap.exists()) { showState('Lesson not found', 'This lesson may have been removed.', backBtn()); return; }
+      topic = { id: snap.id, ...snap.data() };
+      courseKey = topic[KIND[kind].courseField] || courseKeyParam;
+
+      const access = await checkSubjectAccess(u, kind, courseKey);
+      if (!access.ok) {
+        showState(access.pending ? 'Payment pending review' : (kind === 'tutor' ? 'Enrollment required' : 'University Pass required'), access.reason, backBtn());
+        return;
+      }
+      // Hand-made (non-AI) topics keep their original viewer.
+      if (topic.contentFormat !== 'medphysio') {
+        location.replace(kind === 'tutor' ? `tutor-course-viewer.html?course=${encodeURIComponent(courseKey)}` : `lesson.htm?course=${encodeURIComponent(courseKey)}&topic=${encodeURIComponent(topicId)}${initialTab ? `&tab=${initialTab}` : ''}`);
+        return;
+      }
+
+      siblings = await loadCourseTopics(kind, courseKey);
+      idx = Math.max(0, siblings.findIndex((t) => t.id === topicId));
+      done = readProgress(u.uid, topicId);
+      active = TAB_META.some((t) => t.id === initialTab && has(t.id)) ? initialTab : (TAB_META.find((t) => has(t.id))?.id || 'mini');
+      playing = topic.fullLectureEmbed ? 'attached' : null;
+      init();
+    } catch (e) {
+      console.error('Failed to load lesson:', e);
+      showState('Could not load this lesson', e.code === 'permission-denied' ? 'You do not have access to this lesson.' : (e.message || ''), backBtn());
+    }
+  });
+
+  // ---- availability -------------------------------------------------------
+  function has(tab) {
+    if (!topic) return false;
+    switch (tab) {
+      case 'mini': return !!(topic.miniTextHtml || topic.miniText);
+      case 'voice': return !!topic.voiceNote;
+      case 'full': return !!(topic.fullLectureEmbed || (topic.relatedVideos || []).length);
+      case 'answer': return !!(topic.structuredAnswerHtml || topic.structuredAnswer || topic.answerVideoEmbed);
+      case 'quiz': return (topic.quizQuestions || []).length > 0;
+      default: return false;
+    }
+  }
+  const questions = () => topic.quizQuestions || [];
+  const durationFor = (t) => {
+    if (t.id === 'mini') return `${topic.miniTextReadMinutes || estimateReadMinutes(topic.miniTextHtml || topic.miniText)} min read`;
+    if (t.id === 'quiz') return questions().length ? `${questions().length} question${questions().length === 1 ? '' : 's'}` : '';
+    return t.duration || '';
+  };
+
+  // ---- shell --------------------------------------------------------------
+  function init() {
+    const courseHref = `subject.htm?kind=${kind}&course=${encodeURIComponent(courseKey)}`;
+    $('sidebarBack').href = courseHref;
+    $('crumbCourse').href = courseHref;
+    $('crumbCourse').textContent = topic.subjectTitle || courseKey;
+    $('crumbTopic').textContent = `Topic ${idx + 1}`;
+    $('topicLabel').textContent = `Topic ${idx + 1}`;
+    $('sidebarTitle').textContent = topic.title || 'Lesson';
+    document.title = `${topic.title || 'Lesson'} — Geo-Books`;
+    $('stateBox').hidden = true; $('page').hidden = false;
+    renderTabs(); renderWorkspace();
+  }
+
+  function renderTabs() {
+    const total = TAB_META.length;
+    $('progressCount').textContent = `${done.size}/${total}`;
+    $('progressBar').style.width = `${(done.size / total) * 100}%`;
+    $('lessonTabs').innerHTML = TAB_META.map((t) => `
+      <button data-tab="${t.id}" class="${active === t.id && !showAi ? 'active' : ''} ${done.has(t.id) ? 'done' : ''}" aria-expanded="${active === t.id && !showAi}">
+        <span>${done.has(t.id) ? '✓' : t.icon}</span>
+        <p><strong>${t.label}</strong><small>${has(t.id) ? escapeHTML(durationFor(t)) || '&nbsp;' : 'Coming soon'}</small></p>
+      </button>`).join('') + `
+      <button data-tab="__ai" class="${showAi ? 'active' : ''}" style="margin-top:4px;border-top:1px dashed var(--line);padding-top:14px">
+        <span>✦</span><p><strong>Ask AI</strong><small>Grounded in this lesson</small></p>
+      </button>`;
+    $('lessonTabs').querySelectorAll('button[data-tab]').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.tab === '__ai') showAi = true; else { showAi = false; active = b.dataset.tab; }
+      renderTabs(); renderWorkspace();
+      document.querySelector('.lesson-workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
+  }
+
+  function markComplete(tab) {
+    if (done.has(tab)) return;
+    done.add(tab);
+    writeProgress(user.uid, topicId, done);
+    renderTabs(); renderFooter();
+  }
+
+  // ---- workspace ----------------------------------------------------------
+  function renderWorkspace() {
+    const ws = $('workspace');
+    if (showAi) { ws.innerHTML = aiPanelHtml(); wireAi(); return; }
+    const meta = TAB_META.find((t) => t.id === active);
+    const dur = has(active) ? durationFor(meta) : '';
+    let body = '';
+    if (active === 'mini') body = miniHtml();
+    else if (active === 'voice') body = voiceHtml();
+    else if (active === 'full') body = fullHtml();
+    else if (active === 'answer') body = answerHtml();
+    else if (active === 'quiz') body = quizHtml();
+
+    ws.innerHTML = `
+      <div class="workspace-heading">
+        <div><span class="workspace-kicker">${meta.caption}</span><h2>${meta.label}</h2></div>
+        ${dur ? `<span class="duration-pill">◷ ${escapeHTML(dur)}</span>` : ''}
+      </div>
+      ${body}
+      <div class="workspace-footer" id="footer"></div>`;
+    renderFooter();
+    wireWorkspace();
+  }
+
+  function renderFooter() {
+    const el = $('footer'); if (!el) return;
+    const allDone = done.size === TAB_META.length;
+    const next = siblings[idx + 1];
+    const nextHref = next ? (next.contentFormat === 'medphysio'
+      ? `subject-lesson.htm?kind=${kind}&course=${encodeURIComponent(courseKey)}&topic=${encodeURIComponent(next.id)}`
+      : (kind === 'tutor' ? `tutor-course-viewer.html?course=${encodeURIComponent(courseKey)}` : `lesson.htm?course=${encodeURIComponent(courseKey)}&topic=${encodeURIComponent(next.id)}`)) : '';
+    el.innerHTML = `
+      ${active !== 'quiz' ? `<button class="complete-button ${done.has(active) ? 'completed' : ''}" id="completeBtn" ${done.has(active) ? 'disabled' : ''}>${done.has(active) ? 'Section complete' : 'Mark this section complete'}</button>` : ''}
+      <p>${allDone ? 'Lesson complete — nice work!' : 'Your progress is saved on this device.'}
+        ${allDone && next ? `<a href="${escapeHTML(nextHref)}" style="color:var(--teal);font-weight:700"> Continue to “${escapeHTML(next.title || 'next topic')}” →</a>` : ''}
+        ${allDone && !next ? `<a href="subject.htm?kind=${kind}&course=${encodeURIComponent(courseKey)}" style="color:var(--teal);font-weight:700"> Back to the course →</a>` : ''}</p>`;
+    $('completeBtn')?.addEventListener('click', () => markComplete(active));
+  }
+
+  // ---- mini-text ----------------------------------------------------------
+  function miniHtml() {
+    if (!has('mini')) return `<article class="mini-text-card"><p>This lesson's mini-text hasn't been added yet.</p></article>`;
+    const html = topic.miniTextHtml
+      ? sanitizeLessonHtml(topic.miniTextHtml)
+      : String(topic.miniText).split(/\n{2,}/).map((p) => `<p>${escapeHTML(p.trim())}</p>`).join('');
+    return `<article class="mini-text-card">${html}</article>`;
+  }
+
+  // ---- voice --------------------------------------------------------------
+  function voiceHtml() {
+    if (!topic.voiceNote) return `<div class="media-stage voice"><span class="media-icon">♫</span><h3>Voice note coming soon</h3><p>This lesson doesn't have an audio revision note yet.</p></div>`;
+    const embed = safeHttpsUrl(topic.voiceNoteEmbed);
+    const player = embed
+      ? `<iframe class="drive-audio-player" src="${escapeHTML(embed)}" title="${escapeHTML(topic.title)} voice note" allow="autoplay"></iframe>`
+      : `<audio class="drive-audio-player" controls src="${escapeHTML(safeHttpsUrl(topic.voiceNote))}"></audio>`;
+    return `<div class="audio-lesson-card">
+      <div class="audio-lesson-heading"><span class="audio-lesson-icon">♫</span><div><span>Geo-Books voice note</span><h3>${escapeHTML(topic.title)}</h3></div></div>
+      ${player}
+      <p>Use this focused audio revision to reinforce the lesson's key points.</p>
+      ${safeHttpsUrl(topic.voiceNote) ? `<a href="${escapeHTML(safeHttpsUrl(topic.voiceNote))}" target="_blank" rel="noopener noreferrer">Open voice note in a new tab ↗</a>` : ''}
+    </div>`;
+  }
+
+  // ---- full lecture (YouTube) + related videos ----------------------------
+  function videoCard({ embedUrl, title, desc, linkUrl, kicker, structured }) {
+    return `<div class="video-lesson-card ${structured ? 'structured-video-card' : ''}">
+      <div class="video-player-frame"><iframe src="${escapeHTML(safeHttpsUrl(embedUrl))}" title="${escapeHTML(title)}" allow="accelerometer; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+      <div class="video-lesson-details"><span>${escapeHTML(kicker)}</span><h3>${escapeHTML(title)}</h3>${desc ? `<p>${escapeHTML(desc)}</p>` : ''}
+        ${safeHttpsUrl(linkUrl) ? `<a href="${escapeHTML(safeHttpsUrl(linkUrl))}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div>
+    </div>`;
+  }
+  function fullHtml() {
+    const related = topic.relatedVideos || [];
+    let main = '';
+    if (playing && playing !== 'attached') {
+      const v = related.find((r) => r.id === playing);
+      if (v) main = videoCard({ embedUrl: v.embedUrl, title: v.title, desc: v.channel ? `By ${v.channel}` : '', linkUrl: v.url, kicker: 'Related video' });
+    }
+    if (!main && topic.fullLectureEmbed) {
+      main = videoCard({ embedUrl: topic.fullLectureEmbed, title: topic.fullLectureTitle || topic.title, desc: topic.fullLectureDesc, linkUrl: topic.fullLecture, kicker: 'Geo-Books full lecture' });
+    }
+    if (!main) main = `<div class="media-stage full"><span class="media-icon">▶</span><h3>Video coming soon</h3><p>Pick one of the suggested videos below to watch while you wait.</p></div>`;
+
+    const others = related.filter((r) => r.id !== (topic.fullLectureEmbed ? (topic.fullLectureEmbed.match(/embed\/([\w-]+)/) || [])[1] : null));
+    const relatedHtml = others.length ? `<div class="related"><h4>More videos on this topic</h4><div class="related-grid">
+      ${others.map((v) => `<button class="related-card ${playing === v.id ? 'active' : ''}" data-play="${escapeHTML(v.id)}"><strong>${escapeHTML(v.title)}</strong><small>${escapeHTML(v.channel || '')}${v.duration ? ` · ${escapeHTML(v.duration)}` : ''}</small></button>`).join('')}
+    </div>${topic.fullLectureEmbed && playing !== 'attached' ? `<button class="related-card" data-play="attached" style="margin-top:10px"><strong>↩ Back to the main lecture</strong></button>` : ''}</div>` : '';
+    return main + relatedHtml;
+  }
+
+  // ---- structured answer --------------------------------------------------
+  function answerHtml() {
+    let out = '';
+    const html = topic.structuredAnswerHtml ? sanitizeLessonHtml(topic.structuredAnswerHtml)
+      : (topic.structuredAnswer ? `<p>${escapeHTML(topic.structuredAnswer)}</p>` : '');
+    if (html) out += `<article class="mini-text-card"><div class="mini-text-header"><span>${escapeHTML(topic.answerTitle || `How to write a structured answer on ${topic.title}`)}</span><strong>Model exam answer</strong></div>${html}</article>`;
+    if (topic.answerVideoEmbed) out += `<div style="margin-top:20px">${videoCard({ embedUrl: topic.answerVideoEmbed, title: topic.answerTitle || `How to write a structured answer on ${topic.title}`, desc: topic.answerDesc, linkUrl: topic.answerVideo, kicker: 'Geo-Books structured answer', structured: true })}</div>`;
+    return out || `<div class="media-stage answer"><span class="media-icon">✎</span><h3>Structured answer coming soon</h3><p>This lesson doesn't have a model answer yet.</p></div>`;
+  }
+
+  // ---- quiz (graded in the page; answers + explanations come with the lesson) ----
+  function quizHtml() {
+    const qs = questions();
+    if (!qs.length) return `<div class="quiz-workspace"><h3>No quiz questions yet</h3><p style="color:#6d8185;font-size:12px">This lesson doesn't have a quiz yet.</p></div>`;
+    const q = qs[quiz.i];
+    const sel = quiz.answers[quiz.i];
+    const labels = ['A', 'B', 'C', 'D'];
+    const opts = q.opts.map((text, oi) => {
+      let cls = '';
+      if (quiz.submitted) { if (oi === q.correct) cls = 'correct'; else if (oi === sel) cls = 'incorrect'; }
+      else if (oi === sel) cls = 'correct';
+      return `<button class="${cls}" data-opt="${oi}" ${quiz.submitted ? 'disabled' : ''}><span>${labels[oi]}</span>${escapeHTML(text)}</button>`;
+    }).join('');
+    const right = quiz.submitted && sel === q.correct;
+    const score = qs.reduce((n, qq, i) => n + (quiz.answers[i] === qq.correct ? 1 : 0), 0);
+    const allAnswered = qs.every((_, i) => quiz.answers[i] !== undefined);
+    return `<div class="quiz-workspace" style="text-align:left">
+      <span class="question-count">Question ${quiz.i + 1} of ${qs.length}</span>
+      <h3 style="margin-left:0">${escapeHTML(q.q)}</h3>
+      <div class="answer-options">${opts}</div>
+      ${quiz.submitted ? `<div class="answer-feedback ${right ? 'right' : 'wrong'}"><strong>${right ? 'Correct!' : 'Not quite.'}</strong>${q.exp ? `<p>${escapeHTML(q.exp)}</p>` : ''}</div>` : ''}
+      <div class="quiz-nav">
+        ${quiz.i > 0 ? `<button class="complete-button ghost" id="qBack">Back</button>` : ''}
+        ${quiz.i < qs.length - 1 ? `<button class="complete-button" id="qNext">Next question</button>` : ''}
+        ${quiz.i === qs.length - 1 && !quiz.submitted ? `<button class="complete-button" id="qSubmit" ${allAnswered ? '' : 'disabled'}>Submit quiz</button>` : ''}
+        ${quiz.submitted ? `<span style="font-size:12px;color:var(--teal);font-weight:800">Score: ${score}/${qs.length}</span><button class="complete-button ghost" id="qRetake">Retake</button>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // ---- Ask AI -------------------------------------------------------------
+  function aiPanelHtml() {
+    return `<div class="mini-text-card" style="display:flex;flex-direction:column;min-height:480px">
+      <div class="mini-text-header"><span>Ask about “${escapeHTML(topic.title)}”</span><strong>Grounded in this lesson only</strong></div>
+      <p style="color:#587176;font-size:12px">This assistant only uses this lesson's own content to answer — it won't make things up from outside material. Try: “Summarise the key points” or “Why does that happen?”</p>
+      <div id="aiLog" style="flex:1;overflow-y:auto;margin:16px 0;display:flex;flex-direction:column;gap:12px">
+        ${chat.length ? chat.map((m) => `<div class="ai-msg ${m.role === 'user' ? 'user' : 'bot'}">${escapeHTML(m.content)}</div>`).join('') : '<p style="color:#9aabad;font-size:12px">Ask your first question below.</p>'}
+      </div>
+      <p id="aiErr" style="color:#c0392b;font-size:12px" hidden></p>
+      <form id="aiForm" style="display:flex;gap:10px">
+        <input id="aiInput" type="text" maxlength="1000" autocomplete="off" placeholder="Ask a question about this lesson…" style="flex:1;padding:12px 14px;border-radius:10px;border:1px solid var(--line);font-size:13px">
+        <button class="complete-button" type="submit" id="aiSend">Send</button>
+      </form>
+    </div>`;
+  }
+  function wireAi() {
+    const log = $('aiLog'); if (log) log.scrollTop = log.scrollHeight;
+    $('aiForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = $('aiInput'); const q = input.value.trim();
+      if (!q) return;
+      input.value = ''; $('aiErr').hidden = true;
+      const prior = chat.slice();
+      chat.push({ role: 'user', content: q });
+      renderWorkspace();
+      const send = $('aiSend'); send.disabled = true;
+      const log2 = $('aiLog'); log2.insertAdjacentHTML('beforeend', '<div id="aiThinking" style="color:#9aabad;font-size:12px">Thinking…</div>'); log2.scrollTop = log2.scrollHeight;
+      try {
+        const r = await apiPost('/api/ai/subject-ask', { kind, topicId, question: q, history: prior });
+        chat.push({ role: 'assistant', content: r.message });
+        renderWorkspace();
+      } catch (err) {
+        renderWorkspace();
+        const el = $('aiErr'); el.textContent = err.message || 'The AI assistant is unavailable right now.'; el.hidden = false;
+      }
+    });
+  }
+
+  // ---- event wiring for the current tab ----------------------------------
+  function wireWorkspace() {
+    document.querySelectorAll('[data-play]').forEach((b) => b.addEventListener('click', () => {
+      playing = b.dataset.play; renderWorkspace();
+      document.querySelector('.lesson-workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
+    if (active !== 'quiz') return;
+    const qs = questions();
+    document.querySelectorAll('.answer-options [data-opt]').forEach((b) => b.addEventListener('click', () => {
+      if (quiz.submitted) return;
+      quiz.answers[quiz.i] = Number(b.dataset.opt); renderWorkspace();
+    }));
+    $('qBack')?.addEventListener('click', () => { quiz.i--; renderWorkspace(); });
+    $('qNext')?.addEventListener('click', () => { quiz.i++; renderWorkspace(); });
+    $('qSubmit')?.addEventListener('click', () => { quiz.submitted = true; quiz.i = 0; markComplete('quiz'); renderWorkspace(); });
+    $('qRetake')?.addEventListener('click', () => { quiz = { i: 0, answers: [], submitted: false }; renderWorkspace(); });
+  }
+</script>
+</body>
+</html>

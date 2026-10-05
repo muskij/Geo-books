@@ -151,6 +151,9 @@
         <button onclick="window.showSection('lectures')" class="nav-link w-full flex items-center gap-4 px-5 py-4 rounded-3xl text-slate-500 hover:bg-slate-50 font-black text-sm" data-section="lectures">
           <i data-lucide="presentation" class="w-5 h-5"></i> Lectures
         </button>
+        <button onclick="window.showSection('ai-subjects')" class="nav-link w-full flex items-center gap-4 px-5 py-4 rounded-3xl text-slate-500 hover:bg-slate-50 font-black text-sm" data-section="ai-subjects">
+          <i data-lucide="sparkles" class="w-5 h-5"></i> AI Subjects
+        </button>
         <button onclick="window.showSection('sellers')" class="nav-link w-full flex items-center gap-4 px-5 py-4 rounded-3xl text-slate-500 hover:bg-slate-50 font-black text-sm" data-section="sellers">
           <i data-lucide="shopping-bag" class="w-5 h-5"></i> Sellers
         </button>
@@ -1280,6 +1283,144 @@
       </div>
 
       <!-- SUPPORT SECTION -->
+      <!-- ============================================================
+           AI SUBJECTS — generate a whole subject (outline → every lesson →
+           quiz → optional YouTube videos) for a University course or a
+           Tutor course, using MedPhysio's lesson format. Logic lives in
+           ai-subjects-admin.js; students read the result in subject.htm /
+           subject-lesson.htm.
+           ============================================================ -->
+      <div id="section-ai-subjects" class="section h-full flex flex-col animate-in fade-in duration-700">
+        <header class="h-24 bg-white/80 backdrop-blur-xl border-b border-slate-200 flex items-center justify-between px-12 shrink-0">
+          <h2 class="text-3xl font-black tracking-tighter">AI <span class="elite-text">Subjects</span></h2>
+          <div class="flex gap-3">
+            <button onclick="window.aiSubjectsResetDraft()" id="aiSubResetBtn" class="px-6 py-4 rounded-3xl bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-widest">Start Over</button>
+          </div>
+        </header>
+        <div class="flex-1 overflow-y-auto p-12 custom-scrollbar space-y-8">
+
+          <div id="aiSubResumeBanner" class="hidden premium-card p-6 bg-amber-50/60 border-amber-200 flex items-center justify-between gap-4 flex-wrap">
+            <p class="text-xs font-bold text-amber-800">You have an unpublished AI subject draft saved in this browser.</p>
+            <button onclick="window.aiSubjectsDismissBanner()" class="px-4 py-2 rounded-xl bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest">Continue editing</button>
+          </div>
+
+          <!-- STEP 1 — destination -->
+          <div class="premium-card p-8">
+            <div class="flex items-center gap-3 mb-6"><span class="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-xs font-black">1</span><h3 class="text-lg font-black">Where should this subject live?</h3></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <label class="cursor-pointer">
+                <input type="radio" name="aiSubKind" value="uni" class="peer hidden" checked>
+                <div class="p-6 rounded-3xl border-2 border-slate-100 peer-checked:border-violet-500 peer-checked:bg-violet-50/60 transition-all flex items-center gap-4">
+                  <div class="w-12 h-12 rounded-2xl bg-violet-100 text-violet-600 flex items-center justify-center"><i data-lucide="graduation-cap" class="w-6 h-6"></i></div>
+                  <div><p class="font-black text-sm">University Course</p><p class="text-[11px] font-bold text-slate-400">Shown to University Pass students under their course list</p></div>
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="aiSubKind" value="tutor" class="peer hidden">
+                <div class="p-6 rounded-3xl border-2 border-slate-100 peer-checked:border-fuchsia-500 peer-checked:bg-fuchsia-50/60 transition-all flex items-center gap-4">
+                  <div class="w-12 h-12 rounded-2xl bg-fuchsia-100 text-fuchsia-600 flex items-center justify-center"><i data-lucide="users" class="w-6 h-6"></i></div>
+                  <div><p class="font-black text-sm">Tutor Course</p><p class="text-[11px] font-bold text-slate-400">A paid course under Study Tools &gt; Tutor Courses</p></div>
+                </div>
+              </label>
+            </div>
+
+            <div id="aiSubUniFields" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Course ID / code</label>
+                <input id="aiSubCourseId" list="aiSubCourseIdList" type="text" placeholder="e.g. PHS 101" class="mt-1 w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none focus:border-brand-500">
+                <datalist id="aiSubCourseIdList"></datalist>
+              </div>
+              <div>
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Institution ID</label>
+                <input id="aiSubInstitutionId" list="aiSubInstitutionIdList" type="text" placeholder="e.g. unilag" class="mt-1 w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none focus:border-brand-500">
+                <datalist id="aiSubInstitutionIdList"></datalist>
+              </div>
+              <p class="md:col-span-2 text-[11px] font-bold text-slate-400">Existing course IDs from your uploaded topics are suggested as you type. Use the same ID to add to an existing course — new topics are numbered after the last one.</p>
+            </div>
+
+            <div id="aiSubTutorFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Owner</label>
+                <select id="aiSubTutorOwner" class="mt-1 w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none focus:border-brand-500"><option value="">Loading…</option></select>
+              </div>
+              <div>
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Course</label>
+                <select id="aiSubTutorCourse" class="mt-1 w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none focus:border-brand-500"><option value="__new__">＋ Create a new tutor course</option></select>
+              </div>
+              <div id="aiSubTutorNewFields" class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Price (₦)</label>
+                  <input id="aiSubTutorPrice" type="number" min="100" step="100" placeholder="e.g. 5000" class="mt-1 w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none focus:border-brand-500">
+                </div>
+                <div class="flex items-end"><p class="text-[11px] font-bold text-slate-400">The new course takes the subject title &amp; description below, and is published to the Tutor Courses list when you publish.</p></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2 — describe -->
+          <div class="premium-card p-8">
+            <div class="flex items-center gap-3 mb-6"><span class="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-xs font-black">2</span><h3 class="text-lg font-black">Describe the subject</h3></div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+              <input id="aiSubTitle" type="text" placeholder="Subject title (e.g. Cardiovascular Physiology)" class="md:col-span-2 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none focus:border-brand-500">
+              <select id="aiSubLevel" class="px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-black uppercase outline-none">
+                <option>JAMB / WAEC (Secondary)</option>
+                <option selected>100–200 Level (University)</option>
+                <option>300–500 Level (University)</option>
+                <option>Postgraduate / Professional</option>
+              </select>
+            </div>
+            <textarea id="aiSubBrief" rows="4" placeholder="Syllabus notes / what the subject should cover (optional but better results with it). e.g. Cardiac cycle, cardiac output and its regulation, blood pressure control, circulation in special regions, ECG basics…" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none focus:border-brand-500 mb-4"></textarea>
+            <div class="flex flex-wrap items-center gap-x-8 gap-y-4 mb-6">
+              <label class="flex items-center gap-3 text-xs font-black uppercase text-slate-500">Topics
+                <input id="aiSubTopicCount" type="number" min="2" max="20" value="8" class="w-20 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none"></label>
+              <label class="flex items-center gap-3 text-xs font-black uppercase text-slate-500">Quiz Qs / topic
+                <input id="aiSubQuizCount" type="number" min="0" max="10" value="5" class="w-20 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none"></label>
+              <label class="flex items-center gap-3 text-xs font-black uppercase text-slate-500 cursor-pointer">
+                <input id="aiSubYoutube" type="checkbox" checked class="w-4 h-4 accent-violet-600"> Find related YouTube videos <span class="normal-case text-[10px] text-slate-400 font-bold">(optional)</span></label>
+              <label class="flex items-center gap-3 text-xs font-black uppercase text-slate-500 cursor-pointer">
+                <input id="aiSubAutoAttach" type="checkbox" checked class="w-4 h-4 accent-violet-600"> Auto-attach top match as Full lecture</label>
+            </div>
+            <p id="aiSubOutlineStatus" class="text-xs font-bold text-slate-400 mb-3"></p>
+            <button id="aiSubOutlineBtn" onclick="window.aiSubjectsGenerateOutline()" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-black uppercase tracking-widest text-xs shadow-xl flex items-center gap-2"><i data-lucide="sparkles" class="w-4 h-4"></i> Generate Outline</button>
+          </div>
+
+          <!-- STEP 3 — outline editor + lesson generation -->
+          <div id="aiSubOutlineCard" class="premium-card p-8 hidden">
+            <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
+              <div class="flex items-center gap-3"><span class="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-xs font-black">3</span><div><h3 class="text-lg font-black">Edit the outline</h3><p class="text-[11px] font-bold text-slate-400">Rename, reorder or remove topics — the description is what the AI writes each lesson from.</p></div></div>
+              <button onclick="window.aiSubjectsAddTopic()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest">＋ Add topic</button>
+            </div>
+            <div id="aiSubOutlineList" class="space-y-3 mb-6"></div>
+            <div id="aiSubGenProgress" class="hidden mb-4">
+              <div class="flex items-center justify-between mb-2"><span id="aiSubGenLabel" class="text-xs font-black text-slate-500"></span><button onclick="window.aiSubjectsCancelGen()" class="text-[10px] font-black uppercase text-rose-500">Cancel</button></div>
+              <div class="h-2 rounded-full bg-slate-100 overflow-hidden"><div id="aiSubGenBar" class="h-full elite-gradient transition-all" style="width:0%"></div></div>
+            </div>
+            <button id="aiSubGenAllBtn" onclick="window.aiSubjectsGenerateAll()" class="px-8 py-4 rounded-2xl bg-slate-900 text-white font-black uppercase tracking-widest text-xs shadow-xl flex items-center gap-2"><i data-lucide="wand-2" class="w-4 h-4"></i> <span id="aiSubGenAllLabel">Generate All Lessons</span></button>
+          </div>
+
+          <!-- STEP 4 — review + publish -->
+          <div id="aiSubReviewCard" class="premium-card p-8 hidden">
+            <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
+              <div class="flex items-center gap-3"><span class="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-xs font-black">4</span><div><h3 class="text-lg font-black">Review &amp; publish</h3><p class="text-[11px] font-bold text-slate-400">Previews use the exact MedPhysio lesson styling students will see. Nothing is visible to students until you publish.</p></div></div>
+              <span id="aiSubReviewCount" class="text-xs font-black text-slate-400"></span>
+            </div>
+            <div id="aiSubReviewList" class="space-y-4 mb-6"></div>
+            <p id="aiSubPublishStatus" class="text-xs font-bold text-slate-400 mb-3"></p>
+            <button id="aiSubPublishBtn" onclick="window.aiSubjectsPublish()" class="px-8 py-4 rounded-2xl bg-emerald-600 text-white font-black uppercase tracking-widest text-xs shadow-xl flex items-center gap-2"><i data-lucide="rocket" class="w-4 h-4"></i> <span id="aiSubPublishLabel">Publish Subject</span></button>
+          </div>
+
+          <!-- Published AI subjects -->
+          <div class="premium-card overflow-hidden">
+            <div class="p-8 border-b border-slate-100 flex items-center justify-between">
+              <div><h3 class="text-lg font-black">Published AI Subjects</h3><p class="text-xs text-slate-400 font-bold mt-1">Open the student view, or remove a whole subject.</p></div>
+              <button onclick="window.aiSubjectsLoadPublished()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest">Refresh</button>
+            </div>
+            <div id="aiSubPublishedList" class="divide-y divide-slate-100"><p class="p-12 text-center text-slate-400 font-bold">Loading...</p></div>
+          </div>
+
+        </div>
+      </div>
+
       <div id="section-chat" class="section h-full flex flex-col animate-in fade-in duration-700">
         <header class="h-24 bg-white/80 backdrop-blur-xl border-b border-slate-200 flex items-center justify-between px-12 shrink-0">
           <h2 class="text-3xl font-black tracking-tighter">Support <span class="elite-text">Center</span></h2>
@@ -2820,6 +2961,7 @@
       if (sectionId === 'books') renderBooks();
       if (sectionId === 'hostels') window.initHostelsAdmin?.();
       if (sectionId === 'lectures') window.initLecturesAdmin?.();
+      if (sectionId === 'ai-subjects') window.initAiSubjectsAdmin?.();
       if (sectionId === 'sellers') renderSellers();
       if (sectionId === 'moderation') window.initModeration();
       if (sectionId === 'users') window.initUserManagement();
@@ -5705,5 +5847,6 @@
 
   <div id="toast-container" class="fixed top-6 right-6 z-[1000] flex flex-col gap-3 pointer-events-none"></div>
   <script type="module" src="university-admin.js"></script>
+  <script type="module" src="ai-subjects-admin.js"></script>
 </body>
 </html>

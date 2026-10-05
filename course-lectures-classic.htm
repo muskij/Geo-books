@@ -170,6 +170,11 @@ footer{max-width:820px;margin:auto;padding:30px 24px 50px;text-align:center;colo
     try {
       const snap = await getDocs(query(collection(db, 'courseTopics'), where('courseId', '==', cid), orderBy('topicNumber', 'asc')));
       const topics = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // A course made entirely of AI Subjects topics gets the full MedPhysio-style course page.
+      if (topics.length && topics.every((t) => t.contentFormat === 'medphysio')) {
+        window.location.replace(`subject.htm?kind=uni&course=${encodeURIComponent(cid)}`);
+        return;
+      }
       renderTopics(topics, cid);
     } catch (e) {
       console.error('Failed to load topics:', e);
@@ -247,6 +252,7 @@ footer{max-width:820px;margin:auto;padding:30px 24px 50px;text-align:center;colo
   function openResource(key, topicId, topics) {
     const topic = topics.find((t) => t.id === topicId);
     if (!topic) return;
+    if (topic.contentFormat === 'medphysio') { window.location.href = `subject-lesson.htm?kind=uni&course=${encodeURIComponent(courseId || '')}&topic=${encodeURIComponent(topic.id)}`; return; }
     if (key === 'fullLecture') { openLecture(topicId, topic.fullLecture); return; }
     if (key === 'quizAssessmentId') { startTopicQuiz(topic); return; }
     if (key === 'miniText') { showMiniTextResource(topic); return; }

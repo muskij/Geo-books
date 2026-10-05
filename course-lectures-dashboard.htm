@@ -133,6 +133,11 @@
     try {
       const snap = await getDocs(query(collection(db, 'courseTopics'), where('courseId', '==', cid), orderBy('topicNumber', 'asc')));
       allTopics = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // A course made entirely of AI Subjects topics gets the full MedPhysio-style course page.
+      if (allTopics.length && allTopics.every((t) => t.contentFormat === 'medphysio')) {
+        window.location.replace(`subject.htm?kind=uni&course=${encodeURIComponent(cid)}`);
+        return;
+      }
       renderSidebar(cid);
     } catch (e) {
       console.error('Failed to load topics:', e);
@@ -258,6 +263,7 @@
   }
 
   function openResource(key, topic) {
+    if (topic.contentFormat === 'medphysio') { window.location.href = `subject-lesson.htm?kind=uni&course=${encodeURIComponent(courseId || '')}&topic=${encodeURIComponent(topic.id)}`; return; }
     const slot = document.getElementById('topicInlineResource');
     if (key === 'fullLecture') { openLecture(topic.id, topic.fullLecture); return; }
     if (key === 'quizAssessmentId') { startTopicQuiz(topic); return; }

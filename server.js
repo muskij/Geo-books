@@ -224,6 +224,7 @@ app.use(helmet({
         'data:', // inline SVG icons (manifest.json, some UI art)
         'blob:', // client-side image previews before upload
         'https://images.unsplash.com', // placeholder/demo listing images
+        'https://i.ytimg.com', // YouTube thumbnails (AI Subjects video picker)
         ...(r2PublicOrigin ? [r2PublicOrigin] : []),
       ],
       mediaSrc: ["'self'", 'https://assets.mixkit.co'], // UI sound effects
@@ -238,7 +239,7 @@ app.use(helmet({
         'https://form.jotform.com', // AI quiz generator iframe's own connections
         ...(r2PublicOrigin ? [r2PublicOrigin] : []),
       ],
-      frameSrc: ['https://www.jotform.com'], // AI quiz generator embed (see #jotformIframe in geo-books.htm/AIScanVault.htm)
+      frameSrc: ['https://www.jotform.com', 'https://www.youtube-nocookie.com', 'https://www.youtube.com', 'https://drive.google.com'], // YouTube/Drive = AI Subjects lesson videos & voice notes (subject-lesson.htm); jotform = AI quiz generator embed (see #jotformIframe in geo-books.htm/AIScanVault.htm)
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
@@ -1300,6 +1301,345 @@ app.post('/api/ai/generate-topic', requireAuth, requireAdmin, async (req, res) =
     res.status(500).json({ error: 'Failed to generate topic content' });
   }
 });
+
+// ============================================================
+// AI SUBJECTS — whole-subject generation (University / Tutor courses)
+// ------------------------------------------------------------
+// Powers main_admin.htm's "AI Subjects" section and the student-facing
+// subject.htm / subject-lesson.htm pages. Modelled on MedPhysio's
+// lib/ai.js (generateLessonContent / generateQuizQuestions /
+// askAboutLesson): lessons are written with MedPhysio's own pre-styled
+// HTML component vocabulary so they render natively in the viewer.
+//
+// Routes:
+//   POST /api/ai/subject-outline   (admin)  title+brief  -> topic list
+//   POST /api/ai/subject-lesson    (admin)  one topic    -> full lesson + quiz
+//   POST /api/ai/youtube-search    (admin)  query        -> related videos (optional)
+//   POST /api/ai/subject-ask       (user)   grounded Q&A on one lesson
+//
+// YouTube search needs YOUTUBE_API_KEY (YouTube Data API v3). Without it
+// the route degrades gracefully: it returns configured:false plus a plain
+// youtube.com search URL the admin can open and paste a link from.
+// ============================================================
+const SUBJECT_AI_MODEL = process.env.SUBJECT_AI_MODEL || 'gpt-4o-mini';
+
+async function subjectLlm({ system, user, messages, maxTokens = 1500, json = false, temperature = 0.4 }) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { ok: false, status: 503, message: 'AI service not configured on server' };
+  try {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: SUBJECT_AI_MODEL,
+        messages: [{ role: 'system', content: system }, ...(messages || [{ role: 'user', content: user }])],
+        temperature,
+        max_tokens: maxTokens,
+        ...(json ? { response_format: { type: 'json_object' } } : {})
+      })
+    });
+    if (!resp.ok) {
+      console.error('subjectLlm OpenAI error:', resp.status, await resp.text());
+      return { ok: false, status: 502, message: 'AI provider error' };
+    }
+    const data = await resp.json();
+    return { ok: true, text: (data.choices?.[0]?.message?.content || '').trim() };
+  } catch (e) {
+    console.error('subjectLlm request failed:', e);
+    return { ok: false, status: 500, message: 'AI request failed' };
+  }
+}
+
+const clampInt = (v, min, max, fallback) => {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
+};
+const cleanStr = (v, max = 4000) => String(v ?? '').replace(/\u0000/g, '').trim().slice(0, max);
+
+// The generated lesson HTML is rendered with innerHTML in subject-lesson.htm,
+// so it is reduced here to a strict allow-list (tags + the exact MedPhysio
+// class names) — the viewer sanitises again on render (defence in depth).
+const SUBJECT_ALLOWED_TAGS = new Set(['h3', 'h4', 'p', 'strong', 'em', 'b', 'i', 'ul', 'ol', 'li', 'div', 'span', 'small', 'br', 'sup', 'sub']);
+const SUBJECT_ALLOWED_CLASSES = new Set([
+  'mini-section-title', 'requirement-pills', 'cause-grid', 'morph-grid', 'function-list',
+  'epo-flow', 'clinical-box', 'mini-summary', 'exam-summary'
+]);
+function sanitizeLessonHtml(html) {
+  let out = String(html || '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<(script|style|iframe|object|embed|svg|math|form|link|meta)[\s\S]*?<\/\1\s*>/gi, '');
+  out = out.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g, (full, tagRaw, attrs) => {
+    const tag = tagRaw.toLowerCase();
+    if (!SUBJECT_ALLOWED_TAGS.has(tag)) return '';
+    if (full.startsWith('</')) return `</${tag}>`;
+    const m = /\bclass\s*=\s*("([^"]*)"|'([^']*)')/i.exec(attrs || '');
+    const classes = m ? (m[2] ?? m[3] ?? '').split(/\s+/).filter((c) => SUBJECT_ALLOWED_CLASSES.has(c)) : [];
+    return `<${tag}${classes.length ? ` class="${classes.join(' ')}"` : ''}${tag === 'br' ? ' /' : ''}>`;
+  });
+  return out.trim();
+}
+const stripTags = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+
+const SUBJECT_COMPONENT_GUIDE = `You may use ONLY these pre-styled HTML snippets where they genuinely fit the content - never force one that doesn't apply and never invent class names:
+
+- Section heading: <h4 class="mini-section-title">Heading</h4>
+- A row of short related terms/pills: <div class="requirement-pills"><span>Term</span><span>Term</span></div>
+- A 3-item cause/category grid (exactly 3 children): <div class="cause-grid"><div><span>1</span><h4>Title</h4><p>Description.</p></div><div><span>2</span><h4>Title</h4><p>Description.</p></div><div><span>3</span><h4>Title</h4><p>Description.</p></div></div>
+- A 3-item comparison grid, same inner shape as cause-grid, for contrasting categories: <div class="morph-grid">...</div>
+- A numbered list of mechanisms/steps/responses: <div class="function-list"><div><span>1</span><p><strong>Point title</strong> Explanation.</p></div><div><span>2</span><p><strong>Point title</strong> Explanation.</p></div></div>
+- A left-to-right process flow (2-4 steps): <div class="epo-flow"><div><span>1</span><strong>Step</strong><small>Detail</small></div><b>\u2192</b><div><span>2</span><strong>Step</strong><small>Detail</small></div></div>
+- A clinical / real-world relevance box: <div class="clinical-box"><span>Clinical relevance</span><div><p><strong>Point</strong> Detail.</p><p><strong>Point</strong> Detail.</p></div></div>
+- An exam-tip summary box (use at the end): <div class="mini-summary exam-summary"><span>Examination tip</span><p>Tip text.</p></div>
+
+Structure: start with <h3>{Lesson title}</h3>, then an introductory <p>, then 2-4 of the components above that best fit this specific content, then optionally the exam-tip box to close.`;
+
+function parseDelimited(text, names) {
+  const result = {};
+  for (let i = 0; i < names.length; i++) {
+    const start = text.indexOf(`===${names[i]}===`);
+    if (start === -1) continue;
+    const from = start + names[i].length + 6;
+    const nextMarker = names[i + 1] ? `===${names[i + 1]}===` : '===END===';
+    let end = text.indexOf(nextMarker, from);
+    if (end === -1) end = text.length;
+    result[names[i]] = text.slice(from, end).trim();
+  }
+  return result;
+}
+
+// --- 1) Outline: subject brief -> ordered topic list -----------------------
+app.post('/api/ai/subject-outline', requireAuth, requireAdmin, async (req, res) => {
+  const title = cleanStr(req.body?.title, 200);
+  const description = cleanStr(req.body?.description, 3000);
+  const level = cleanStr(req.body?.level, 120) || 'University undergraduate';
+  const audience = req.body?.audience === 'tutor' ? 'tutor' : 'university';
+  const topicCount = clampInt(req.body?.topicCount, 2, 20, 8);
+  if (!title) return res.status(400).json({ error: 'A subject title is required.' });
+
+  const system = `You design the syllabus for ONE subject on a Nigerian exam-prep / tutoring platform (${audience === 'tutor' ? 'an independent tutor\'s paid course' : 'a university course'}).
+Return ONLY JSON: {"topics":[{"title":string,"description":string}]} with exactly ${topicCount} topics, in the order they should be taught (foundations first, progressing logically).
+- "title": short and specific (max 8 words), no numbering prefixes.
+- "description": 1-2 sentences stating exactly what that lesson covers (key concepts, mechanisms, examples) - it is used later to write the lesson, so be concrete.
+- Topics must not overlap; together they should cover the subject sensibly for the stated level.`;
+  const user = `Subject: ${title}\nLevel: ${level}\nBrief / syllabus notes: ${description || '(none - use standard syllabus for this subject and level)'}`;
+
+  const r = await subjectLlm({ system, user, maxTokens: 2500, json: true, temperature: 0.5 });
+  if (!r.ok) return res.status(r.status).json({ error: r.message });
+  try {
+    const parsed = JSON.parse(r.text);
+    const topics = (Array.isArray(parsed.topics) ? parsed.topics : [])
+      .map((t) => ({ title: cleanStr(t?.title, 160), description: cleanStr(t?.description, 600) }))
+      .filter((t) => t.title)
+      .slice(0, topicCount);
+    if (!topics.length) return res.status(502).json({ error: 'The AI returned no topics. Please try again.' });
+    res.json({ topics });
+  } catch (e) {
+    console.error('subject-outline parse failed:', e, r.text);
+    res.status(502).json({ error: 'The AI returned an unexpected format. Please try again.' });
+  }
+});
+
+// --- 2) One full lesson (mini-text + video copy + model answer + quiz) -----
+app.post('/api/ai/subject-lesson', requireAuth, requireAdmin, async (req, res) => {
+  const subjectTitle = cleanStr(req.body?.subjectTitle, 200);
+  const topicTitle = cleanStr(req.body?.topicTitle, 200);
+  const topicDescription = cleanStr(req.body?.topicDescription, 1500);
+  const level = cleanStr(req.body?.level, 120) || 'University undergraduate';
+  const quizCount = clampInt(req.body?.quizCount, 0, 10, 5);
+  const siblings = (Array.isArray(req.body?.outlineTitles) ? req.body.outlineTitles : []).slice(0, 25).map((t) => cleanStr(t, 120)).filter(Boolean);
+  if (!subjectTitle || !topicTitle) return res.status(400).json({ error: 'subjectTitle and topicTitle are required.' });
+  if (topicDescription.length < 10) return res.status(400).json({ error: 'Each topic needs a short description for the AI to work from.' });
+
+  const system = `You write lesson content for a tutoring platform for ${level} students. The house style is mechanism-focused, precise and exam-oriented - never vague, never padded with filler.
+Write STRICTLY from the subject, lesson title and description given. Stick to well-established, standard knowledge consistent with that description; do not invent statistics, named studies or citations.
+${siblings.length ? `Other lessons in this subject (do not duplicate their content; you may refer forward/back briefly): ${siblings.join(' | ')}` : ''}
+
+${SUBJECT_COMPONENT_GUIDE}
+
+Respond with ONLY these delimited sections, in exactly this order, nothing before or after:
+===MINI_TEXT_HTML===
+(the lesson, as HTML, per the structure above; roughly 350-700 words of actual content)
+===VIDEO_TITLE===
+(a short, specific title for a full-lecture video on this topic)
+===VIDEO_DESC===
+(one sentence describing what that lecture covers)
+===ANSWER_TITLE===
+(title in the pattern "How to Write a Structured Answer on {Topic}")
+===ANSWER_DESC===
+(one sentence describing the exam-answer framework)
+===ANSWER_HTML===
+(a model written exam answer to the most likely essay-style question on this topic, as HTML using ONLY <h4>, <p>, <ul>, <li>, <strong> and optionally one <div class="mini-summary exam-summary"> box at the end. Open with the likely question in <p><strong>Question:</strong> ...</p>, then a clear definition -> body (headed sections) -> conclusion structure.)
+===YOUTUBE_QUERY===
+(a precise YouTube search query, 4-9 words, likely to find a good educational lecture on exactly this topic at this level)
+===END===`;
+  const user = `Subject: "${subjectTitle}"\nLesson title: "${topicTitle}"\nWhat this lesson should cover: "${topicDescription}"\n\nWrite all sections now.`;
+
+  const r = await subjectLlm({ system, user, maxTokens: 4200, temperature: 0.4 });
+  if (!r.ok) return res.status(r.status).json({ error: r.message });
+
+  const s = parseDelimited(r.text, ['MINI_TEXT_HTML', 'VIDEO_TITLE', 'VIDEO_DESC', 'ANSWER_TITLE', 'ANSWER_DESC', 'ANSWER_HTML', 'YOUTUBE_QUERY']);
+  const miniTextHtml = sanitizeLessonHtml(s.MINI_TEXT_HTML);
+  if (!miniTextHtml) {
+    console.error('subject-lesson: missing mini-text. Raw:', r.text);
+    return res.status(502).json({ error: 'The AI returned an unexpected format. Please try again.' });
+  }
+
+  // Quiz is its own call so a quiz hiccup never costs the lesson (same
+  // split MedPhysio's topics/generate route uses).
+  let questions = [];
+  if (quizCount > 0) {
+    const quizSystem = `You write multiple-choice exam questions for a tutoring platform, based STRICTLY on the lesson content given. Every question, option and explanation must be answerable from this content alone.
+Return ONLY JSON: {"questions":[{"q":string,"opts":[string,string,string,string],"correct":0|1|2|3,"exp":string}]} with exactly ${quizCount} questions.
+Rules: exactly 4 plausible, mutually exclusive options; vary which index is correct; "exp" is 1-2 sentences citing the lesson; cover distinct points.`;
+    const quizUser = `Lesson: "${topicTitle}" (subject: "${subjectTitle}")\nCONTENT:\n"""\n${stripTags(miniTextHtml).slice(0, 9000)}\n"""\nWrite the ${quizCount} questions now.`;
+    const qr = await subjectLlm({ system: quizSystem, user: quizUser, maxTokens: Math.min(450 * quizCount + 300, 4000), json: true, temperature: 0.3 });
+    if (qr.ok) {
+      try {
+        const parsed = JSON.parse(qr.text);
+        questions = (Array.isArray(parsed.questions) ? parsed.questions : [])
+          .filter((q) => q && typeof q.q === 'string' && Array.isArray(q.opts) && q.opts.length === 4
+            && q.opts.every((o) => typeof o === 'string' && o.trim()) && Number.isInteger(q.correct) && q.correct >= 0 && q.correct <= 3)
+          .map((q) => ({ q: cleanStr(q.q, 500), opts: q.opts.map((o) => cleanStr(o, 300)), correct: q.correct, exp: cleanStr(q.exp, 600) }));
+      } catch (e) { console.warn('subject-lesson quiz parse failed:', e); }
+    } else {
+      console.warn('subject-lesson quiz generation failed; continuing without it');
+    }
+  }
+
+  const words = stripTags(miniTextHtml).split(/\s+/).filter(Boolean).length;
+  res.json({
+    miniTextHtml,
+    miniTextReadMinutes: Math.max(1, Math.round(words / 200)),
+    videoTitle: cleanStr(s.VIDEO_TITLE, 200),
+    videoDesc: cleanStr(s.VIDEO_DESC, 400),
+    answerTitle: cleanStr(s.ANSWER_TITLE, 200) || `How to Write a Structured Answer on ${topicTitle}`,
+    answerDesc: cleanStr(s.ANSWER_DESC, 400),
+    structuredAnswerHtml: sanitizeLessonHtml(s.ANSWER_HTML),
+    youtubeQuery: cleanStr(s.YOUTUBE_QUERY, 120) || `${topicTitle} ${subjectTitle} lecture`,
+    questions
+  });
+});
+
+// --- 3) YouTube search (optional) ------------------------------------------
+app.post('/api/ai/youtube-search', requireAuth, requireAdmin, async (req, res) => {
+  const q = cleanStr(req.body?.query, 200);
+  const max = clampInt(req.body?.max, 1, 8, 4);
+  if (!q) return res.status(400).json({ error: 'A search query is required.' });
+  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+  const key = process.env.YOUTUBE_API_KEY;
+  if (!key) return res.json({ configured: false, videos: [], searchUrl });
+
+  try {
+    const sp = new URLSearchParams({
+      part: 'snippet', type: 'video', q, maxResults: String(max), key,
+      videoEmbeddable: 'true', videoSyndicated: 'true', safeSearch: 'strict', relevanceLanguage: 'en'
+    });
+    const sResp = await fetch(`https://www.googleapis.com/youtube/v3/search?${sp}`);
+    if (!sResp.ok) {
+      console.error('youtube-search error:', sResp.status, await sResp.text());
+      return res.json({ configured: true, videos: [], searchUrl, error: 'YouTube search failed (check YOUTUBE_API_KEY and quota).' });
+    }
+    const sData = await sResp.json();
+    const items = (sData.items || []).filter((i) => i?.id?.videoId);
+    const ids = items.map((i) => i.id.videoId);
+
+    const durations = {};
+    if (ids.length) {
+      try {
+        const vResp = await fetch(`https://www.googleapis.com/youtube/v3/videos?${new URLSearchParams({ part: 'contentDetails', id: ids.join(','), key })}`);
+        if (vResp.ok) (await vResp.json()).items?.forEach((v) => { durations[v.id] = v.contentDetails?.duration || ''; });
+      } catch (e) { /* durations are a nice-to-have */ }
+    }
+    const fmt = (iso) => {
+      const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso || '');
+      if (!m) return '';
+      const h = Number(m[1] || 0), mi = Number(m[2] || 0), se = Number(m[3] || 0);
+      return h ? `${h}:${String(mi).padStart(2, '0')}:${String(se).padStart(2, '0')}` : `${mi}:${String(se).padStart(2, '0')}`;
+    };
+    res.json({
+      configured: true,
+      searchUrl,
+      videos: items.map((i) => ({
+        id: i.id.videoId,
+        title: cleanStr(i.snippet?.title, 200),
+        channel: cleanStr(i.snippet?.channelTitle, 120),
+        thumb: `https://i.ytimg.com/vi/${i.id.videoId}/mqdefault.jpg`,
+        duration: fmt(durations[i.id.videoId]),
+        url: `https://youtu.be/${i.id.videoId}`,
+        embedUrl: `https://www.youtube-nocookie.com/embed/${i.id.videoId}?rel=0`
+      }))
+    });
+  } catch (e) {
+    console.error('youtube-search failed:', e);
+    res.json({ configured: true, videos: [], searchUrl, error: 'YouTube search failed.' });
+  }
+});
+
+// --- 4) Grounded lesson Q&A for students ("Ask AI" tab) --------------------
+// Mirrors MedPhysio's askAboutLesson: the model only sees THIS lesson's own
+// text and must say so when a question falls outside it. The lesson is read
+// server-side from Firestore (never trusted from the client), and access is
+// re-checked here: admin, active University Pass (university), or course
+// owner / verified purchase (tutor).
+const subjectAskHits = new Map(); // uid -> [timestamps]; in-memory per-instance throttle
+async function canReadSubjectTopic(user, kind, topic) {
+  if (user.admin === true) return true;
+  if (kind === 'tutor') {
+    const courseId = topic.tutorCourseId;
+    if (!courseId) return false;
+    const courseSnap = await db.collection('tutorCourses').doc(courseId).get();
+    if (courseSnap.exists && courseSnap.data().tutorId === user.uid) return true;
+    const p = await db.collection('tutorPurchases').doc(`${user.uid}_${courseId}`).get();
+    return p.exists && p.data().status === 'verified';
+  }
+  const u = await db.collection('users').doc(user.uid).get();
+  const sub = u.exists ? u.data().subscription : null;
+  return !!(sub && ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'].includes(sub.tier) && sub.verified === true && sub.status === 'active');
+}
+app.post('/api/ai/subject-ask', requireAuth, async (req, res) => {
+  if (!db) return res.status(503).json({ error: 'Server not configured' });
+  const kind = req.body?.kind === 'tutor' ? 'tutor' : 'uni';
+  const topicId = cleanStr(req.body?.topicId, 200);
+  const question = cleanStr(req.body?.question, 1000);
+  if (!topicId || !question) return res.status(400).json({ error: 'topicId and question are required.' });
+
+  const now = Date.now();
+  const hits = (subjectAskHits.get(req.user.uid) || []).filter((t) => now - t < 3600_000);
+  if (hits.length >= 40) return res.status(429).json({ error: 'You have asked a lot of questions this hour - please try again a little later.' });
+  hits.push(now);
+  subjectAskHits.set(req.user.uid, hits);
+
+  try {
+    const snap = await db.collection(kind === 'tutor' ? 'tutorTopics' : 'courseTopics').doc(topicId).get();
+    if (!snap.exists) return res.status(404).json({ error: 'Lesson not found.' });
+    const topic = snap.data();
+    if (!(await canReadSubjectTopic(req.user, kind, topic))) return res.status(403).json({ error: 'You do not have access to this lesson.' });
+
+    const lessonText = stripTags(`${topic.miniTextHtml || topic.miniText || ''} ${topic.structuredAnswerHtml || ''}`).slice(0, 12000);
+    if (lessonText.length < 40) return res.status(400).json({ error: 'This lesson has no text content to answer from yet.' });
+
+    const history = (Array.isArray(req.body?.history) ? req.body.history : []).slice(-6)
+      .filter((m) => m && (m.role === 'user' || m.role === 'assistant'))
+      .map((m) => ({ role: m.role, content: cleanStr(m.content, 1500) }));
+
+    const system = `You are the study assistant embedded in the "${cleanStr(topic.title, 200)}" lesson of "${cleanStr(topic.subjectTitle || topic.courseId || 'this subject', 200)}".
+Answer ONLY using the lesson content below. Do not use outside knowledge to add facts the content does not support.
+If the student asks something this lesson does not cover, say so plainly and point them to the part of the lesson (or the kind of topic) to look at instead - do not answer from general knowledge.
+Keep answers concise and exam-focused, using the lesson's own terminology. Short paragraphs or a short list; no long essays.
+
+LESSON CONTENT:
+"""
+${lessonText}
+"""`;
+    const r = await subjectLlm({ system, messages: [...history, { role: 'user', content: question }], maxTokens: 600, temperature: 0.3 });
+    if (!r.ok) return res.status(r.status).json({ error: r.message });
+    res.json({ message: r.text || "I couldn't generate a response - please try rephrasing your question." });
+  } catch (e) {
+    console.error('subject-ask failed:', e);
+    res.status(500).json({ error: 'Could not answer right now.' });
+  }
+});
+
 
 
 // Admin-only (not the CBT_GENERATION_DAILY_CAP consumer quota above — this is

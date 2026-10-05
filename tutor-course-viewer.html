@@ -146,6 +146,11 @@
 
       const snap = await getDocs(query(collection(db, 'tutorTopics'), where('tutorCourseId', '==', cid), orderBy('topicNumber', 'asc')));
       allTopics = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // A course made entirely of AI Subjects topics gets the full MedPhysio-style course page.
+      if (allTopics.length && allTopics.every((t) => t.contentFormat === 'medphysio')) {
+        window.location.replace(`subject.htm?kind=tutor&course=${encodeURIComponent(cid)}`);
+        return;
+      }
       renderSidebar();
     } catch (e) {
       console.error('Failed to load topics:', e);
@@ -244,6 +249,12 @@
       <h2 class="text-2xl font-black mb-2">${escapeHTML(topic.title || 'Untitled topic')}</h2>
       ${topic.description ? `<p class="text-slate-400 font-bold text-sm mb-6">${escapeHTML(topic.description)}</p>` : '<div class="mb-6"></div>'}`;
 
+    if (topic.contentFormat === 'medphysio') {
+      html += `<a href="subject-lesson.htm?kind=tutor&course=${encodeURIComponent(courseId || '')}&topic=${encodeURIComponent(topic.id)}" class="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-brand-600 text-white text-xs font-black uppercase tracking-widest">Open lesson workspace →</a>`;
+      panel.innerHTML = html;
+      return;
+    }
+
     if (topic.miniText || (topic.miniTextBlocks || []).length) {
       html += `<div class="mb-8 pb-8 border-b border-slate-100">${miniTextHTML(topic)}</div>`;
     }
@@ -269,6 +280,7 @@
   }
 
   function openResource(key, topic) {
+    if (topic.contentFormat === 'medphysio') { window.location.href = `subject-lesson.htm?kind=tutor&course=${encodeURIComponent(courseId || '')}&topic=${encodeURIComponent(topic.id)}`; return; }
     const slot = document.getElementById('topicInlineResource');
     if (key === 'fullLecture') { window.open(topic.fullLecture, '_blank', 'noopener'); return; }
     if (key === 'quizAssessmentId') { startTopicQuiz(topic); return; }

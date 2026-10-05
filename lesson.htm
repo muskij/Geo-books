@@ -162,6 +162,13 @@
       }
       topic = { id: snap.id, ...snap.data() };
 
+      // AI Subjects (main_admin.htm > AI Subjects) are authored in MedPhysio's lesson
+      // format (HTML components, YouTube, inline quiz) and have their own viewer.
+      if (topic.contentFormat === 'medphysio') {
+        window.location.replace(`subject-lesson.htm?kind=uni&course=${encodeURIComponent(courseId || topic.courseId || '')}&topic=${encodeURIComponent(topic.id)}${initialTab ? `&tab=${encodeURIComponent(initialTab)}` : ''}`);
+        return;
+      }
+
       if (topic.quizAssessmentId) {
         try {
           const qSnap = await getDoc(doc(db, 'assessments', topic.quizAssessmentId));

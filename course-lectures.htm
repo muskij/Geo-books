@@ -145,6 +145,11 @@ footer{max-width:1184px;margin:auto;padding:45px 28px 28px;display:flex;align-it
     try {
       const snap = await getDocs(query(collection(db, 'courseTopics'), where('courseId', '==', cid), orderBy('topicNumber', 'asc')));
       const topics = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // A course made entirely of AI Subjects topics gets the full MedPhysio-style course page.
+      if (topics.length && topics.every((t) => t.contentFormat === 'medphysio')) {
+        window.location.replace(`subject.htm?kind=uni&course=${encodeURIComponent(cid)}`);
+        return;
+      }
       renderTopics(topics, cid);
     } catch (e) {
       console.error('Failed to load topics:', e);

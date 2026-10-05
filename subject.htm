@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subject — Geo-Books</title>
+<link rel="icon" href="data:,">
+<!-- MedPhysio's own stylesheet, so AI subjects look exactly like MedPhysio courses -->
+<link rel="stylesheet" href="medphysio.css">
+<style>
+  [hidden]{display:none!important}
+  .subject-art{position:relative;min-height:340px;border-radius:28px;background:linear-gradient(145deg,#173e48,#0b7775);padding:30px;color:white;box-shadow:0 30px 60px #173e4833;overflow:hidden}
+  .subject-art:before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;right:-80px;top:-80px;background:#ffffff14}
+  .subject-art h4{margin:0 0 16px;font-size:10px;text-transform:uppercase;letter-spacing:.18em;color:#9fe4dd}
+  .subject-art ol{margin:0;padding:0;list-style:none;display:grid;gap:10px;position:relative}
+  .subject-art li{display:flex;gap:12px;align-items:center;padding:11px 14px;border-radius:12px;background:#ffffff14;font-size:12px;font-weight:700}
+  .subject-art li b{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:#ffffff26;font-size:10px;flex:none}
+  .subject-art li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .student-chip{border:0;background:#f3faf7;border-radius:30px;padding:6px 14px 6px 6px;display:flex;align-items:center;gap:9px;cursor:pointer}
+  .student-chip>span{width:30px;height:30px;border-radius:50%;background:var(--teal);color:white;display:grid;place-items:center;font-size:10px;font-weight:800}
+  .student-chip p{margin:0;text-align:left}.student-chip strong,.student-chip small{display:block}.student-chip strong{font-size:11px;color:var(--navy)}.student-chip small{font-size:8px;color:#8a9b9d}
+  .done-pill{padding:4px 9px;border-radius:20px;background:#dff5ee;color:#168f89;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+  .state-box{min-height:70vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px}
+  .state-box h2{color:var(--navy);margin:0 0 10px}.state-box p{color:#718589;margin:0 0 22px;max-width:420px}
+  .resource.disabled{opacity:.5;cursor:not-allowed}
+  @media(max-width:700px){.course-nav .course-nav-links a:not(.student-link){display:none}.subject-art{min-height:0}}
+</style>
+</head>
+<body>
+<main class="course-page" id="page">
+  <header class="course-nav">
+    <a class="logo" href="geo-books.htm" aria-label="Geo-Books home">
+      <span class="logo-mark">G<span>+</span></span>
+      <span class="logo-copy"><strong>Geo-Books</strong><small id="logoSub">Subjects</small></span>
+    </a>
+    <div class="course-nav-links" style="display:flex;align-items:center;gap:26px;font-size:13px;font-weight:700">
+      <a href="geo-books.htm">Home</a>
+      <a href="#lessons">Lessons</a>
+      <button class="student-chip student-link" id="studentChip" type="button"><span id="studentInitials">ST</span><p><strong id="studentName">Student</strong><small>Learning mode</small></p></button>
+    </div>
+  </header>
+
+  <div id="stateBox" class="state-box"><div><h2>Loading subject…</h2></div></div>
+
+  <div id="content" hidden>
+    <section class="course-hero">
+      <div class="course-hero-copy">
+        <a class="back-link" id="backLink" href="geo-books.htm">← Back</a>
+        <span class="course-kicker" id="kicker">Subject</span>
+        <h1 id="title">Subject</h1>
+        <p id="description"></p>
+        <div class="course-facts" id="facts"></div>
+        <a class="button" id="startBtn" href="#lessons">Begin the course →</a>
+      </div>
+      <div class="subject-art" aria-hidden="true"><h4>What you'll cover</h4><ol id="artList"></ol></div>
+    </section>
+
+    <section class="course-path">
+      <div>
+        <span class="kicker">Your learning pathway</span>
+        <h2>Five ways to master<br><em>every topic.</em></h2>
+      </div>
+      <div class="format-row">
+        <div class="format"><span>◫</span><p><strong>Mini-text</strong><small>Quick readable overview</small></p><i>→</i></div>
+        <div class="format"><span>♫</span><p><strong>Voice note</strong><small>Listen and revise</small></p><i>→</i></div>
+        <div class="format"><span>▶</span><p><strong>Full lecture</strong><small>Video explanation</small></p><i>→</i></div>
+        <div class="format"><span>✎</span><p><strong>Structured answer</strong><small>Exam-ready writing</small></p><i>→</i></div>
+        <div class="format"><span>✓</span><p><strong>Quick quiz</strong><small>Test yourself</small></p></div>
+      </div>
+    </section>
+
+    <section class="lesson-catalogue" id="lessons">
+      <div class="catalogue-heading">
+        <span class="kicker">Lesson catalogue</span>
+        <h2>Learn it <em>topic by topic.</em></h2>
+      </div>
+      <div class="module-list" id="moduleList"></div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+  import { auth, db, escapeHTML, checkSubjectAccess, loadCourseTopics, readProgress, KIND, LESSON_TABS } from './subject-shared.js';
+  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js';
+  import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js';
+
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const kind = params.get('kind') === 'tutor' ? 'tutor' : 'uni';
+  const courseKey = params.get('course') || '';
+  const COLORS = ['red', 'amber', 'blue', 'teal', 'purple', 'green', 'pink'];
+  const TABS = [
+    { id: 'mini', icon: '◫', label: 'Mini-text', has: (t) => !!(t.miniTextHtml || t.miniText) },
+    { id: 'voice', icon: '♫', label: 'Voice note', has: (t) => !!t.voiceNote },
+    { id: 'full', icon: '▶', label: 'Full lecture', has: (t) => !!(t.fullLectureEmbed || (t.relatedVideos || []).length) },
+    { id: 'answer', icon: '✎', label: 'Structured answer', has: (t) => !!(t.structuredAnswerHtml || t.structuredAnswer || t.answerVideoEmbed) },
+    { id: 'quiz', icon: '✓', label: 'Quick quiz', has: (t) => (t.quizQuestions || []).length > 0 }
+  ];
+
+  $('backLink').href = kind === 'tutor' ? 'tutor-courses.htm' : 'geo-books.htm';
+  $('backLink').textContent = kind === 'tutor' ? '← Back to tutor courses' : '← Back to Geo-Books';
+  $('logoSub').textContent = kind === 'tutor' ? 'Tutor Courses' : 'University';
+
+  const showState = (title, body, btn) => {
+    $('content').hidden = true;
+    $('stateBox').hidden = false;
+    $('stateBox').innerHTML = `<div><h2>${escapeHTML(title)}</h2><p>${escapeHTML(body || '')}</p>${btn || ''}</div>`;
+  };
+
+  if (!courseKey) {
+    showState('Subject not found', 'Open a subject from your course list.', '<a class="button" href="geo-books.htm">Back to Geo-Books</a>');
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!courseKey) return;
+    if (!user) { location.href = 'geo-books.htm'; return; }
+    const name = user.displayName || user.email || 'Student';
+    $('studentInitials').textContent = name.trim().split(/\s+/).map((s) => s[0]).slice(0, 2).join('').toUpperCase() || 'ST';
+    $('studentName').textContent = name.split(/[\s@]/)[0];
+
+    const access = await checkSubjectAccess(user, kind, courseKey);
+    if (!access.ok) {
+      showState(access.pending ? 'Payment pending review' : (kind === 'tutor' ? 'Enrollment required' : 'University Pass required'), access.reason,
+        `<a class="button" href="${kind === 'tutor' ? `tutor-courses.htm?course=${encodeURIComponent(courseKey)}` : 'geo-books.htm'}">${kind === 'tutor' ? 'View course' : 'Back to Geo-Books'}</a>`);
+      return;
+    }
+
+    try {
+      const [topics, courseDoc] = await Promise.all([
+        loadCourseTopics(kind, courseKey),
+        kind === 'tutor' ? getDoc(doc(db, 'tutorCourses', courseKey)).catch(() => null) : Promise.resolve(null)
+      ]);
+      if (!topics.length) { showState('No lessons yet', 'Nothing has been published for this subject yet — check back soon.', '<a class="button" href="geo-books.htm">Back to Geo-Books</a>'); return; }
+      render(user, topics, courseDoc && courseDoc.exists() ? courseDoc.data() : null);
+    } catch (e) {
+      console.error('Failed to load subject:', e);
+      showState('Could not load this subject', e.message || '', '<a class="button" href="geo-books.htm">Back to Geo-Books</a>');
+    }
+  });
+
+  const lessonHref = (t, tab) => {
+    if (t.contentFormat === 'medphysio') {
+      return `subject-lesson.htm?kind=${kind}&course=${encodeURIComponent(courseKey)}&topic=${encodeURIComponent(t.id)}${tab ? `&tab=${tab}` : ''}`;
+    }
+    // A course can mix AI-generated and hand-made topics; the latter keep their original viewers.
+    return kind === 'tutor'
+      ? `tutor-course-viewer.html?course=${encodeURIComponent(courseKey)}`
+      : `lesson.htm?course=${encodeURIComponent(courseKey)}&topic=${encodeURIComponent(t.id)}${tab ? `&tab=${tab}` : ''}`;
+  };
+
+  function render(user, topics, course) {
+    const ai = topics.find((t) => t.contentFormat === 'medphysio') || topics[0];
+    const title = course?.title || ai.subjectTitle || courseKey;
+    const desc = course?.description || ai.subjectDescription || `${topics.length} topic${topics.length === 1 ? '' : 's'} with mini-texts, videos, structured answers and quizzes.`;
+    document.title = `${title} — Geo-Books`;
+    $('title').textContent = title;
+    $('description').textContent = desc;
+    $('kicker').textContent = kind === 'tutor' ? `Tutor course${course?.tutorName ? ` · ${course.tutorName}` : ''}` : `University · ${courseKey}`;
+
+    const quizQs = topics.reduce((n, t) => n + (t.quizQuestions || []).length, 0);
+    const progress = topics.map((t) => readProgress(user.uid, t.id));
+    const doneLessons = topics.filter((t, i) => progress[i].size >= TABS.filter((x) => x.has(t)).length && progress[i].size > 0).length;
+    $('facts').innerHTML = `
+      <span><strong>${topics.length}</strong>topics</span>
+      <span><strong>${quizQs}</strong>quiz questions</span>
+      <span><strong>${doneLessons}/${topics.length}</strong>completed</span>`;
+    $('artList').innerHTML = topics.slice(0, 5).map((t, i) => `<li><b>${String(i + 1).padStart(2, '0')}</b><span>${escapeHTML(t.title || 'Untitled')}</span></li>`).join('')
+      + (topics.length > 5 ? `<li><b>+</b><span>${topics.length - 5} more topics</span></li>` : '');
+
+    // "Begin" → first lesson that isn't finished yet
+    const nextIdx = Math.max(0, topics.findIndex((t, i) => progress[i].size < Math.max(1, TABS.filter((x) => x.has(t)).length)));
+    const anyProgress = progress.some((s) => s.size > 0);
+    $('startBtn').textContent = `${anyProgress ? 'Continue course' : 'Begin the course'} →`;
+    $('startBtn').href = lessonHref(topics[nextIdx]);
+
+    $('moduleList').innerHTML = topics.map((t, i) => {
+      const num = String(i + 1).padStart(2, '0');
+      const done = progress[i];
+      const avail = TABS.filter((x) => x.has(t)).length;
+      const isDone = avail > 0 && done.size >= avail;
+      return `<article class="module ${COLORS[i % COLORS.length]} ${i === nextIdx ? 'expanded' : ''}" data-m="${i}">
+        <button class="module-heading" aria-expanded="${i === nextIdx}" data-toggle="${i}">
+          <span class="module-number">${num}</span>
+          <span class="module-title"><small>Topic ${i + 1}</small><strong>${escapeHTML(t.title || 'Untitled topic')}</strong></span>
+          <span class="module-time">${isDone ? '<span class="done-pill">Completed</span>' : `${done.size}/${avail || 5} done`}</span>
+          <span class="module-toggle">${i === nextIdx ? '−' : '+'}</span>
+        </button>
+        <div class="module-body" ${i === nextIdx ? '' : 'hidden'}>
+          ${t.description ? `<p style="margin:0 0 14px;color:#587176;font-size:12px;line-height:1.6">${escapeHTML(t.description)}</p>` : ''}
+          <div class="resource-grid">
+            ${TABS.map((x) => {
+              const has = x.has(t);
+              const inner = `<span>${done.has(x.id) ? '✓' : x.icon}</span><p><strong>${x.label}</strong><small>${has ? (done.has(x.id) ? 'Completed' : 'Open') : 'Coming soon'}</small></p><i>→</i>`;
+              return has ? `<a class="resource" href="${escapeHTML(lessonHref(t, x.id))}">${inner}</a>` : `<span class="resource disabled">${inner}</span>`;
+            }).join('')}
+          </div>
+        </div>
+      </article>`;
+    }).join('');
+
+    document.querySelectorAll('[data-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const m = btn.closest('.module');
+        const open = m.classList.toggle('expanded');
+        m.querySelector('.module-body').hidden = !open;
+        btn.setAttribute('aria-expanded', String(open));
+        btn.querySelector('.module-toggle').textContent = open ? '−' : '+';
+      });
+    });
+
+    $('stateBox').hidden = true;
+    $('content').hidden = false;
+  }
+</script>
+</body>
+</html>
