@@ -87,12 +87,22 @@
 
   let currentUser = null;
   let allCourses = [];
-  let myPurchases = {}; // tutorCourseId -> purchase doc
+  let myPurchases = {}; // legacy per-course purchases (still honoured)
+  let hasPass = false;  // active, verified University Pass (either tier)
+  let isAdminUser = false;
 
   onAuthStateChanged(auth, async (user) => {
     currentUser = user;
     await loadCourses();
-    if (user) await loadMyPurchases();
+    if (user) {
+      await loadMyPurchases();
+      try {
+        isAdminUser = (await user.getIdTokenResult()).claims.admin === true;
+        const u = await getDoc(doc(db, 'users', user.uid));
+        const s = u.exists() ? u.data().subscription : null;
+        hasPass = !!(s && ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'].includes(s.tier) && s.verified === true && s.status === 'active');
+      } catch (e) { console.error('Subscription check failed:', e); }
+    }
     renderGrid();
 
     const wantedCourse = new URLSearchParams(location.search).get('course');
@@ -123,9 +133,8 @@
 
   function ownershipBadge(courseId) {
     const p = myPurchases[courseId];
-    if (!p) return null;
-    if (p.status === 'verified') return { label: 'Owned', cls: 'bg-emerald-50 text-emerald-600' };
-    return { label: 'Payment pending review', cls: 'bg-amber-50 text-amber-600' };
+    if (hasPass || isAdminUser || p?.status === 'verified') return { label: 'Owned', cls: 'bg-emerald-50 text-emerald-600' };
+    return null;
   }
 
   function renderGrid() {
@@ -146,8 +155,8 @@
           <h3 class="font-black text-sm mb-1 truncate">${escapeHTML(c.title || 'Untitled course')}</h3>
           <p class="text-[10px] text-slate-400 font-bold mb-3 truncate">By ${escapeHTML(c.tutorName || 'Tutor')}</p>
           <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-black">₦${Number(c.price || 0).toLocaleString()}</span>
-            ${badge ? `<span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-full ${badge.cls}">${badge.label}</span>` : `<span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-full bg-slate-50 text-slate-400">Enroll</span>`}
+            <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Included with Pass</span>
+            ${badge ? `<span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-full ${badge.cls}">Open</span>` : `<span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-full bg-slate-50 text-slate-400">Locked</span>`}
           </div>
         </div>
       </button>`;
@@ -170,54 +179,23 @@
       <p class="text-slate-400 font-bold text-sm mb-1">By ${escapeHTML(c.tutorName || 'Tutor')}</p>
       ${c.description ? `<p class="text-slate-500 text-sm mt-4 mb-6 leading-relaxed">${escapeHTML(c.description)}</p>` : '<div class="mb-6"></div>'}
       <div class="flex items-center justify-between p-5 rounded-2xl bg-slate-50 mb-6">
-        <span class="text-2xl font-black">₦${Number(c.price || 0).toLocaleString()}</span>
-        ${badge ? `<span class="text-[10px] font-black uppercase px-3 py-1.5 rounded-full ${badge.cls}">${badge.label}</span>` : ''}
+        <span class="text-sm font-black">Included with University Pass</span>
+        ${badge ? `<span class="text-[10px] font-black uppercase px-3 py-1.5 rounded-full ${badge.cls}">Unlocked</span>` : ''}
       </div>
       <p id="purchaseStatus" class="text-xs font-bold text-slate-400 mb-3"></p>
       <button id="purchaseBtn" class="w-full py-4 rounded-2xl bg-brand-600 text-white font-black uppercase tracking-widest text-xs disabled:opacity-40">
-        ${badge?.label === 'Owned' ? 'Open Course' : 'Enroll'}
+        ${badge ? 'Open Course' : 'Get University Pass'}
       </button>`;
     document.getElementById('courseDetailModal').classList.replace('hidden', 'flex');
 
     document.getElementById('purchaseBtn').onclick = () => {
-      if (badge?.label === 'Owned') { window.location.href = `tutor-course-viewer.html?course=${c.id}`; return; }
-      startPurchase(c);
+      if (badge) { window.location.href = `tutor-course-viewer.html?course=${c.id}`; return; }
+      window.location.href = 'geo-books.htm';
     };
   }
 
   window.closeCourseDetail = () => document.getElementById('courseDetailModal').classList.replace('flex', 'hidden');
 
-  async function startPurchase(c) {
-    if (!currentUser) { window.location.href = 'geo-books.htm'; return; }
-    const status = document.getElementById('purchaseStatus');
-    const btn = document.getElementById('purchaseBtn');
-    btn.disabled = true;
-    status.textContent = 'Recording your enrollment...';
-    try {
-      const idToken = await currentUser.getIdToken();
-      const res = await fetch(`${API_BASE_URL}/api/tutor-courses/${c.id}/purchase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ price: c.price })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) { status.textContent = data.error || 'Could not record your enrollment.'; btn.disabled = false; return; }
-
-      if (data.alreadyOwned) {
-        window.location.href = `tutor-course-viewer.html?course=${c.id}`;
-        return;
-      }
-
-      status.textContent = 'Enrollment recorded — pending payment verification by an admin.';
-      window.toast('Enrollment recorded. Complete payment as instructed and an admin will verify it shortly.', 'success');
-      await loadMyPurchases();
-      openCourseDetail(c);
-    } catch (e) {
-      console.error('Purchase failed:', e);
-      status.textContent = 'Something went wrong. Please try again.';
-      btn.disabled = false;
-    }
-  }
 </script>
 </body>
 </html>

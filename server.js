@@ -1590,7 +1590,11 @@ async function canReadSubjectTopic(user, kind, topic) {
     const courseSnap = await db.collection('tutorCourses').doc(courseId).get();
     if (courseSnap.exists && courseSnap.data().tutorId === user.uid) return true;
     const p = await db.collection('tutorPurchases').doc(`${user.uid}_${courseId}`).get();
-    return p.exists && p.data().status === 'verified';
+    if (p.exists && p.data().status === 'verified') return true; // legacy per-course purchase
+    // Tutor courses are included with an active, verified University Pass.
+    const us = await db.collection('users').doc(user.uid).get();
+    const s = us.exists ? us.data().subscription : null;
+    return !!(s && ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'].includes(s.tier) && s.verified === true && s.status === 'active');
   }
   const u = await db.collection('users').doc(user.uid).get();
   const sub = u.exists ? u.data().subscription : null;
@@ -1884,55 +1888,10 @@ app.post('/api/escrow/confirm', requireAuth, async (req, res) => {
   }
 });
 
-// --- Tutor course purchase (pay-per-course, 30% platform cut) ---
-// Mirrors /api/escrow/confirm's "record now, admin verifies later" shape —
-// same as how a University Pass subscription starts unverified until an
-// admin confirms payment in main_admin.htm. Purchase doc id is
-// `${uid}_${courseId}` so firestore.rules and tutor-course-viewer.html's
-// ownership check can do a single direct doc lookup instead of a query.
-app.post('/api/tutor-courses/:courseId/purchase', requireAuth, async (req, res) => {
-  if (!db) return res.status(503).json({ error: 'Server not configured' });
-  const uid = req.user.uid;
-  const { courseId } = req.params;
-  const price = Math.floor(Number(req.body?.price) || 0);
-  if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'Invalid price' });
-
-  const courseRef = db.collection('tutorCourses').doc(courseId);
-  const purchaseRef = db.collection('tutorPurchases').doc(`${uid}_${courseId}`);
-
-  try {
-    const result = await db.runTransaction(async (tx) => {
-      const courseSnap = await tx.get(courseRef);
-      if (!courseSnap.exists) throw new Error('NOT_FOUND');
-      const course = courseSnap.data() || {};
-      const expectedPrice = Math.floor(Number(course.price) || 0);
-      if (expectedPrice !== price) throw new Error('PRICE_MISMATCH');
-
-      const existing = await tx.get(purchaseRef);
-      if (existing.exists && existing.data().status === 'verified') {
-        return { ok: true, alreadyOwned: true };
-      }
-
-      const platformCut = Math.round(price * 0.3);
-      const tutorCut = price - platformCut;
-
-      tx.set(purchaseRef, {
-        buyerId: uid,
-        tutorCourseId: courseId,
-        tutorId: course.tutorId || null,
-        price, platformCut, tutorCut,
-        status: 'recorded',
-        createdAt: FieldValue.serverTimestamp()
-      });
-      return { ok: true, paymentId: purchaseRef.id };
-    });
-    res.json(result);
-  } catch (error) {
-    if (error.message === 'NOT_FOUND') return res.status(404).json({ error: 'Course not found' });
-    if (error.message === 'PRICE_MISMATCH') return res.status(412).json({ error: 'Price mismatch' });
-    console.error('tutor course purchase error:', error);
-    res.status(500).json({ error: 'Could not record purchase' });
-  }
+// Tutor courses are now included with the University Pass (no per-course
+// purchase). Endpoint kept as a stub so stale clients get a clear answer.
+app.post('/api/tutor-courses/:courseId/purchase', requireAuth, (req, res) => {
+  res.status(410).json({ error: 'Tutor courses are included with the University Pass.' });
 });
 
 // Error handlers

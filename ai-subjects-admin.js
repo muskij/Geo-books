@@ -136,9 +136,7 @@ function readDestination() {
   if (!tutorId) throw new Error('Choose who owns this tutor course.');
   const tutorCourseId = $('aiSubTutorCourse').value;
   if (tutorCourseId === '__new__') {
-    const price = Math.floor(Number($('aiSubTutorPrice').value) || 0);
-    if (price <= 0) throw new Error('Enter a price above ₦0 for the new tutor course.');
-    return { kind, tutorId, tutorCourseId: null, price };
+    return { kind, tutorId, tutorCourseId: null };
   }
   return { kind, tutorId, tutorCourseId };
 }
@@ -596,7 +594,7 @@ window.aiSubjectsPublish = async () => {
       course.tutorName = owner?.name || (dest.tutorId === adminUid ? 'Geo-Books' : (owner?.email || 'Tutor'));
       if (!dest.tutorCourseId) {
         const ref = await addDoc(collection(db, 'tutorCourses'), {
-          title: state.config.title, subject: state.config.title, price: dest.price,
+          title: state.config.title, subject: state.config.title, access: 'subscription',
           description: state.config.brief || `${state.config.title} — ${idx.length} AI-structured lessons with quizzes.`,
           coverUrl: null, tutorId: dest.tutorId, tutorName: course.tutorName, tutorLogoUrl: owner?.logoUrl || null,
           status: 'published', aiGenerated: true, aiSubjectId,

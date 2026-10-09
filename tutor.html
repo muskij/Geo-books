@@ -158,10 +158,6 @@
       <div class="space-y-4">
         <input id="courseTitleInput" type="text" placeholder="Course title (e.g. WAEC Chemistry Crash Course)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
         <input id="courseSubjectInput" type="text" placeholder="Subject (e.g. Chemistry)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
-        <div class="relative">
-          <span class="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">₦</span>
-          <input id="coursePriceInput" type="number" min="0" step="50" placeholder="Price" class="w-full pl-9 pr-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none">
-        </div>
         <textarea id="courseDescriptionInput" placeholder="What will students get from this course?" rows="3" class="w-full px-5 py-4 rounded-2xl bg-slate-50 text-sm font-bold outline-none resize-none"></textarea>
 
         <div id="courseCoverDropzone" class="dropzone border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center cursor-pointer" onclick="document.getElementById('courseCoverFileInput').click()">
@@ -170,7 +166,7 @@
           <p id="courseCoverDropzoneText" class="text-xs font-bold text-slate-400">Cover image (optional) — JPG, PNG or WebP</p>
         </div>
 
-        <div id="coursePriceSplit" class="hidden p-4 rounded-2xl bg-orange-50 text-[11px] font-bold text-orange-700"></div>
+        <p class="text-[11px] font-bold text-slate-400">Your course is included with the University Pass, so students don't pay for it separately.</p>
 
         <p id="courseStatus" class="text-xs font-bold text-slate-400"></p>
         <button id="submitCourseBtn" onclick="window.submitCourse()" class="w-full py-4 rounded-2xl elite-gradient text-white font-black uppercase tracking-widest text-xs disabled:opacity-40">Publish Course</button>
@@ -403,7 +399,6 @@
       renderTutorHeader();
       setupProfileLogoDropzone();
       setupCourseCoverDropzone();
-      wireCoursePriceSplit();
       lucide.createIcons();
       watchMyCourses();
       watchMyTopics();
@@ -504,7 +499,7 @@
         <div class="p-6 flex items-center justify-between gap-4 flex-wrap hover:bg-slate-50/50 transition-colors">
           <div class="min-w-0">
             <p class="font-black truncate">${escapeHTML(c.title || 'Untitled course')}</p>
-            <p class="text-[10px] text-slate-400 font-bold">${escapeHTML(c.subject || '')} · ₦${Number(c.price || 0).toLocaleString()} · ${topicCount} topic${topicCount === 1 ? '' : 's'}</p>
+            <p class="text-[10px] text-slate-400 font-bold">${escapeHTML(c.subject || '')} · ${topicCount} topic${topicCount === 1 ? '' : 's'}</p>
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <button onclick="navigator.clipboard.writeText('${link}').then(() => window.toast('Link copied.', 'success'))" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-slate-700 hover:bg-slate-100 transition-colors"><i data-lucide="link" class="w-4 h-4"></i></button>
@@ -595,24 +590,11 @@
       document.getElementById('courseCoverDropzoneText').textContent = file.name;
     }
 
-    function wireCoursePriceSplit() {
-      document.getElementById('coursePriceInput').addEventListener('input', (e) => {
-        const price = Math.max(0, Number(e.target.value) || 0);
-        const wrap = document.getElementById('coursePriceSplit');
-        if (!price) { wrap.classList.add('hidden'); return; }
-        const platformCut = Math.round(price * (PLATFORM_CUT_PCT / 100));
-        const tutorCut = price - platformCut;
-        wrap.classList.remove('hidden');
-        wrap.textContent = `You keep ₦${tutorCut.toLocaleString()} · Peak Flow takes ₦${platformCut.toLocaleString()} (${PLATFORM_CUT_PCT}%) per sale`;
-      });
-    }
-
     window.openCourseModal = () => {
-      ['courseTitleInput', 'courseSubjectInput', 'coursePriceInput', 'courseDescriptionInput'].forEach((id) => document.getElementById(id).value = '');
+      ['courseTitleInput', 'courseSubjectInput', 'courseDescriptionInput'].forEach((id) => document.getElementById(id).value = '');
       courseCoverFile = null;
       document.getElementById('courseCoverFileInput').value = '';
       document.getElementById('courseCoverDropzoneText').textContent = 'Cover image (optional) — JPG, PNG or WebP';
-      document.getElementById('coursePriceSplit').classList.add('hidden');
       document.getElementById('courseStatus').textContent = '';
       setBusy('submitCourseBtn', false, '', 'Publish Course');
       document.getElementById('courseModal').classList.replace('hidden', 'flex');
@@ -624,11 +606,9 @@
       const status = document.getElementById('courseStatus');
       const title = document.getElementById('courseTitleInput').value.trim();
       const subject = document.getElementById('courseSubjectInput').value.trim();
-      const price = Math.floor(Number(document.getElementById('coursePriceInput').value) || 0);
       const description = document.getElementById('courseDescriptionInput').value.trim();
 
       if (!title) { status.textContent = 'Enter a course title.'; return; }
-      if (!price || price <= 0) { status.textContent = 'Enter a price above ₦0.'; return; }
 
       setBusy('submitCourseBtn', true, 'Publishing...', 'Publish Course');
       status.textContent = '';
@@ -639,7 +619,7 @@
           coverUrl = await uploadFile(courseCoverFile, key);
         }
         await addDoc(collection(db, 'tutorCourses'), {
-          title, subject: subject || null, price, description: description || null,
+          title, subject: subject || null, access: 'subscription', description: description || null,
           coverUrl,
           tutorId: currentUser.uid,
           tutorName: myGrant.name || currentUser.email || 'Tutor',

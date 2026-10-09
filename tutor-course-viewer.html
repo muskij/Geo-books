@@ -115,12 +115,19 @@
         if (courseSnap.exists() && courseSnap.data().tutorId === user.uid) hasAccess = true;
       }
       if (!hasAccess) {
+        // Tutor courses are included with an active, verified University Pass.
+        const userSnap = await getDoc(doc(db, 'users', user.uid));
+        const s = userSnap.exists() ? userSnap.data().subscription : null;
+        if (s && ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'].includes(s.tier) && s.verified === true && s.status === 'active') hasAccess = true;
+      }
+      if (!hasAccess) {
+        // Legacy: per-course purchases made before courses moved into the Pass.
         const purchaseSnap = await getDoc(doc(db, 'tutorPurchases', `${user.uid}_${courseId}`));
         if (purchaseSnap.exists() && purchaseSnap.data().status === 'verified') hasAccess = true;
-        else if (purchaseSnap.exists()) {
-          document.getElementById('accessGateTitle').textContent = 'Payment pending review';
-          document.getElementById('accessGateCopy').textContent = 'Your enrollment is recorded and awaiting admin verification. Check back shortly.';
-        }
+      }
+      if (!hasAccess) {
+        document.getElementById('accessGateTitle').textContent = 'University Pass required';
+        document.getElementById('accessGateCopy').textContent = 'Tutor courses are included with an active University Pass.';
       }
 
       if (!hasAccess) {

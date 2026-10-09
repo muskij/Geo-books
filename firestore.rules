@@ -712,6 +712,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isAdmin() ||
         resource.data.createdBy == request.auth.uid ||
+        hasUniversityAccess() ||
         (
           exists(/databases/$(database)/documents/tutorPurchases/$(request.auth.uid + '_' + resource.data.tutorCourseId)) &&
           get(/databases/$(database)/documents/tutorPurchases/$(request.auth.uid + '_' + resource.data.tutorCourseId)).data.status == 'verified'
