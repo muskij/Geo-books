@@ -10,6 +10,9 @@
 import crypto from 'crypto';
 
 const REPORT_STATUSES = ['pending', 'reviewing', 'resolved', 'dismissed'];
+// Content collections Claude may create/edit. No users, admins, payments, promos or subscriptions.
+const CONTENT = ['books', 'announcements', 'questions', 'scholarships', 'hostels', 'courseTopics', 'timetableEntries', 'assessments', 'videoLessons'];
+const MAX_BYTES = 20000;
 const USER_FIELDS = ['displayName', 'email', 'university', 'role', 'level', 'xp', 'streak', 'subscription', 'createdAt'];
 
 function safeEqual(a, b) {
@@ -36,6 +39,12 @@ export function mountClaudeAdminMcp({ app, db, FieldValue }) {
   }
   if (!db) { console.log('[claude-mcp] disabled (Firebase Admin not configured)'); return; }
 
+  const checkCol = (c) => { if (!CONTENT.includes(c)) throw new Error('collection not allowed'); };
+  const checkData = (d) => {
+    if (!d || typeof d !== 'object' || Array.isArray(d) || !Object.keys(d).length) throw new Error('data must be a non-empty object');
+    if (JSON.stringify(d).length > MAX_BYTES) throw new Error('data too large');
+    for (const k of Object.keys(d)) if (k.startsWith('__') || k.includes('.') || ['createdBy', 'createdAt', 'updatedBy', 'updatedAt'].includes(k)) throw new Error('field not allowed: ' + k);
+  };
   const count = async (q) => (await q.count().get()).data().count;
 
   const tools = {
@@ -78,6 +87,66 @@ export function mountClaudeAdminMcp({ app, db, FieldValue }) {
       inputSchema: { type: 'object', properties: { limit: { type: 'integer', minimum: 1, maximum: 50 } } },
       run: async ({ limit = 20 }) => (await db.collection('marketItems').limit(Math.min(limit, 50)).get()).docs.map((d) => ({ id: d.id, ...plain(d.data()) })),
     },
+    content_list: {
+      description: 'Read-only: list documents in a content collection. Collections: ' + CONTENT.join(', '),
+      inputSchema: { type: 'object', required: ['collection'], properties: { collection: { type: 'string', enum: CONTENT }, limit: { type: 'integer', minimum: 1, maximum: 50 } } },
+      run: async ({ collection, limit = 20 }) => {
+        checkCol(collection);
+        return (await db.collection(collection).limit(Math.min(limit, 50)).get()).docs.map((d) => ({ id: d.id, ...plain(d.data()) }));
+      },
+    },
+    content_get: {
+      description: 'Read-only: get one content document.',
+      inputSchema: { type: 'object', required: ['collection', 'id'], properties: { collection: { type: 'string', enum: CONTENT }, id: { type: 'string' } } },
+      run: async ({ collection, id }) => {
+        checkCol(collection);
+        const d = await db.collection(collection).doc(String(id)).get();
+        return d.exists ? { id: d.id, ...plain(d.data()) } : { found: false };
+      },
+    },
+    content_create: {
+      description: 'WRITE (logged, undoable): create a new document in a content collection. Never overwrites an existing id.',
+      inputSchema: { type: 'object', required: ['collection', 'data'], properties: { collection: { type: 'string', enum: CONTENT }, id: { type: 'string' }, data: { type: 'object' } } },
+      write: true,
+      run: async ({ collection, id, data }) => {
+        checkCol(collection); checkData(data);
+        const ref = id ? db.collection(collection).doc(String(id)) : db.collection(collection).doc();
+        if ((await ref.get()).exists) throw new Error('id already exists; use content_update');
+        await ref.set({ ...data, createdBy: 'claude-mcp', createdAt: FieldValue.serverTimestamp() });
+        return { collection, id: ref.id, created: true };
+      },
+    },
+    content_update: {
+      description: 'WRITE (logged, undoable): merge fields into an existing content document. Cannot delete fields or documents.',
+      inputSchema: { type: 'object', required: ['collection', 'id', 'data'], properties: { collection: { type: 'string', enum: CONTENT }, id: { type: 'string' }, data: { type: 'object' } } },
+      write: true,
+      run: async ({ collection, id, data }) => {
+        checkCol(collection); checkData(data);
+        const ref = db.collection(collection).doc(String(id));
+        const before = await ref.get();
+        if (!before.exists) throw new Error('document not found');
+        const prev = {}; for (const k of Object.keys(data)) prev[k] = before.data()[k] === undefined ? null : before.data()[k];
+        await ref.update({ ...data, updatedBy: 'claude-mcp', updatedAt: FieldValue.serverTimestamp() });
+        return { collection, id, updated: Object.keys(data), _undo: { collection, id, prev } };
+      },
+    },
+    revert_change: {
+      description: 'WRITE (logged): undo a content_update or content_create using the auditId returned by that call.',
+      inputSchema: { type: 'object', required: ['auditId'], properties: { auditId: { type: 'string' } } },
+      write: true,
+      run: async ({ auditId }) => {
+        const a = await db.collection('claudeAuditLog').doc(String(auditId)).get();
+        if (!a.exists) throw new Error('audit entry not found');
+        const { tool, result } = a.data();
+        if (tool === 'content_create') { await db.collection(result.collection).doc(result.id).delete(); return { reverted: 'created doc removed', id: result.id }; }
+        if (tool === 'content_update' && result._undo) {
+          const { collection, id, prev } = result._undo;
+          await db.collection(collection).doc(id).update(prev);
+          return { reverted: 'fields restored', id };
+        }
+        throw new Error('this entry cannot be reverted');
+      },
+    },
     set_report_status: {
       description: 'WRITE (logged): set a report status to pending, reviewing, resolved or dismissed. Does not delete anything.',
       inputSchema: { type: 'object', required: ['id', 'status'], properties: { id: { type: 'string' }, status: { type: 'string', enum: REPORT_STATUSES } } },
@@ -99,7 +168,7 @@ export function mountClaudeAdminMcp({ app, db, FieldValue }) {
     return n > 60;
   };
 
-  const audit = (entry) => db.collection('claudeAuditLog').add({ ...entry, at: FieldValue.serverTimestamp() }).catch(() => {});
+  const audit = async (entry) => { try { return (await db.collection('claudeAuditLog').add({ ...entry, at: FieldValue.serverTimestamp() })).id; } catch { return null; } };
   const ok = (id, result) => ({ jsonrpc: '2.0', id, result });
   const err = (id, code, message) => ({ jsonrpc: '2.0', id, error: { code, message } });
 
@@ -120,7 +189,11 @@ export function mountClaudeAdminMcp({ app, db, FieldValue }) {
         const args = params.arguments || {};
         try {
           const out = await t.run(args);
-          if (t.write) await audit({ tool: params.name, args, ok: true });
+          if (t.write) {
+            const auditId = await audit({ tool: params.name, args, ok: true, result: { ...out } });
+            if (out && out._undo) delete out._undo;
+            if (out && typeof out === 'object') out.auditId = auditId;
+          }
           return res.json(ok(id, { content: [{ type: 'text', text: JSON.stringify(out, null, 2) }] }));
         } catch (e) {
           if (t.write) await audit({ tool: params.name, args, ok: false, error: String(e.message) });
