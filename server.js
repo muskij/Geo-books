@@ -17,6 +17,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { mountClaudeAdminMcp } from './claude-admin-mcp.js';
 import { getAuth } from 'firebase-admin/auth';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1902,6 +1903,8 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
+
+mountClaudeAdminMcp({ app, db, FieldValue }); // no-op unless CLAUDE_MCP_SECRET is set
 
 const server = app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
