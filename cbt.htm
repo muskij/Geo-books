@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%237c3aed'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M18 30.5L32 22l14 8.5-14 8.5-14-8.5zm6 4.6L32 40l8-4.9V42L32 47l-8-5v-6.9z' fill='white'/%3E%3C/svg%3E">
-<meta name="theme-color" content="#7c3aed">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%235b4cf0'/%3E%3Cstop offset='1' stop-color='%237468f5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M18 30.5L32 22l14 8.5-14 8.5-14-8.5zm6 4.6L32 40l8-4.9V42L32 47l-8-5v-6.9z' fill='white'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#5b4cf0">
 <title>Exam in progress • Geo-Books</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,6 +30,83 @@
   html, body { margin: 0 !important; padding: 0 !important; min-height: 100%; }
   body { background: #f8fafc; }
   .dark body { background: #0f172a; }
+  /* ===== cbt-mobile: phone-first exam runner (styling only; cbt.js is untouched) ===== */
+  :root{ --c-bg:#f5f6fc; --c-line:rgba(12,17,38,.09); --c-brand:#5b4cf0; }
+  body{ background:var(--c-bg); -webkit-tap-highlight-color:transparent; }
+  #cbtTimer{ font-variant-numeric:tabular-nums; }
+  #cbtQuestionContainer > div{ border-radius:32px !important; }
+  #cbtQuestionContainer > div:first-child > .absolute{ border-radius:32px 32px 0 0; }
+
+  @media (max-width:760px){
+    main{ padding:10px 10px calc(14px + env(safe-area-inset-bottom)) !important; }
+    #cbtExamArea{ gap:12px !important; }
+    #cbtQuestionContainer{ margin:0; }
+    #cbtQuestionContainer > div{ padding:16px 14px !important; border-radius:24px !important; }
+    #cbtQuestionContainer > div:first-child{ overflow:visible !important; padding-bottom:0 !important; }
+    #cbtQuestionContainer > div:first-child > .absolute{ border-radius:24px 24px 0 0; }
+
+    /* JAMB subject tabs: one swipeable row instead of a wrapped pile */
+    #cbtSubjectTabs.flex{ flex-wrap:nowrap !important; overflow-x:auto; margin:6px 0 14px !important; gap:8px !important; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+    #cbtSubjectTabs.flex::-webkit-scrollbar{ display:none; }
+    #cbtSubjectTabs > button{ flex:none; min-height:44px; padding:0 14px !important; border-radius:14px !important; font-size:13px !important; letter-spacing:0 !important; text-transform:none !important; }
+
+    /* header: subject + question number, then timer + controls */
+    #cbtExamArea .gap-8.mb-12{ gap:10px !important; margin:8px 0 12px !important; }
+    #cbtSubjectInitial{ width:40px !important; height:40px !important; border-radius:13px !important; font-size:16px !important; flex:none; }
+    #cbtSubject{ font-size:18px !important; line-height:1.2 !important; }
+    #cbtQuestionBadge{ font-size:10px !important; letter-spacing:.16em !important; margin-top:2px !important; }
+    #cbtExamArea .gap-8.mb-12 > div:has(> #cbtTimer){ width:100%; justify-content:space-between; gap:8px !important; }
+    #cbtTimer{ padding:8px 14px !important; border-radius:14px !important; font-size:18px !important; gap:8px !important; }
+    #cbtTimer svg{ width:18px !important; height:18px !important; }
+    #cbtPauseBtn, #cbtFlagBtn, #cbtExitBtn{ width:44px !important; height:44px !important; border-radius:14px !important; }
+    #cbtPauseBtn svg, #cbtFlagBtn svg, #cbtExitBtn svg{ width:20px !important; height:20px !important; }
+
+    /* progress */
+    #cbtExamArea .mb-12{ margin-bottom:14px !important; }
+    #cbtExamArea .mb-12 > .flex{ margin-bottom:8px !important; padding:0 2px !important; }
+    #cbtExamArea .h-3{ height:8px !important; padding:0 !important; }
+
+    /* question + options */
+    #cbtQuestionContainer .min-h-\[300px\]{ min-height:0 !important; padding:2px 0 8px !important; }
+    #cbtQuestionText{ font-size:clamp(18px,5.2vw,22px) !important; line-height:1.45 !important; font-weight:700 !important; letter-spacing:-.01em !important; margin-bottom:16px !important; }
+    #cbtOptions{ grid-template-columns:1fr !important; gap:10px !important; }
+    #cbtOptions > button{ padding:12px 14px !important; gap:12px !important; border-radius:18px !important; transform:none !important; min-height:56px; }
+    #cbtOptions > button > div:first-child{ width:36px !important; height:36px !important; border-radius:12px !important; flex:none; }
+    #cbtOptions > button > span{ font-size:16px !important; font-weight:600 !important; line-height:1.4 !important; min-width:0; overflow-wrap:anywhere; }
+    #cbtOptions > button svg{ width:22px !important; height:22px !important; flex:none; }
+    #cbtExplanationWrap{ margin-top:16px !important; padding:16px !important; border-radius:20px !important; }
+    #cbtExplanationText{ font-size:15px !important; line-height:1.55 !important; }
+    #cbtQuestionImageWrap{ margin-bottom:14px !important; }
+
+    /* Previous / Next stays on screen while you read */
+    #cbtQuestionContainer > div:first-child > div:has(> #prevQuestion){
+      position:sticky; bottom:0; z-index:20; margin:14px -14px 0 !important; gap:10px; border-radius:0 0 24px 24px;
+      padding:10px 14px calc(10px + env(safe-area-inset-bottom)) !important; border-top:1px solid var(--c-line) !important;
+      background:color-mix(in srgb,#ffffff 92%,transparent); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    }
+    #cbtQuestionContainer > div:first-child > div:has(> #prevQuestion) > div{ flex:1; min-width:0; }
+    #prevQuestion, #nextQuestion, #submitExam{ min-height:52px; padding:0 18px !important; border-radius:16px !important; font-size:15px !important; letter-spacing:0 !important; text-transform:none !important; font-weight:700 !important; justify-content:center; box-shadow:none !important; }
+    #prevQuestion{ flex:0 0 auto; }
+    #nextQuestion, #submitExam{ flex:1 1 0; min-width:0; width:auto; background:var(--c-brand) !important; padding:0 12px !important; gap:6px !important; white-space:nowrap; }
+    #prevQuestion{ padding:0 14px !important; gap:4px !important; }
+    #submitExam svg{ display:none !important; }
+    #cbtQuestionContainer > div:first-child > div:has(> #prevQuestion) > div{ gap:8px !important; }
+    #submitExam{ background:#059669 !important; }
+    #prevQuestion svg, #nextQuestion svg, #submitExam svg{ width:20px !important; height:20px !important; }
+
+    /* question map */
+    #cbtQuestionMapCard .mb-10{ margin-bottom:14px !important; flex-wrap:wrap; gap:10px; }
+    #cbtQuestionMapCard h3{ font-size:16px !important; }
+    #cbtQuestionMapCard .gap-6{ gap:12px !important; }
+    #cbtQuestionMapCard .tracking-\[0\.2em\]{ letter-spacing:.04em !important; font-size:11px !important; }
+    #questionMap{ gap:8px !important; }
+    #questionMap > button{ width:42px !important; height:42px !important; border-radius:12px !important; font-size:13px !important; }
+
+    /* dialogs */
+    [id$="Modal"] > .relative{ border-radius:28px !important; }
+    [id$="Modal"] button{ min-height:48px; }
+  }
+  @media (prefers-reduced-motion:reduce){ *{ animation-duration:.001ms !important; transition-duration:.001ms !important; } }
 </style>
 </head>
 <body class="font-sans text-slate-900 dark:text-slate-50 antialiased">
@@ -85,7 +162,7 @@
               <span id="cbtProgressMeta">Question 0/20</span>
             </div>
             <div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner p-0.5">
-              <div id="cbtProgressBar" class="h-full bg-gradient-to-r from-brand-600 via-indigo-600 to-brand-400 rounded-full transition-all duration-700 shadow-[0_0_15px_rgba(124,58,237,0.4)]" style="width: 0%"></div>
+              <div id="cbtProgressBar" class="h-full bg-gradient-to-r from-brand-600 via-indigo-600 to-brand-400 rounded-full transition-all duration-700 shadow-[0_0_15px_rgba(91, 76, 240,0.4)]" style="width: 0%"></div>
             </div>
           </div>
 

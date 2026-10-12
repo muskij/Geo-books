@@ -254,7 +254,7 @@ function rankOf(xpOrUserData) {
 }
 
 // Rank 2 (Expert)+: can set a custom accent color on their profile.
-export const PROFILE_COLOR_PRESETS = ['#7c3aed', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6', '#6366f1'];
+export const PROFILE_COLOR_PRESETS = ['#5b4cf0', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6', '#6366f1'];
 export const canCustomizeProfileColor = (xpOrUserData) => rankOf(xpOrUserData) >= 2;
 export const isValidProfileColor = (value) => /^#[0-9a-f]{6}$/i.test(toText(value).trim());
 

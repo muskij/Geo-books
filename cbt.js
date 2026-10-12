@@ -188,7 +188,7 @@ function renderQuestion() {
           iconClass = 'bg-rose-500 text-white';
         }
       } else if (isSelected) {
-        btnClass = 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-100 shadow-[0_0_20px_rgba(124,58,237,0.1)] scale-[1.02]';
+        btnClass = 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-100 shadow-[0_0_20px_rgba(91, 76, 240,0.1)] scale-[1.02]';
         iconClass = 'bg-brand-600 text-white';
       }
 
@@ -445,7 +445,7 @@ function finishExam() {
       particleCount: 150,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#7c3aed', '#4f46e5', '#06b6d4', '#10b981']
+      colors: ['#5b4cf0', '#4f46e5', '#06b6d4', '#10b981']
     });
   }
 

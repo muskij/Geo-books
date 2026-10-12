@@ -18,15 +18,15 @@
           fontFamily: { sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] },
           colors: {
             brand: {
-              50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd',
-              400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9',
-              800: '#5b21b6', 900: '#4c1d95', 950: '#2e1065'
+              50: '#f1f0ff', 100: '#e6e4ff', 200: '#cfcbff', 300: '#b0a8ff',
+              400: '#8f84fa', 500: '#7468f5', 600: '#5b4cf0', 700: '#4a3bd9',
+              800: '#3d30b0', 900: '#342b8a', 950: '#1f1a5c'
             }
           },
           borderRadius: { '4xl': '2rem', '5xl': '3rem' },
           boxShadow: {
             soft: '0 2px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -2px rgba(0,0,0,0.05)',
-            glow: '0 0 20px rgba(139, 92, 246, 0.15)',
+            glow: '0 0 20px rgba(116, 104, 245, 0.15)',
             premium: '0 25px 50px -12px rgba(0, 0, 0, 0.15)'
           }
         }
@@ -37,14 +37,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
-    .elite-gradient { background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #06B6D4 100%); }
-    .elite-text { background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #06B6D4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .elite-gradient { background: linear-gradient(135deg, #5b4cf0 0%, #4F46E5 50%, #06B6D4 100%); }
+    .elite-text { background: linear-gradient(135deg, #5b4cf0 0%, #4F46E5 50%, #06B6D4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .premium-card { background: white; border-radius: 2.5rem; border: 1px solid #F1F5F9; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
     .dropzone { transition: all 0.2s ease; }
-    .dropzone.drag-over { background: #F5F3FF; border-color: #7C3AED; transform: scale(1.01); }
+    .dropzone.drag-over { background: #f1f0ff; border-color: #5b4cf0; transform: scale(1.01); }
     .progress-bar-fill { transition: width 0.3s ease; }
     /* Ambient background glow for the full-screen lecture uploader — same
        token as the app's existing .zen-mode glow (input.css), reproduced
@@ -52,7 +52,7 @@
     @keyframes zen-pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 0.8; } }
     .zen-glow {
       position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.25;
-      background: radial-gradient(circle at center, #7c3aed 0%, transparent 70%);
+      background: radial-gradient(circle at center, #5b4cf0 0%, transparent 70%);
       animation: zen-pulse 10s infinite ease-in-out;
     }
   </style>
@@ -207,7 +207,7 @@
               stroke-dasharray="276.46" stroke-dashoffset="276.46" style="transition: stroke-dashoffset 0.25s ease"/>
             <defs>
               <linearGradient id="lectureRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#7C3AED"/>
+                <stop offset="0%" stop-color="#5b4cf0"/>
                 <stop offset="100%" stop-color="#06B6D4"/>
               </linearGradient>
             </defs>

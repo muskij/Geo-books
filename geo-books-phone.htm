@@ -2,10 +2,10 @@
 <html lang="en" class="h-full scroll-smooth" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=0.9, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%237c3aed'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M18 30.5L32 22l14 8.5-14 8.5-14-8.5zm6 4.6L32 40l8-4.9V42L32 47l-8-5v-6.9z' fill='white'/%3E%3C/svg%3E">
-<meta name="theme-color" content="#0A0A0A">
+<meta name="theme-color" content="#5b4cf0">
 <meta name="google-adsense-account" content="ca-pub-3177374567374612">
 <title>Geo-Books • Mobile</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,7 +75,7 @@
     --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.04);
     --shadow-2: 0 8px 24px -8px rgba(15, 23, 42, 0.08);
     --shadow-3: 0 24px 48px -12px rgba(15, 23, 42, 0.12);
-    --shadow-brand: 0 20px 40px -12px rgba(124, 58, 237, 0.28);
+    --shadow-brand: 0 20px 40px -12px rgba(91, 76, 240, 0.28);
   }
 
   /* Tabular numerals for stats/scores so digits don't jitter horizontally
@@ -108,7 +108,7 @@
   select:focus-visible,
   textarea:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #7C3AED;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #5b4cf0;
     border-radius: 0.5rem;
   }
   .dark a:focus-visible,
@@ -117,7 +117,7 @@
   .dark input:focus-visible,
   .dark select:focus-visible,
   .dark textarea:focus-visible {
-    box-shadow: 0 0 0 2px #0F172A, 0 0 0 4px #A78BFA;
+    box-shadow: 0 0 0 2px #0F172A, 0 0 0 4px #8f84fa;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -161,7 +161,7 @@
   }
 
   .shadow-elite {
-    box-shadow: 0 0 50px -12px rgba(124, 58, 237, 0.25);
+    box-shadow: 0 0 50px -12px rgba(91, 76, 240, 0.25);
   }
   
   .elite-card {
@@ -178,14 +178,14 @@
   .elite-card:hover {
     transform: translateY(-8px);
     box-shadow: var(--shadow-3);
-    border-color: #DDD6FE;
+    border-color: #cfcbff;
   }
 
   .premium-card {
     @apply bg-white dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200/50 dark:border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[2.5rem] transition-all duration-700;
   }
   .premium-card:hover {
-    @apply shadow-[0_40px_80px_rgba(124,58,237,0.15)] -translate-y-2 border-brand-500/30;
+    @apply shadow-[0_40px_80px_rgba(91, 76, 240,0.15)] -translate-y-2 border-brand-500/30;
     transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) translateY(-8px);
   }
   
@@ -209,7 +209,7 @@
   }
   
   .neural-glow {
-    box-shadow: 0 0 40px -10px rgba(124, 58, 237, 0.5);
+    box-shadow: 0 0 40px -10px rgba(91, 76, 240, 0.5);
   }
   
   /* Haptic animation */
@@ -221,17 +221,17 @@
   }
 
   .elite-gradient {
-    background: linear-gradient(135deg, #6D28D9 0%, #7C3AED 35%, #4F46E5 70%, #4338CA 100%);
+    background: linear-gradient(135deg, #4a3bd9 0%, #5b4cf0 35%, #4F46E5 70%, #4338CA 100%);
   }
   .elite-gradient-warm {
-    background: linear-gradient(135deg, #7C3AED 0%, #C026D3 55%, #F97316 100%);
+    background: linear-gradient(135deg, #5b4cf0 0%, #C026D3 55%, #F97316 100%);
   }
   .elite-text {
     @apply text-transparent bg-clip-text elite-gradient;
   }
   
   .elite-gradient-text {
-    background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #06B6D4 100%);
+    background: linear-gradient(135deg, #5b4cf0 0%, #4F46E5 50%, #06B6D4 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
@@ -256,9 +256,9 @@
   .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; transition: background 0.2s; }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #C4B5FD; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #b0a8ff; }
   .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6D28D9; }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4a3bd9; }
 
   @keyframes float {
     0%, 100% { transform: translateY(0); }
@@ -277,7 +277,7 @@
   }
 
   .premium-gradient {
-    background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
+    background: linear-gradient(135deg, #5b4cf0 0%, #4F46E5 100%);
   }
 
   /* Neo-blur effects */
@@ -352,8 +352,8 @@
 
   /* Badge styling */
   .badge-premium {
-    background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    background: linear-gradient(135deg, #5b4cf0 0%, #4F46E5 100%);
+    box-shadow: 0 4px 12px rgba(91, 76, 240, 0.3);
   }
   
   /* Sidebar transition refinement */
@@ -411,8 +411,8 @@
 
   /* Improved Progress Pulse */
   @keyframes progress-pulse {
-    0%, 100% { box-shadow: 0 0 15px rgba(124, 58, 237, 0.4); }
-    50% { box-shadow: 0 0 30px rgba(124, 58, 237, 0.8); }
+    0%, 100% { box-shadow: 0 0 15px rgba(91, 76, 240, 0.4); }
+    50% { box-shadow: 0 0 30px rgba(91, 76, 240, 0.8); }
   }
   .progress-pulse-active {
     animation: progress-pulse 2s infinite;
@@ -509,7 +509,7 @@
     @apply border-brand-500/30 -translate-y-2 shadow-2xl;
   }
   .cbt-option.selected {
-    @apply border-brand-500 bg-brand-50/50 dark:bg-brand-900/10 shadow-[0_20px_40px_rgba(124,58,237,0.1)];
+    @apply border-brand-500 bg-brand-50/50 dark:bg-brand-900/10 shadow-[0_20px_40px_rgba(91, 76, 240,0.1)];
   }
   .cbt-option.correct {
     @apply border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/10;
@@ -580,139 +580,158 @@
   }
 </style>
 
-<style id="phone-compact-scale">
-  /* ===== Compact mobile scale: icons -> 70%, general text -> 70%, dashboard greeting -> 60% ===== */
+<style id="phone-compact-scale">.dash-greeting-title{ line-height:1.1; }</style>
 
-  /* Icons: visually scaled down within their existing containers so surrounding
-     layout (badges, buttons, avatar boxes) keeps its footprint. */
-  i[data-lucide],
-  svg.lucide {
-    transform: scale(0.7);
-    transform-origin: center;
-  }
-
-  /* General font sizes, scaled to 70% of Tailwind's defaults */
-  .text-xs        { font-size: .525rem !important; line-height: .7rem !important; }
-  .text-sm        { font-size: .6125rem !important; line-height: .875rem !important; }
-  .text-base      { font-size: .7rem !important; line-height: 1.05rem !important; }
-  .text-lg        { font-size: .7875rem !important; line-height: 1.225rem !important; }
-  .text-xl        { font-size: .875rem !important; line-height: 1.225rem !important; }
-  .text-2xl       { font-size: 1.05rem !important; line-height: 1.4rem !important; }
-  .text-3xl       { font-size: 1.3125rem !important; line-height: 1.575rem !important; }
-  .text-4xl       { font-size: 1.575rem !important; line-height: 1.75rem !important; }
-  .text-5xl       { font-size: 2.1rem !important; line-height: 1 !important; }
-  .text-6xl       { font-size: 2.625rem !important; line-height: 1 !important; }
-  .text-7xl       { font-size: 3.15rem !important; line-height: 1 !important; }
-  .text-8xl       { font-size: 4.2rem !important; line-height: 1 !important; }
-  .text-9xl       { font-size: 5.6rem !important; line-height: 1 !important; }
-  .text-\[8px\]   { font-size: 5.6px !important; }
-  .text-\[9px\]   { font-size: 6.3px !important; }
-  .text-\[10px\]  { font-size: 7px !important; }
-  .text-\[11px\]  { font-size: 7.7px !important; }
-
-  /* Dashboard greeting ("Hello, ...!") scaled harder, to 60% of its original text-5xl (3rem) */
-  .dash-greeting-title { font-size: 1.8rem !important; line-height: 1 !important; }
-</style>
-
-<style id="phone-ink-theme">
-/* ===== Ink-Stamp reskin: brand purple -> seal red, systematic override ===== */
-.bg-brand-100 { background-color: rgb(246,208,208) !important; }
-.bg-brand-400 { background-color: rgb(210,78,78) !important; }
-.bg-brand-50 { background-color: rgb(251,234,234) !important; }
-.bg-brand-50\/10 { background-color: rgba(251,234,234,0.1) !important; }
-.bg-brand-50\/50 { background-color: rgba(251,234,234,0.5) !important; }
-.bg-brand-500 { background-color: rgb(200,30,30) !important; }
-.bg-brand-500\/10 { background-color: rgba(200,30,30,0.1) !important; }
-.bg-brand-500\/20 { background-color: rgba(200,30,30,0.2) !important; }
-.bg-brand-500\/5 { background-color: rgba(200,30,30,0.05) !important; }
-.bg-brand-600 { background-color: rgb(168,22,22) !important; }
-.bg-brand-700 { background-color: rgb(143,20,20) !important; }
-.bg-brand-900\/10 { background-color: rgba(74,10,10,0.1) !important; }
-.bg-brand-900\/20 { background-color: rgba(74,10,10,0.2) !important; }
-.bg-brand-900\/30 { background-color: rgba(74,10,10,0.3) !important; }
-.bg-brand-900\/40 { background-color: rgba(74,10,10,0.4) !important; }
-.border-brand-100 { border-color: rgb(246,208,208) !important; }
-.border-brand-400 { border-color: rgb(210,78,78) !important; }
-.border-brand-500 { border-color: rgb(200,30,30) !important; }
-.border-brand-500\/10 { border-color: rgba(200,30,30,0.1) !important; }
-.border-brand-500\/20 { border-color: rgba(200,30,30,0.2) !important; }
-.border-brand-500\/30 { border-color: rgba(200,30,30,0.3) !important; }
-.border-brand-500\/40 { border-color: rgba(200,30,30,0.4) !important; }
-.border-brand-500\/50 { border-color: rgba(200,30,30,0.5) !important; }
-.border-brand-600 { border-color: rgb(168,22,22) !important; }
-.border-brand-800 { border-color: rgb(110,15,15) !important; }
-.border-brand-800\/50 { border-color: rgba(110,15,15,0.5) !important; }
-.border-brand-900\/20 { border-color: rgba(74,10,10,0.2) !important; }
-.border-brand-900\/30 { border-color: rgba(74,10,10,0.3) !important; }
-.from-brand-500 { --tw-gradient-from: rgb(200,30,30) var(--tw-gradient-from-position) !important; --tw-gradient-to: rgba(200,30,30,0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
-.from-brand-500\/10 { --tw-gradient-from: rgba(200,30,30,0.1) var(--tw-gradient-from-position) !important; --tw-gradient-to: rgba(200,30,30,0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
-.from-brand-600 { --tw-gradient-from: rgb(168,22,22) var(--tw-gradient-from-position) !important; --tw-gradient-to: rgba(168,22,22,0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
-.from-brand-600\/10 { --tw-gradient-from: rgba(168,22,22,0.1) var(--tw-gradient-from-position) !important; --tw-gradient-to: rgba(168,22,22,0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
-.from-brand-600\/20 { --tw-gradient-from: rgba(168,22,22,0.2) var(--tw-gradient-from-position) !important; --tw-gradient-to: rgba(168,22,22,0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
-.from-brand-700 { --tw-gradient-from: rgb(143,20,20) var(--tw-gradient-from-position) !important; --tw-gradient-to: rgba(143,20,20,0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
-.ring-brand-500 { --tw-ring-color: rgb(200,30,30) !important; }
-.ring-brand-500\/20 { --tw-ring-color: rgba(200,30,30,0.2) !important; }
-.ring-brand-500\/5 { --tw-ring-color: rgba(200,30,30,0.05) !important; }
-.shadow-brand-500\/10 { --tw-shadow-color: rgba(200,30,30,0.1) !important; }
-.shadow-brand-500\/20 { --tw-shadow-color: rgba(200,30,30,0.2) !important; }
-.shadow-brand-500\/30 { --tw-shadow-color: rgba(200,30,30,0.3) !important; }
-.shadow-brand-500\/40 { --tw-shadow-color: rgba(200,30,30,0.4) !important; }
-.text-brand-100 { color: rgb(246,208,208) !important; }
-.text-brand-300 { color: rgb(225,120,120) !important; }
-.text-brand-400 { color: rgb(210,78,78) !important; }
-.text-brand-500 { color: rgb(200,30,30) !important; }
-.text-brand-600 { color: rgb(168,22,22) !important; }
-.text-brand-900 { color: rgb(74,10,10) !important; }
-.to-brand-400 { --tw-gradient-to: rgb(210,78,78) var(--tw-gradient-to-position) !important; }
-.to-brand-500\/5 { --tw-gradient-to: rgba(200,30,30,0.05) var(--tw-gradient-to-position) !important; }
-.to-brand-600 { --tw-gradient-to: rgb(168,22,22) var(--tw-gradient-to-position) !important; }
-/* ===== Hardcoded gradient/hex classes -> seal red ===== */
-.elite-gradient,
-.elite-gradient-text,
-.premium-gradient,
-.badge-premium {
-  background: linear-gradient(135deg, #C81E1E 0%, #8F1414 55%, #4A0A0A 100%) !important;
+<style id="phone-skin">
+/* ===================================================================
+   Geo-Books phone skin — clean & bright, indigo brand.
+   Replaces the old red "Ink-Stamp" override and the 70% size squeeze.
+   Everything here is scoped to this phone shell.
+   =================================================================== */
+:root{
+  --pb-bg:#f5f6fc; --pb-card:#ffffff; --pb-ink:#0c1126; --pb-ink2:#4b5476; --pb-ink3:#7d86a6;
+  --pb-line:rgba(12,17,38,.08); --pb-brand:#5b4cf0; --pb-brand2:#8b5cf6; --pb-soft:rgba(91,76,240,.10);
+  --pb-shadow:0 14px 34px -18px rgba(34,28,110,.35);
 }
-.elite-gradient-text {
-  -webkit-background-clip: text !important;
-  background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-}
-.badge-premium {
-  box-shadow: 0 4px 12px rgba(200, 30, 30, 0.35) !important;
+html.dark{
+  --pb-bg:#070a16; --pb-card:#0f1530; --pb-ink:#f4f6ff; --pb-ink2:#aab3d1; --pb-ink3:#7882a6;
+  --pb-line:rgba(255,255,255,.09); --pb-brand:#8b7dff; --pb-soft:rgba(139,125,255,.16);
+  --pb-shadow:0 14px 34px -18px rgba(0,0,0,.7);
 }
 
-/* ===== Ink-stamp brand mark + display type for the top-level wordmark only
-   (body copy keeps Plus Jakarta Sans — Anton is a display face, not meant
-   for paragraph or dense UI text at this scale) ===== */
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500;700&display=swap');
-.gb-wordmark { font-family: 'Anton', sans-serif; letter-spacing: 0.02em; }
-.gb-mono { font-family: 'JetBrains Mono', monospace; letter-spacing: 0.04em; }
+/* ---- keep: phone-only chrome (the sidebar is the only route to several sections) ---- */
+#bottomNav{ display:block !important; }
+aside#sidebar{ position:fixed !important; z-index:250 !important; }
 
-/* Bottom nav active state: swap the rounded-pill convention for a short
-   angled brush-stroke mark, matching the ink-stamp identity used across
-   the rest of the Geo-Books mobile surface. */
-.bottom-nav-item { position: relative; }
-.bottom-nav-item::before {
-  content: ''; position: absolute; top: 2px; left: 50%;
-  width: 20px; height: 3px; background: #C81E1E; border-radius: 1px;
-  transform: translateX(-50%) skewX(-18deg);
-  opacity: 0; transition: opacity .18s ease;
+/* ---- keep: wordmark helpers referenced by the markup ---- */
+.gb-wordmark{ font-weight:800; letter-spacing:-.02em; }
+.gb-mono{ font-variant-numeric:tabular-nums; letter-spacing:.02em; }
+
+/* ---- base ---- */
+html,body{ background:var(--pb-bg) !important; }
+body{ -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent; }
+main{ background:transparent !important; padding-bottom:calc(112px + env(safe-area-inset-bottom)) !important; }
+.font-tabular{ font-variant-numeric:tabular-nums; }
+
+/* readable text: the old build squeezed everything to 70% (8px labels). Icons back to full size. */
+i[data-lucide], svg.lucide{ transform:none; }
+
+/* ---- header: compact, with a level chip on phones ---- */
+header.sticky{ height:60px !important; background:color-mix(in srgb,var(--pb-bg) 86%,transparent) !important;
+  -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); border-bottom:1px solid var(--pb-line) !important; }
+header.sticky > div{ padding-top:0 !important; padding-bottom:0 !important; }
+header.sticky .gap-8{ gap:0 !important; }
+header.sticky .text-xl{ font-size:17px !important; line-height:1.2 !important; }
+#userStats{ display:flex !important; padding:6px 10px !important; gap:8px !important; border-radius:14px !important; min-height:0 !important; }
+#userStats #userTier, #userStats #xpText{ display:none !important; }
+#userStats #userLevel{ font-size:13px !important; margin:0 !important; }
+#userStats #userLevel::before{ content:'Lv '; font-weight:700; color:var(--pb-ink3); }
+#userStats .w-20{ width:44px !important; }
+#openSidebarBtn{ border-radius:14px !important; }
+
+/* ---- floating button bar ---- */
+#bottomNav{ position:fixed !important; left:0; right:0; bottom:0; z-index:400; padding:0 12px calc(10px + env(safe-area-inset-bottom)) !important;
+  background:none !important; border:0 !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; pointer-events:none; }
+#bottomNav .pb-dock{ pointer-events:auto; max-width:460px; margin:0 auto; display:grid; grid-template-columns:repeat(5,1fr); gap:2px; padding:7px;
+  border-radius:28px; background:color-mix(in srgb,var(--pb-card) 90%,transparent); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
+  box-shadow:0 22px 44px -14px rgba(30,24,100,.38), 0 0 0 1px var(--pb-line); }
+.bottom-nav-item{ position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height:58px !important; min-width:0 !important;
+  padding:6px 2px !important; border-radius:20px; color:var(--pb-ink3); font-size:11px; font-weight:700; letter-spacing:0; text-transform:none; touch-action:manipulation; transition:color .2s; }
+.bottom-nav-item .pb-ico{ display:grid; place-items:center; width:46px; height:30px; border-radius:15px; transition:background .25s, transform .3s cubic-bezier(.34,1.56,.64,1); }
+.bottom-nav-item svg, .bottom-nav-item i{ width:22px !important; height:22px !important; }
+.bottom-nav-item:active .pb-ico{ transform:scale(.88); }
+.bottom-nav-item.active{ color:var(--pb-brand) !important; }
+.bottom-nav-item.active .pb-ico{ background:var(--pb-soft); transform:translateY(-1px); }
+.bottom-nav-item.active svg{ stroke-width:2.3; }
+.bottom-nav-item .pb-lab{ font-size:11px; line-height:1; }
+.bottom-nav-item.active::before{ display:none; }
+.bottom-nav-item .pb-dot{ position:absolute; top:6px; right:calc(50% - 20px); width:8px; height:8px; border-radius:50%; background:#f43f5e; box-shadow:0 0 0 2px var(--pb-card); display:none; }
+
+/* ---- one AI button (sits above the bar) ---- */
+#aiAssistant{ bottom:calc(98px + env(safe-area-inset-bottom)) !important; right:14px !important; z-index:350 !important; }
+#aiToggleBtn{ width:54px !important; height:54px !important; border-radius:20px !important; background:linear-gradient(135deg,var(--pb-brand),var(--pb-brand2)) !important;
+  box-shadow:0 16px 30px -10px rgba(91,76,240,.7) !important; }
+#aiToggleBtn > .absolute{ display:none; }
+#aiChat{ max-height:calc(100dvh - 200px) !important; }
+
+/* ---- Home ---- */
+.pb-home{ max-width:560px; margin:0 auto; padding:16px 16px 8px !important; }
+.pb-home > * + *{ margin-top:18px; }
+.pb-hello{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.pb-eyebrow{ font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--pb-brand); margin-bottom:6px; }
+.pb-h1{ font-size:27px !important; line-height:1.1 !important; font-weight:800 !important; letter-spacing:-.025em; color:var(--pb-ink); }
+.pb-sub{ margin-top:6px; font-size:13px; font-weight:600; color:var(--pb-ink3); }
+.pb-rank{ flex:none; display:flex; flex-direction:column; align-items:center; gap:1px; padding:9px 14px; border-radius:18px; background:var(--pb-card); border:1px solid var(--pb-line); box-shadow:var(--pb-shadow); color:var(--pb-ink); min-width:64px; }
+.pb-rank svg{ width:16px !important; height:16px !important; color:#f59e0b; }
+.pb-rank .pb-rank-l{ font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--pb-ink3); }
+.pb-rank b{ font-size:16px; font-weight:800; line-height:1.2; }
+.pb-rank b *{ font-size:11px !important; }
+
+.pb-hero{ position:relative; overflow:hidden; border-radius:26px; padding:22px 20px; color:#fff;
+  background:linear-gradient(135deg,#4a3be0 0%,#6a55f3 55%,#9a6bff 100%); box-shadow:0 24px 40px -22px rgba(74,59,224,.8); }
+.pb-hero::before,.pb-hero::after{ content:''; position:absolute; border-radius:50%; background:rgba(255,255,255,.13); pointer-events:none; animation:pbDrift 12s ease-in-out infinite alternate; }
+.pb-hero::before{ width:200px; height:200px; right:-70px; top:-90px; } .pb-hero::after{ width:140px; height:140px; left:-50px; bottom:-70px; animation-direction:alternate-reverse; }
+@keyframes pbDrift{ to{ transform:translate(18px,14px) scale(1.1); } }
+.pb-hero > *{ position:relative; z-index:1; }
+.pb-hero-k{ font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; opacity:.8; }
+.pb-hero h2{ font-size:23px; font-weight:800; letter-spacing:-.02em; line-height:1.15; margin:6px 0 8px; }
+.pb-hero p.pb-hero-d{ font-size:14px; line-height:1.5; opacity:.88; max-width:34ch; }
+.pb-hero-actions{ display:flex; gap:10px; margin-top:18px; }
+.pb-btn{ flex:1; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 14px; border-radius:16px; font-size:14px; font-weight:700; transition:transform .15s; }
+.pb-btn:active{ transform:scale(.97); } .pb-btn svg{ width:18px !important; height:18px !important; }
+.pb-btn-white{ background:#fff; color:#2c2180; box-shadow:0 12px 22px -12px rgba(0,0,0,.45); }
+.pb-btn-glass{ background:rgba(255,255,255,.17); border:1.5px solid rgba(255,255,255,.35); color:#fff; }
+
+.pb-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.pb-stat{ background:var(--pb-card); border:1px solid var(--pb-line); border-radius:20px; padding:14px 12px; box-shadow:var(--pb-shadow); }
+.pb-stat-ic{ width:34px; height:34px; border-radius:11px; display:grid; place-items:center; margin-bottom:10px; background:var(--pb-soft); color:var(--pb-brand); }
+.pb-stat-ic.o{ background:rgba(245,158,11,.14); color:#d97706; } .pb-stat-ic.g{ background:rgba(16,185,129,.13); color:#059669; }
+.pb-stat-ic svg{ width:18px !important; height:18px !important; }
+.pb-num{ font-size:21px !important; line-height:1.1 !important; font-weight:800 !important; letter-spacing:-.02em; color:var(--pb-ink); }
+.pb-num span{ font-size:11px !important; font-weight:700 !important; color:var(--pb-ink3) !important; text-transform:none !important; letter-spacing:0 !important; margin-left:2px; }
+.pb-lab{ margin-top:4px; font-size:11px; font-weight:700; color:var(--pb-ink3); }
+
+.pb-goal{ width:100%; display:flex; align-items:center; gap:12px; text-align:left; padding:14px 16px; border-radius:20px; background:var(--pb-card); border:1px solid var(--pb-line); box-shadow:var(--pb-shadow); }
+.pb-goal .pb-stat-ic{ margin:0; flex:none; } .pb-goal > div{ flex:1; min-width:0; }
+.pb-goal-n{ font-size:15px !important; font-weight:800 !important; color:var(--pb-ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px; }
+.pb-goal > svg{ width:18px !important; height:18px !important; color:var(--pb-ink3); flex:none; }
+
+.pb-title{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.pb-title h3{ font-size:16px; font-weight:800; letter-spacing:-.01em; color:var(--pb-ink); }
+.pb-grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.pb-grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.pb-tile{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:14px 4px 12px; border-radius:20px; background:var(--pb-card); border:1px solid var(--pb-line);
+  transition:transform .2s, border-color .2s, box-shadow .2s; min-width:0; }
+.pb-tile:active{ transform:scale(.95); } @media (hover:hover){ .pb-tile:hover{ transform:translateY(-3px); border-color:var(--pb-brand); box-shadow:var(--pb-shadow); } }
+.pb-tile .pb-stat-ic{ margin:0; width:40px; height:40px; border-radius:13px; }
+.pb-tile .pb-stat-ic svg{ width:20px !important; height:20px !important; }
+.pb-tile span{ font-size:12px; font-weight:700; color:var(--pb-ink2); text-align:center; line-height:1.15; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 2px; }
+.pb-stat-ic.r{ background:rgba(244,63,94,.12); color:#e11d48; } .pb-stat-ic.c{ background:rgba(6,182,212,.13); color:#0891b2; } .pb-stat-ic.i{ background:rgba(99,102,241,.13); color:#4f46e5; }
+
+/* rise-in for the Home blocks */
+.pb-home > *{ animation:pbRise .6s cubic-bezier(.16,1,.3,1) both; }
+.pb-home > *:nth-child(2){ animation-delay:.05s } .pb-home > *:nth-child(3){ animation-delay:.1s } .pb-home > *:nth-child(4){ animation-delay:.15s }
+.pb-home > *:nth-child(5){ animation-delay:.2s } .pb-home > *:nth-child(6){ animation-delay:.25s } .pb-home > *:nth-child(7){ animation-delay:.3s }
+@keyframes pbRise{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
+
+/* ---- every other screen: softer cards, tighter padding, readable tap targets ---- */
+.premium-card, .elite-card, .ux-card{ border-radius:22px !important; border:1px solid var(--pb-line) !important; box-shadow:var(--pb-shadow) !important; }
+@media (max-width:640px){
+  .p-12{ padding:1.25rem !important; } .p-10{ padding:1.25rem !important; } .p-8{ padding:1.1rem !important; }
+  [class*="rounded-[3rem]"], [class*="rounded-[2.5rem]"], [class*="rounded-[40px]"], [class*="rounded-[32px]"]{ border-radius:24px !important; }
+  .space-y-10 > * + *{ margin-top:1.5rem !important; } .space-y-8 > * + *{ margin-top:1.25rem !important; }
+  .gap-8{ gap:1rem !important; }
 }
-.bottom-nav-item.active::before { opacity: 1; }
-.bottom-nav-item.active { color: #C81E1E !important; }
-.bottom-nav-item.active i { color: #C81E1E !important; }
+@media (max-width:1024px){
+  button, input, select, textarea{ min-height:44px; min-width:44px; }
+  aside{ transition:transform .3s ease-out; }
+  .sm\:grid-cols-2, .md\:grid-cols-2, .lg\:grid-cols-3{ grid-template-columns:repeat(1,minmax(0,1fr)); }
+}
 
-/* ===== Force phone-only chrome regardless of viewport width =====
-   IMPORTANT: the sidebar is NOT just a desktop nav — it's the only path to
-   5 of 9 sections on mobile (community, notes/flashcards, skillAcademy/gigs,
-   profile, aiscan), reached via the hamburger (#openSidebarBtn) as an
-   off-canvas drawer. It must stay fully functional. What's forced here is
-   only the *outer chrome*: bottom nav visible, sidebar's `lg:static` desktop
-   docking suppressed so it always behaves as the off-canvas drawer, even in
-   a wide browser window, since this file is the phone entry point. */
-#bottomNav { display: block !important; }
-aside#sidebar { position: fixed !important; }
+@media (prefers-reduced-motion:reduce){
+  .pb-home > *, .pb-hero::before, .pb-hero::after{ animation:none !important; }
+  .bottom-nav-item .pb-ico{ transition:none; }
+}
 
 </style>
 </head>
@@ -1125,314 +1144,96 @@ aside#sidebar { position: fixed !important; }
       </section>
 
       <!-- Dashboard Section -->
-      <section id="dashboard" class="section space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700 p-4 sm:p-6 lg:p-8">
-        <!-- Header: Minimalist & High-End -->
-        <div class="flex flex-col md:flex-row items-center justify-between gap-8"> 
-           <div class="flex items-center gap-6 group cursor-default"> 
-             <div class="relative"> 
-               <div class="absolute -inset-2 bg-brand-500 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity"></div> 
-               <div class="w-20 h-20 rounded-[32px] bg-gradient-to-br from-brand-600 to-indigo-600 flex items-center justify-center shadow-2xl shadow-brand-500/30 animate-pulse-slow relative z-10 group-hover:scale-105 transition-transform grain-overlay"> 
-                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="brain-circuit" aria-hidden="true" class="lucide lucide-brain-circuit w-10 h-10 text-white"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M9 13a4.5 4.5 0 0 0 3-4"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M12 13h4"></path><path d="M12 18h6a2 2 0 0 1 2 2v1"></path><path d="M12 8h8"></path><path d="M16 8V5a2 2 0 0 1 2-2"></path><circle cx="16" cy="13" r=".5"></circle><circle cx="18" cy="3" r=".5"></circle><circle cx="20" cy="21" r=".5"></circle><circle cx="20" cy="8" r=".5"></circle></svg> 
-               </div> 
-             </div> 
-             <div> 
-               <div class="flex items-center gap-3"> 
-                 <h1 class="dash-greeting-title text-5xl font-black tracking-tighter text-slate-900 dark:text-white leading-none">Hello, <span id="dashGreetingName" class="elite-text">superadmin</span>!</h1> 
-                 <div class="px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800 text-[10px] font-black uppercase tracking-widest text-brand-600">Beta v2.5</div> 
-               </div> 
-               <div class="flex items-center gap-3 mt-4"> 
-                 <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600"> 
-                   <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> 
-                   <p class="text-[10px] font-black uppercase tracking-widest">AI Sync: Active</p> 
-                 </div> 
-                 <div class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700"></div> 
-                 <p id="dashUniversityName" class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">University Student Scholar</p> 
-               </div> 
-             </div> 
-           </div> 
-           <div class="flex items-center gap-6"> 
-             <div class="hidden sm:flex flex-col items-end px-8 border-r border-slate-200 dark:border-slate-800"> 
-               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Scholar Rank</p> 
-               <div class="flex items-center gap-3"> 
-                 <p id="globalRank" class="text-2xl font-black text-slate-900 dark:text-white font-tabular">#2 </p> 
-                 <div class="flex items-center gap-1 text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-lg"> 
-                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="trending-up" aria-hidden="true" class="lucide lucide-trending-up w-3 h-3"><path d="M16 7h6v6"></path><path d="m22 7-8.5 8.5-5-5L2 17"></path></svg> 0 
-                 </div> 
-               </div> 
-             </div> 
-             <button onclick="toggleFocusMode(true)" class="group relative px-8 py-4 rounded-[28px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-2xl hover:scale-105 active:scale-95 transition-all overflow-hidden"> 
-               <div class="absolute inset-0 bg-gradient-to-r from-brand-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div> 
-               <div class="relative flex items-center gap-3"> 
-                 <div class="w-8 h-8 rounded-xl bg-white/10 dark:bg-slate-900/10 flex items-center justify-center"> 
-                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="zap" aria-hidden="true" class="lucide lucide-zap w-4 h-4"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg> 
-                 </div> 
-                 <span class="text-xs font-black uppercase tracking-[0.2em]">Enter Zen</span> 
-               </div> 
-             </button> 
-           </div> 
-         </div>
-
-        <!-- Quick Stats Row -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 parallax-wrap stagger">
-          <div class="premium-card p-10 group relative overflow-hidden parallax-card">
-            <div class="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-              <i data-lucide="flame" class="w-24 h-24"></i>
-            </div>
-            <div class="w-16 h-16 rounded-3xl bg-orange-50 dark:bg-orange-900/20 text-orange-500 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shadow-lg shadow-orange-500/10">
-              <i data-lucide="flame" class="w-8 h-8"></i>
-            </div>
-            <p class="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Study Streak</p>
-            <p class="text-4xl font-black mt-2 tracking-tighter font-tabular" id="currentStreakCount">0 <span class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Days</span></p>
-            <div class="flex items-center gap-2 mt-6 text-emerald-500 text-[10px] font-black uppercase tracking-widest">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Consistency: 98%</span>
-            </div>
+      <section id="dashboard" class="section pb-home">
+        <div class="pb-hello">
+          <div style="min-width:0">
+            <p class="pb-eyebrow" id="pbGreet">Welcome back</p>
+            <h1 class="dash-greeting-title pb-h1">Hello, <span id="dashGreetingName">Scholar</span></h1>
+            <p id="dashUniversityName" class="pb-sub">University Student Scholar</p>
           </div>
-
-          <div class="premium-card p-10 group relative overflow-hidden parallax-card">
-            <div class="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-              <i data-lucide="sparkles" class="w-24 h-24"></i>
-            </div>
-            <div class="w-16 h-16 rounded-3xl bg-brand-50 dark:bg-brand-900/20 text-brand-600 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-brand-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-brand-500/10">
-              <i data-lucide="sparkles" class="w-8 h-8"></i>
-            </div>
-            <p class="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Scholar XP</p>
-            <p class="text-4xl font-black mt-2 tracking-tighter font-tabular" id="totalXPPoints">0 <span class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Points</span></p>
-            <div class="flex items-center gap-2 mt-6 text-brand-500 text-[10px] font-black uppercase tracking-widest">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
-              <span>Top 5% Nationwide</span>
-            </div>
-          </div>
-
-          <div class="premium-card p-10 group relative overflow-hidden parallax-card">
-            <div class="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-              <i data-lucide="target" class="w-24 h-24"></i>
-            </div>
-            <div class="w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500 shadow-lg shadow-emerald-500/10">
-              <i data-lucide="target" class="w-8 h-8"></i>
-            </div>
-            <p class="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Active Goal</p>
-            <p class="text-4xl font-black mt-2 tracking-tighter truncate" id="activeGoalName">None</p>
-            <div class="flex items-center gap-2 mt-6 text-emerald-500 text-[10px] font-black uppercase tracking-widest animate-pulse">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span>In Progress</span>
-            </div>
-          </div>
-
-          <div class="premium-card p-10 group relative overflow-hidden parallax-card">
-            <div class="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-              <i data-lucide="brain" class="w-24 h-24"></i>
-            </div>
-            <div class="w-16 h-16 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-indigo-500/10">
-              <i data-lucide="brain" class="w-8 h-8"></i>
-            </div>
-            <p class="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">AI IQ</p>
-            <p class="text-4xl font-black mt-2 tracking-tighter font-tabular" id="aiIntelligenceScore">0<span class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">/100</span></p>
-            <p class="text-[10px] text-slate-400 font-bold mt-6 uppercase tracking-widest">Neural Learning Active</p>
-          </div>
-        </div>
-
-        <!-- Quick Actions Grid -->
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 stagger">
-          <button onclick="window.showSection('cbt')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-brand-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-900/40 text-brand-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="zap" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Start CBT</span>
-          </button>
-          <button onclick="window.showSection('aiscan')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-emerald-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="scan-line" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">AI Scan</span>
-          </button>
-          <button onclick="window.showSection('marketplace')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-indigo-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="shopping-bag" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Market</span>
-          </button>
-          <button onclick="window.showSection('community')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-amber-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/40 text-amber-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="users" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Network</span>
-          </button>
-          <button onclick="window.showSection('notes')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-rose-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-900/40 text-rose-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="sticky-note" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Notes</span>
-          </button>
-          <button onclick="window.showSection('skillAcademy')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-cyan-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-cyan-50 dark:bg-cyan-900/40 text-cyan-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="graduation-cap" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Academy</span>
+          <button type="button" class="pb-rank" onclick="window.showSection('leaderboardSection')" aria-label="Open the ranking">
+            <i data-lucide="trophy"></i>
+            <span class="pb-rank-l">Rank</span>
+            <b id="globalRank" class="font-tabular">#–</b>
           </button>
         </div>
 
-        <!-- Elite Analytics Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
-          <div class="lg:col-span-8 premium-card p-10 flex flex-col">
-            <div class="flex items-center justify-between mb-10">
-              <div>
-                <h3 class="text-2xl font-black">Velocity <span class="elite-text">Analysis</span></h3>
-                <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Real-time study performance tracking</p>
-              </div>
-              <div class="flex gap-2">
-                <div class="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-[10px] font-black uppercase text-slate-400">7 Day Cycle</div>
-              </div>
-            </div>
-            
-            <div class="flex-1 flex items-end justify-between gap-4 h-48 mb-8">
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 40%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">M</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 70%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">T</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 45%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">W</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 90%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">T</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 65%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">F</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 80%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">S</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 100%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">S</span>
-              </div>
-            </div>
-            
-            <div class="grid grid-cols-3 gap-6 pt-8 border-t border-slate-100 dark:border-slate-800">
-              <div>
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Peak Intensity</p>
-                <p class="text-xl font-black text-slate-900 dark:text-white">92.4%</p>
-              </div>
-              <div>
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Focus</p>
-                <p class="text-xl font-black text-slate-900 dark:text-white">24.5h</p>
-              </div>
-              <div>
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Efficiency</p>
-                <p class="text-xl font-black text-emerald-500">+12%</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="lg:col-span-4 premium-card p-10 flex flex-col bg-slate-900 text-white border-none relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-10 opacity-10"><i data-lucide="zap" class="w-32 h-32"></i></div>
-            <div class="relative z-10 h-full flex flex-col">
-              <h3 class="text-xl font-black mb-8">Daily <span class="text-brand-400">Milestones</span></h3>
-              <div class="space-y-6 flex-1">
-                <div class="flex items-center gap-4 group cursor-pointer">
-                  <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-all">
-                    <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-400"></i>
-                  </div>
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-white">Morning Protocol</p>
-                    <p class="text-[10px] text-slate-400 font-bold">Review Study Notes</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-4 group cursor-pointer">
-                  <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-all">
-                    <i data-lucide="circle" class="w-6 h-6 text-slate-600"></i>
-                  </div>
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-white">Deep Work Session</p>
-                    <p class="text-[10px] text-slate-400 font-bold">Complete 1 CBT Exam</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-4 group cursor-pointer">
-                  <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-all">
-                    <i data-lucide="circle" class="w-6 h-6 text-slate-600"></i>
-                  </div>
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-white">Market Review</p>
-                    <p class="text-[10px] text-slate-400 font-bold">Check new gig opportunities</p>
-                  </div>
-                </div>
-              </div>
-              <div class="mt-8 pt-8 border-t border-white/10">
-                <div class="flex items-center justify-between mb-4">
-                  <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Day Progress</span>
-                  <span class="text-[10px] font-black text-brand-400">33%</span>
-                </div>
-                <div class="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div class="h-full elite-gradient" style="width: 33%"></div>
-                </div>
-              </div>
-            </div>
+        <div class="pb-hero">
+          <p class="pb-hero-k">Today</p>
+          <h2>Ready to practise?</h2>
+          <p class="pb-hero-d">Timed JAMB and WAEC questions, with an AI explanation whenever you get one wrong.</p>
+          <div class="pb-hero-actions">
+            <button type="button" class="pb-btn pb-btn-white" onclick="window.showSection('cbt')"><i data-lucide="zap"></i>Start CBT</button>
+            <button type="button" class="pb-btn pb-btn-glass" onclick="window.toggleAiAssistant(true)"><i data-lucide="sparkles"></i>Ask AI</button>
           </div>
         </div>
 
-        <div class="space-y-10">
-          <!-- Interactive Study Pulse -->
-          <div class="p-10 rounded-[3rem] bg-slate-900 text-white border border-white/5 shadow-2xl relative overflow-hidden group">
-            <div class="absolute inset-0 bg-gradient-to-br from-brand-600/20 to-transparent"></div>
-            <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-              <div class="space-y-4">
-                <h3 class="text-2xl font-black tracking-tight">Your Neural Pulse</h3>
-                <p class="text-white/50 text-sm font-medium leading-relaxed max-w-sm">Real-time analysis of your focus intensity and memory retention across all subjects.</p>
-                <div class="flex gap-4 pt-2">
-                  <div class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-                    <p class="text-[9px] font-black uppercase text-white/30 tracking-widest">Focus</p>
-                    <p class="text-lg font-black">92%</p>
-                  </div>
-                  <div class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-                    <p class="text-[9px] font-black uppercase text-white/30 tracking-widest">Retention</p>
-                    <p class="text-lg font-black">88%</p>
-                  </div>
-                </div>
-              </div>
-              <div class="flex-1 w-full h-32 flex items-end justify-center gap-1.5 px-4">
-                <!-- Pulse bars injected via JS -->
-                <div class="w-2 bg-brand-500 rounded-full animate-pulse-slow" style="height: 40%"></div>
-                <div class="w-2 bg-brand-400 rounded-full animate-pulse-slow" style="height: 60%; animation-delay: 0.2s"></div>
-                <div class="w-2 bg-indigo-500 rounded-full animate-pulse-slow" style="height: 85%; animation-delay: 0.4s"></div>
-                <div class="w-2 bg-brand-600 rounded-full animate-pulse-slow" style="height: 50%; animation-delay: 0.1s"></div>
-                <div class="w-2 bg-brand-400 rounded-full animate-pulse-slow" style="height: 75%; animation-delay: 0.3s"></div>
-                <div class="w-2 bg-indigo-400 rounded-full animate-pulse-slow" style="height: 95%; animation-delay: 0.5s"></div>
-                <div class="w-2 bg-brand-500 rounded-full animate-pulse-slow" style="height: 30%; animation-delay: 0.2s"></div>
-                <div class="w-2 bg-brand-600 rounded-full animate-pulse-slow" style="height: 70%; animation-delay: 0.4s"></div>
-                <div class="w-2 bg-indigo-600 rounded-full animate-pulse-slow" style="height: 55%; animation-delay: 0.1s"></div>
-                <div class="w-2 bg-brand-400 rounded-full animate-pulse-slow" style="height: 80%; animation-delay: 0.3s"></div>
-              </div>
-            </div>
+        <div class="pb-stats">
+          <div class="pb-stat">
+            <div class="pb-stat-ic o"><i data-lucide="flame"></i></div>
+            <p id="currentStreakCount" class="pb-num font-tabular">0 <span>Days</span></p>
+            <p class="pb-lab">Study streak</p>
+          </div>
+          <div class="pb-stat">
+            <div class="pb-stat-ic"><i data-lucide="sparkles"></i></div>
+            <p id="totalXPPoints" class="pb-num font-tabular">0 <span>XP</span></p>
+            <p class="pb-lab">Scholar XP</p>
+          </div>
+          <div class="pb-stat">
+            <div class="pb-stat-ic g"><i data-lucide="brain"></i></div>
+            <p id="aiIntelligenceScore" class="pb-num font-tabular">0<span>/100</span></p>
+            <p class="pb-lab">AI IQ</p>
+          </div>
+        </div>
+
+        <button type="button" class="pb-goal" onclick="window.showSection('cbt')">
+          <div class="pb-stat-ic g"><i data-lucide="target"></i></div>
+          <div>
+            <p class="pb-lab" style="margin:0">Active goal</p>
+            <p id="activeGoalName" class="pb-goal-n">None</p>
+          </div>
+          <i data-lucide="chevron-right"></i>
+        </button>
+
+        <div>
+          <div class="pb-title"><h3>Study</h3></div>
+          <div class="pb-grid4">
+            <button type="button" class="pb-tile" onclick="window.showSection('cbt')"><div class="pb-stat-ic"><i data-lucide="zap"></i></div><span>Practice</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('aiscan')"><div class="pb-stat-ic g"><i data-lucide="scan-line"></i></div><span>AI Scan</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('flashcards')"><div class="pb-stat-ic o"><i data-lucide="layers"></i></div><span>Flashcards</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('leaderboardSection')"><div class="pb-stat-ic r"><i data-lucide="trophy"></i></div><span>Ranking</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('books')"><div class="pb-stat-ic i"><i data-lucide="book-open"></i></div><span>Library</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('notes')"><div class="pb-stat-ic c"><i data-lucide="sticky-note"></i></div><span>Notes</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('tutorHub')"><div class="pb-stat-ic"><i data-lucide="graduation-cap"></i></div><span>Tutors</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('marketplace')"><div class="pb-stat-ic g"><i data-lucide="shopping-bag"></i></div><span>Market</span></button>
+          </div>
+        </div>
+
+        <div>
+          <div class="pb-title"><h3>University</h3></div>
+          <div class="pb-grid3">
+            <button type="button" class="pb-tile" onclick="window.showSection('universityLectures')"><div class="pb-stat-ic"><i data-lucide="play-circle"></i></div><span>Lectures</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('universityTimetable')"><div class="pb-stat-ic o"><i data-lucide="calendar"></i></div><span>Timetable</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('universityCgpa')"><div class="pb-stat-ic g"><i data-lucide="calculator"></i></div><span>CGPA</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('hostelFinder')"><div class="pb-stat-ic c"><i data-lucide="home"></i></div><span>Hostels</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('universityAssessments')"><div class="pb-stat-ic r"><i data-lucide="clipboard-check"></i></div><span>Assessments</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('universityAnnouncements')"><div class="pb-stat-ic i"><i data-lucide="megaphone"></i></div><span>Updates</span></button>
+          </div>
+        </div>
+
+        <div>
+          <div class="pb-title"><h3>Community</h3></div>
+          <div class="pb-grid3">
+            <button type="button" class="pb-tile" onclick="window.showSection('community')"><div class="pb-stat-ic"><i data-lucide="users"></i></div><span>Network</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('warRooms')"><div class="pb-stat-ic r"><i data-lucide="swords"></i></div><span>War Rooms</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('campusHub')"><div class="pb-stat-ic g"><i data-lucide="map-pin"></i></div><span>Campus Hub</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('gigsBoard')"><div class="pb-stat-ic o"><i data-lucide="briefcase"></i></div><span>Gigs</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('skillAcademy')"><div class="pb-stat-ic c"><i data-lucide="award"></i></div><span>Academy</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('support')"><div class="pb-stat-ic i"><i data-lucide="life-buoy"></i></div><span>Support</span></button>
           </div>
         </div>
       </section>
 
-      
-      
-
-      <!-- CBT Section -->
       <section id="cbt" class="section hidden space-y-8 p-4 sm:p-6 lg:p-8">
         <!-- AI Exam Setup -->
         <div id="cbtSetup" class="ux-cbt-shell is-hub relative">
@@ -1459,7 +1260,7 @@ aside#sidebar { position: fixed !important; }
             <h3 class="ux-sub">More tools</h3>
             <div id="cbtTopCards" class="ux-rows">
               <a href="AIScanVault.htm" class="ux-rowlink">
-                <span class="ux-tile-ic" style="background:#ede9fe;color:#7c3aed"><i data-lucide="scan-face"></i></span>
+                <span class="ux-tile-ic" style="background:#e6e4ff;color:#5b4cf0"><i data-lucide="scan-face"></i></span>
                 <div><b>Scan notes into a quiz</b><small>Take a photo of your notes or textbook page and get practice questions.</small></div>
                 <i data-lucide="chevron-right"></i>
               </a>
@@ -1767,7 +1568,7 @@ aside#sidebar { position: fixed !important; }
                   <span id="cbtProgressMeta">Question 0 / 20</span>
                 </div>
                 <div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner p-0.5">
-                  <div id="cbtProgressBar" class="h-full bg-gradient-to-r from-brand-600 via-indigo-600 to-brand-400 rounded-full transition-all duration-700 shadow-[0_0_15px_rgba(124,58,237,0.4)]" style="width: 0%"></div>
+                  <div id="cbtProgressBar" class="h-full bg-gradient-to-r from-brand-600 via-indigo-600 to-brand-400 rounded-full transition-all duration-700 shadow-[0_0_15px_rgba(91, 76, 240,0.4)]" style="width: 0%"></div>
                 </div>
               </div>
 
@@ -3720,7 +3521,7 @@ aside#sidebar { position: fixed !important; }
       </div>
     </div>
     
-    <button id="aiToggleBtn" onclick="toggleAiAssistant(true)" class="w-16 h-16 rounded-[24px] bg-brand-600 text-white flex items-center justify-center shadow-[0_20px_50px_rgba(124,58,237,0.4)] hover:scale-110 active:scale-95 transition-all pointer-events-auto group relative">
+    <button id="aiToggleBtn" onclick="toggleAiAssistant(true)" class="w-16 h-16 rounded-[24px] bg-brand-600 text-white flex items-center justify-center shadow-[0_20px_50px_rgba(91, 76, 240,0.4)] hover:scale-110 active:scale-95 transition-all pointer-events-auto group relative">
       <div class="absolute -inset-2 bg-brand-500 blur-2xl opacity-40 group-hover:opacity-60 transition-opacity"></div>
       <i data-lucide="sparkles" class="w-8 h-8 relative z-10"></i>
     </button>
@@ -4522,7 +4323,7 @@ aside#sidebar { position: fixed !important; }
 <!-- Zen Study Overlay -->
 <div id="zenOverlay" class="fixed inset-0 z-[300] hidden bg-slate-950 flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
   <div class="absolute inset-0 opacity-20 pointer-events-none">
-    <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(124,58,237,0.1),transparent_70%)]"></div>
+    <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(91, 76, 240,0.1),transparent_70%)]"></div>
   </div>
   
   <div class="max-w-4xl w-full space-y-12 relative z-10">
@@ -4963,103 +4764,36 @@ aside#sidebar { position: fixed !important; }
   <!-- AI Scan Modal: The Architect's Vault -->
   <div id="toast-container" class="fixed top-6 right-6 z-[1000] flex flex-col gap-3 pointer-events-none"></div>
 
-  <!-- Bottom Navigation for Mobile -->
-  <nav id="bottomNav" class="lg:hidden fixed bottom-0 left-0 right-0 z-[400] bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 transition-all duration-300" style="padding-bottom: env(safe-area-inset-bottom);">
-    <div class="flex items-center justify-around h-[80px]">
-      <button onclick="window.showSection('dashboard')" class="bottom-nav-item flex flex-col items-center justify-center gap-1 flex-1 py-3 transition-all duration-300" data-section="dashboard">
-        <i data-lucide="layout-grid" class="w-6 h-6"></i>
-        <span class="text-[10px] font-black uppercase tracking-widest">Home</span>
+    <!-- Bottom button bar (floating dock). Keep .bottom-nav-item + data-section: app.js highlights the active tab with them. -->
+  <nav id="bottomNav" aria-label="Main navigation">
+    <div class="pb-dock">
+      <button type="button" class="bottom-nav-item" onclick="window.showSection('dashboard')" data-section="dashboard" aria-label="Home">
+        <span class="pb-ico"><i data-lucide="house"></i></span><span class="pb-lab">Home</span>
       </button>
-      <button onclick="window.showSection('cbt')" class="bottom-nav-item flex flex-col items-center justify-center gap-1 flex-1 py-3 transition-all duration-300" data-section="cbt">
-        <i data-lucide="zap" class="w-6 h-6"></i>
-        <span class="text-[10px] font-black uppercase tracking-widest">CBT</span>
+      <button type="button" class="bottom-nav-item" onclick="window.showSection('cbt')" data-section="cbt" aria-label="Practice">
+        <span class="pb-ico"><i data-lucide="zap"></i></span><span class="pb-lab">Practice</span>
       </button>
-      <button onclick="window.toggleAIAssistant(true)" class="bottom-nav-item flex flex-col items-center justify-center gap-1 flex-1 py-3 transition-all duration-300">
-        <div class="w-14 h-14 rounded-full elite-gradient flex items-center justify-center shadow-2xl">
-          <i data-lucide="sparkles" class="w-7 h-7 text-white"></i>
-        </div>
+      <button type="button" class="bottom-nav-item" onclick="window.showSection('books')" data-section="books" aria-label="Library">
+        <span class="pb-ico"><i data-lucide="book-open"></i></span><span class="pb-lab">Library</span>
       </button>
-      <button onclick="window.showSection('books')" class="bottom-nav-item flex flex-col items-center justify-center gap-1 flex-1 py-3 transition-all duration-300" data-section="books">
-        <i data-lucide="book-open" class="w-6 h-6"></i>
-        <span class="text-[10px] font-black uppercase tracking-widest">Books</span>
+      <button type="button" class="bottom-nav-item" onclick="window.showSection('marketplace')" data-section="marketplace" aria-label="Market">
+        <span class="pb-ico"><i data-lucide="shopping-bag"></i></span><span class="pb-lab">Market</span>
       </button>
-      <button onclick="window.showSection('marketplace')" class="bottom-nav-item flex flex-col items-center justify-center gap-1 flex-1 py-3 transition-all duration-300" data-section="marketplace">
-        <i data-lucide="shopping-bag" class="w-6 h-6"></i>
-        <span class="text-[10px] font-black uppercase tracking-widest">Market</span>
+      <!-- Menu opens the same drawer as the header button. stopPropagation: app.js closes the drawer on any outside click. -->
+      <button type="button" class="bottom-nav-item" id="dockMenuBtn" aria-label="Open menu"
+        onclick="event.stopPropagation(); document.getElementById('sidebar').classList.toggle('-translate-x-full')">
+        <span class="pb-ico"><i data-lucide="layout-grid"></i></span><span class="pb-lab">Menu</span>
       </button>
     </div>
   </nav>
 
-  <!-- Add padding to main content so bottom nav doesn't cover it -->
-  <style>
-    /* Mobile Bottom Navigation Styles */
-    .bottom-nav-item {
-      position: relative;
-      min-height: 60px;
-      min-width: 60px;
-      touch-action: manipulation;
-    }
-    
-    .bottom-nav-item.active {
-      color: #7c3aed;
-    }
-    
-    .bottom-nav-item.active i {
-      transform: scale(1.1);
-    }
-    
-    .bottom-nav-item i {
-      transition: all 0.2s ease;
-    }
-    
-    /* Ensure main content has padding for bottom nav */
-    main {
-      padding-bottom: 96px; /* 80px nav + safe area */
-    }
-    
-    @media (max-width: 1024px) {
-      /* Sidebar adjustments */
-      aside {
-        transition: transform 0.3s ease-out;
-      }
-      
-      /* Increase touch targets */
-      button, input, select, textarea {
-        min-height: 44px;
-        min-width: 44px;
-      }
-      
-      /* Optimize font sizes */
-      .text-xl { font-size: 1.25rem; }
-      .text-2xl { font-size: 1.5rem; }
-      .text-3xl { font-size: 1.75rem; }
-      
-      /* Optimize grid for small screens */
-      .grid-cols-1\.sm\:grid-cols-2,
-      .grid-cols-2 {
-        grid-template-columns: repeat(1, minmax(0, 1fr));
-      }
-      
-      .sm\:grid-cols-2,
-      .md\:grid-cols-2,
-      .lg\:grid-cols-3 {
-        grid-template-columns: repeat(1, minmax(0, 1fr));
-      }
-      
-      /* Reduce padding for small screens */
-      .p-12 { padding: 2rem; }
-      .p-8 { padding: 1.5rem; }
-      .p-6 { padding: 1rem; }
-    }
-    
-    /* Extra small screens (under 400px) */
-    @media (max-width: 400px) {
-      .text-3xl { font-size: 1.25rem; }
-      .text-2xl { font-size: 1.125rem; }
-      .p-12 { padding: 1.5rem; }
-      .p-8 { padding: 1rem; }
-    }
-  </style>
+  <script>
+    // Time-aware greeting on Home (cosmetic only)
+    (function(){ var h=new Date().getHours(), g=document.getElementById('pbGreet');
+      if(g) g.textContent = h<12 ? 'Good morning' : h<17 ? 'Good afternoon' : 'Good evening'; })();
+  </script>
+
+
 
 
 

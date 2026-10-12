@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%237c3aed'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M18 30.5L32 22l14 8.5-14 8.5-14-8.5zm6 4.6L32 40l8-4.9V42L32 47l-8-5v-6.9z' fill='white'/%3E%3C/svg%3E">
-  <meta name="theme-color" content="#7c3aed">
+  <meta name="theme-color" content="#5b4cf0">
   <title>Geo-Books • Seller Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,9 +36,9 @@
     }
 
     /* Elite Premium Styles */
-    .elite-gradient { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #06b6d4 100%); }
+    .elite-gradient { background: linear-gradient(135deg, #5b4cf0 0%, #4f46e5 50%, #06b6d4 100%); }
     .elite-text {
-      background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #06B6D4 100%);
+      background: linear-gradient(135deg, #5b4cf0 0%, #4F46E5 50%, #06B6D4 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -65,7 +65,7 @@
     }
     .premium-card:hover {
       transform: translateY(-16px) scale(1.01);
-      box-shadow: 0 40px 100px -20px rgba(124, 58, 237, 0.2);
+      box-shadow: 0 40px 100px -20px rgba(91, 76, 240, 0.2);
       border-color: #E0E7FF;
     }
 
@@ -124,7 +124,7 @@
       position: absolute;
       inset: -4px;
       border-radius: inherit;
-      background: radial-gradient(circle at center, rgba(124,58,237,0.2), transparent 70%);
+      background: radial-gradient(circle at center, rgba(91, 76, 240,0.2), transparent 70%);
       z-index: -1;
       filter: blur(10px);
     }
@@ -681,7 +681,7 @@
           type: 'bar',
           data: {
             labels: topByViews.map(l => (l.title || 'Untitled').slice(0, 18)),
-            datasets: [{ label: 'Views', data: topByViews.map(l => Number(l.views) || 0), backgroundColor: '#7c3aed', borderRadius: 8 }]
+            datasets: [{ label: 'Views', data: topByViews.map(l => Number(l.views) || 0), backgroundColor: '#5b4cf0', borderRadius: 8 }]
           },
           options: {
             responsive: true, maintainAspectRatio: false,
@@ -700,7 +700,7 @@
           type: 'doughnut',
           data: {
             labels: Object.keys(categoryCounts),
-            datasets: [{ data: Object.values(categoryCounts), backgroundColor: ['#7c3aed', '#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e'] }]
+            datasets: [{ data: Object.values(categoryCounts), backgroundColor: ['#5b4cf0', '#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e'] }]
           },
           options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
         });

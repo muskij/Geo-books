@@ -12,8 +12,8 @@
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;900&display=swap');
 
     :root {
-      --brand: #7c3aed;
-      --brand-glow: rgba(124, 58, 237, 0.4);
+      --brand: #5b4cf0;
+      --brand-glow: rgba(91, 76, 240, 0.4);
       --bg: #030712;
       --accent: #10b981;
       --error: #ef4444;
@@ -45,7 +45,7 @@
     .grid-bg {
       position: fixed;
       inset: 0;
-      background-image: radial-gradient(circle at 1px 1px, rgba(124, 58, 237, 0.1) 1px, transparent 0);
+      background-image: radial-gradient(circle at 1px 1px, rgba(91, 76, 240, 0.1) 1px, transparent 0);
       background-size: 40px 40px;
       z-index: -2;
     }
@@ -54,7 +54,7 @@
     .neural-glass {
       background: rgba(15, 23, 42, 0.6);
       backdrop-filter: blur(20px) saturate(180%);
-      border: 1px solid rgba(124, 58, 237, 0.2);
+      border: 1px solid rgba(91, 76, 240, 0.2);
       box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
     }
 
@@ -73,7 +73,7 @@
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.1), transparent);
+      background: linear-gradient(90deg, transparent, rgba(91, 76, 240, 0.1), transparent);
       transform: translateX(-100%);
       transition: transform 0.5s ease;
     }
@@ -84,15 +84,15 @@
 
     .option-card.active {
       border-color: var(--brand);
-      background: rgba(124, 58, 237, 0.15);
-      box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
+      background: rgba(91, 76, 240, 0.15);
+      box-shadow: 0 0 20px rgba(91, 76, 240, 0.2);
     }
 
     /* Animation Keyframes */
     @keyframes pulse-border {
-      0% { border-color: rgba(124, 58, 237, 0.2); }
-      50% { border-color: rgba(124, 58, 237, 0.6); }
-      100% { border-color: rgba(124, 58, 237, 0.2); }
+      0% { border-color: rgba(91, 76, 240, 0.2); }
+      50% { border-color: rgba(91, 76, 240, 0.6); }
+      100% { border-color: rgba(91, 76, 240, 0.2); }
     }
 
     .pulse-active { animation: pulse-border 2s infinite; }
@@ -485,7 +485,7 @@
                 if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) this.reset();
             }
             draw() {
-                ctx.fillStyle = 'rgba(124, 58, 237, 0.5)';
+                ctx.fillStyle = 'rgba(91, 76, 240, 0.5)';
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fill();
@@ -502,7 +502,7 @@
             });
             
             // Connect nearby particles
-            ctx.strokeStyle = 'rgba(124, 58, 237, 0.05)';
+            ctx.strokeStyle = 'rgba(91, 76, 240, 0.05)';
             ctx.lineWidth = 0.5;
             for (let i = 0; i < particles.length; i++) {
                 for (let j = i + 1; j < particles.length; j++) {
@@ -759,7 +759,7 @@
             const ring = document.getElementById('resultRing');
             const circumference = 691;
             ring.style.strokeDashoffset = circumference - (score / 100) * circumference;
-            if(score >= 70) confetti({ particleCount: 300, spread: 120, origin: { y: 0.6 }, colors: ['#7c3aed', '#6366f1'] });
+            if(score >= 70) confetti({ particleCount: 300, spread: 120, origin: { y: 0.6 }, colors: ['#5b4cf0', '#6366f1'] });
         }});
     }
 

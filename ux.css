@@ -1,8 +1,8 @@
 /* GEO-books UX layer — CBT, Marketplace, Library, Campus Hub.
    Loaded after styles.css. Uses its own .ux-* classes (not in compiled Tailwind). */
 :root{--ux-card:#fff;--ux-soft:#f8fafc;--ux-line:#e2e8f0;--ux-tx:#0f172a;--ux-mute:#64748b;
-  --ux-brand:#7c3aed;--ux-brand-d:#6d28d9;--ux-brand-soft:#f5f3ff;--ux-green:#059669;--ux-rose:#e11d48;--ux-amber:#d97706}
-html.dark{--ux-card:#0f172a;--ux-soft:#1e293b;--ux-line:#273449;--ux-tx:#f1f5f9;--ux-mute:#94a3b8;--ux-brand-soft:#2e1065}
+  --ux-brand:#5b4cf0;--ux-brand-d:#4a3bd9;--ux-brand-soft:#f1f0ff;--ux-green:#059669;--ux-rose:#e11d48;--ux-amber:#d97706}
+html.dark{--ux-card:#0f172a;--ux-soft:#1e293b;--ux-line:#273449;--ux-tx:#f1f5f9;--ux-mute:#94a3b8;--ux-brand-soft:#1f1a5c}
 [class*="ux-"].hidden{display:none!important}
 
 /* ---------- shared ---------- */
@@ -16,7 +16,7 @@ html.dark{--ux-card:#0f172a;--ux-soft:#1e293b;--ux-line:#273449;--ux-tx:#f1f5f9;
   font-weight:700;font-size:.9rem;border:1px solid transparent;cursor:pointer;transition:transform .15s,background .15s;text-decoration:none}
 .ux-btn:active{transform:scale(.97)}
 .ux-btn svg{width:18px;height:18px}
-.ux-btn-primary{background:var(--ux-brand);color:#fff;box-shadow:0 6px 16px -6px rgba(124,58,237,.6)}
+.ux-btn-primary{background:var(--ux-brand);color:#fff;box-shadow:0 6px 16px -6px rgba(91, 76, 240,.6)}
 .ux-btn-primary:hover{background:var(--ux-brand-d)}
 .ux-btn-ghost{background:var(--ux-card);border-color:var(--ux-line);color:var(--ux-tx)}
 .ux-btn-ghost:hover{background:var(--ux-soft)}
@@ -122,7 +122,7 @@ html.dark .ux-tab.is-active{background:var(--ux-brand);color:#fff}
 .ux-cbt-intro h2{font-size:clamp(1.5rem,4vw,2rem);font-weight:800;letter-spacing:-.02em}
 .ux-cbt-intro p{color:var(--ux-mute);margin-top:4px}
 .ux-hero{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:18px;border-radius:18px;border:0;cursor:pointer;color:#fff;
-  background:linear-gradient(135deg,#7c3aed,#4f46e5);box-shadow:0 14px 30px -14px rgba(79,70,229,.7);transition:transform .15s}
+  background:linear-gradient(135deg,#5b4cf0,#4f46e5);box-shadow:0 14px 30px -14px rgba(79,70,229,.7);transition:transform .15s}
 .ux-hero:active{transform:scale(.99)}
 .ux-hero-ic{width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex:none}
 .ux-hero-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}

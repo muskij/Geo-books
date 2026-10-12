@@ -496,7 +496,7 @@ const confettiCelebration = () => {
       particleCount: 150,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#3b82f6']
+      colors: ['#5b4cf0', '#10b981', '#f59e0b', '#ef4444', '#3b82f6']
     });
   }
 };
@@ -962,7 +962,7 @@ const showPageLoader = (msg = 'Entering Geo-Books...') => {
   loader.className = 'fixed inset-0 z-[1000] bg-slate-950 flex flex-col items-center justify-center animate-in fade-in duration-500';
   loader.innerHTML = `
     <div class="relative scale-75 sm:scale-100">
-      <div class="w-24 h-24 rounded-[2rem] bg-brand-600 animate-pulse shadow-[0_0_50px_rgba(124,58,237,0.5)]"></div>
+      <div class="w-24 h-24 rounded-[2rem] bg-brand-600 animate-pulse shadow-[0_0_50px_rgba(91, 76, 240,0.5)]"></div>
       <div class="absolute inset-0 flex items-center justify-center">
         <i data-lucide="zap" class="w-10 h-10 text-white animate-bounce"></i>
       </div>
@@ -2099,7 +2099,7 @@ async function showSection(id, state) {
       const isActive = btnSection === id;
       btn.classList.toggle('active', isActive);
       if (isActive) {
-        btn.style.color = '#7c3aed';
+        btn.style.color = '#5b4cf0';
       } else {
         btn.style.color = '';
       }
@@ -4373,7 +4373,7 @@ function renderBooks() {
     const type = escapeHTML(toText(b.type || 'Textbook'));
     const author = escapeHTML(toText(b.author || '').trim());
     const desc = escapeHTML(toText(b.description || '').trim());
-    const bg = lvlColor[rawCat] || 'linear-gradient(135deg,#6366f1,#7c3aed)';
+    const bg = lvlColor[rawCat] || 'linear-gradient(135deg,#6366f1,#5b4cf0)';
     return `
       <article class="ux-book">
         <div class="ux-book-cover" style="background:${bg}"><i data-lucide="book-open"></i><span>${category} · ${type}</span></div>
@@ -4991,7 +4991,7 @@ async function finishJambExam(timedOut = false) {
   const result = computeJambResult();
 
   if (window.confetti && result.overallPct >= 50) {
-    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#7c3aed', '#4f46e5', '#06b6d4', '#10b981'] });
+    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#5b4cf0', '#4f46e5', '#06b6d4', '#10b981'] });
   }
 
   toast(timedOut ? "Time's up! Your JAMB simulation was submitted." : 'JAMB simulation submitted!', 'success');
@@ -5116,8 +5116,8 @@ async function drawShareCard(result) {
 
   // Background: brand gradient matching .elite-gradient in the app
   const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#6D28D9');
-  bg.addColorStop(0.35, '#7C3AED');
+  bg.addColorStop(0, '#4a3bd9');
+  bg.addColorStop(0.35, '#5b4cf0');
   bg.addColorStop(0.7, '#4F46E5');
   bg.addColorStop(1, '#4338CA');
   ctx.fillStyle = bg;
@@ -5370,7 +5370,7 @@ function renderCbtQuestion() {
               iconClass = 'bg-rose-500 text-white';
             }
           } else if (isSelected) {
-            btnClass = 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-100 shadow-[0_0_20px_rgba(124,58,237,0.1)] scale-[1.02]';
+            btnClass = 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-100 shadow-[0_0_20px_rgba(91, 76, 240,0.1)] scale-[1.02]';
             iconClass = 'bg-brand-600 text-white';
           }
 
@@ -5750,7 +5750,7 @@ function renderFlashcardZenCard() {
       </div>
       <!-- Back -->
       <div class="absolute inset-0 backface-hidden rotate-y-180">
-        <div class="relative w-full h-full rounded-[32px] bg-brand-600 text-white p-10 sm:p-16 flex flex-col items-center justify-center text-center overflow-hidden shadow-[0_25px_60px_-25px_rgba(124,58,237,0.5)]">
+        <div class="relative w-full h-full rounded-[32px] bg-brand-600 text-white p-10 sm:p-16 flex flex-col items-center justify-center text-center overflow-hidden shadow-[0_25px_60px_-25px_rgba(91, 76, 240,0.5)]">
           <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_60%)]"></div>
           <h3 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-[1.15] max-w-3xl relative z-10">${escapeHTML(card.a)}</h3>
         </div>
@@ -11110,7 +11110,7 @@ window.submitExam = (event) => {
       particleCount: 150,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#7c3aed', '#4f46e5', '#06b6d4', '#10b981']
+      colors: ['#5b4cf0', '#4f46e5', '#06b6d4', '#10b981']
     });
   }
 

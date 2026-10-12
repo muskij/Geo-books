@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%237c3aed'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M18 30.5L32 22l14 8.5-14 8.5-14-8.5zm6 4.6L32 40l8-4.9V42L32 47l-8-5v-6.9z' fill='white'/%3E%3C/svg%3E">
-<meta name="theme-color" content="#7c3aed">
+<meta name="theme-color" content="#5b4cf0">
 <title>Geo-Books • The Ultimate Nigerian Student Hub</title>
 <meta name="google-adsense-account" content="ca-pub-3177374567374612">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -76,7 +76,7 @@
     --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.04);
     --shadow-2: 0 8px 24px -8px rgba(15, 23, 42, 0.08);
     --shadow-3: 0 24px 48px -12px rgba(15, 23, 42, 0.12);
-    --shadow-brand: 0 20px 40px -12px rgba(124, 58, 237, 0.28);
+    --shadow-brand: 0 20px 40px -12px rgba(91, 76, 240, 0.28);
   }
 
   /* Tabular numerals for stats/scores so digits don't jitter horizontally
@@ -109,7 +109,7 @@
   select:focus-visible,
   textarea:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #7C3AED;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #5b4cf0;
     border-radius: 0.5rem;
   }
   .dark a:focus-visible,
@@ -118,7 +118,7 @@
   .dark input:focus-visible,
   .dark select:focus-visible,
   .dark textarea:focus-visible {
-    box-shadow: 0 0 0 2px #0F172A, 0 0 0 4px #A78BFA;
+    box-shadow: 0 0 0 2px #0F172A, 0 0 0 4px #8f84fa;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -162,7 +162,7 @@
   }
 
   .shadow-elite {
-    box-shadow: 0 0 50px -12px rgba(124, 58, 237, 0.25);
+    box-shadow: 0 0 50px -12px rgba(91, 76, 240, 0.25);
   }
   
   .elite-card {
@@ -179,14 +179,14 @@
   .elite-card:hover {
     transform: translateY(-8px);
     box-shadow: var(--shadow-3);
-    border-color: #DDD6FE;
+    border-color: #cfcbff;
   }
 
   .premium-card {
     @apply bg-white dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200/50 dark:border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[2.5rem] transition-all duration-700;
   }
   .premium-card:hover {
-    @apply shadow-[0_40px_80px_rgba(124,58,237,0.15)] -translate-y-2 border-brand-500/30;
+    @apply shadow-[0_40px_80px_rgba(91, 76, 240,0.15)] -translate-y-2 border-brand-500/30;
     transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) translateY(-8px);
   }
   
@@ -210,7 +210,7 @@
   }
   
   .neural-glow {
-    box-shadow: 0 0 40px -10px rgba(124, 58, 237, 0.5);
+    box-shadow: 0 0 40px -10px rgba(91, 76, 240, 0.5);
   }
   
   /* Haptic animation */
@@ -222,17 +222,17 @@
   }
 
   .elite-gradient {
-    background: linear-gradient(135deg, #6D28D9 0%, #7C3AED 35%, #4F46E5 70%, #4338CA 100%);
+    background: linear-gradient(135deg, #4a3bd9 0%, #5b4cf0 35%, #4F46E5 70%, #4338CA 100%);
   }
   .elite-gradient-warm {
-    background: linear-gradient(135deg, #7C3AED 0%, #C026D3 55%, #F97316 100%);
+    background: linear-gradient(135deg, #5b4cf0 0%, #C026D3 55%, #F97316 100%);
   }
   .elite-text {
     @apply text-transparent bg-clip-text elite-gradient;
   }
   
   .elite-gradient-text {
-    background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 50%, #06B6D4 100%);
+    background: linear-gradient(135deg, #5b4cf0 0%, #4F46E5 50%, #06B6D4 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
@@ -257,9 +257,9 @@
   .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; transition: background 0.2s; }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #C4B5FD; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #b0a8ff; }
   .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6D28D9; }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4a3bd9; }
 
   @keyframes float {
     0%, 100% { transform: translateY(0); }
@@ -278,7 +278,7 @@
   }
 
   .premium-gradient {
-    background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
+    background: linear-gradient(135deg, #5b4cf0 0%, #4F46E5 100%);
   }
 
   /* Neo-blur effects */
@@ -353,8 +353,8 @@
 
   /* Badge styling */
   .badge-premium {
-    background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    background: linear-gradient(135deg, #5b4cf0 0%, #4F46E5 100%);
+    box-shadow: 0 4px 12px rgba(91, 76, 240, 0.3);
   }
   
   /* Sidebar transition refinement */
@@ -412,8 +412,8 @@
 
   /* Improved Progress Pulse */
   @keyframes progress-pulse {
-    0%, 100% { box-shadow: 0 0 15px rgba(124, 58, 237, 0.4); }
-    50% { box-shadow: 0 0 30px rgba(124, 58, 237, 0.8); }
+    0%, 100% { box-shadow: 0 0 15px rgba(91, 76, 240, 0.4); }
+    50% { box-shadow: 0 0 30px rgba(91, 76, 240, 0.8); }
   }
   .progress-pulse-active {
     animation: progress-pulse 2s infinite;
@@ -510,7 +510,7 @@
     @apply border-brand-500/30 -translate-y-2 shadow-2xl;
   }
   .cbt-option.selected {
-    @apply border-brand-500 bg-brand-50/50 dark:bg-brand-900/10 shadow-[0_20px_40px_rgba(124,58,237,0.1)];
+    @apply border-brand-500 bg-brand-50/50 dark:bg-brand-900/10 shadow-[0_20px_40px_rgba(91, 76, 240,0.1)];
   }
   .cbt-option.correct {
     @apply border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/10;
@@ -1358,7 +1358,7 @@
             <h3 class="ux-sub">More tools</h3>
             <div id="cbtTopCards" class="ux-rows">
               <a href="AIScanVault.htm" class="ux-rowlink">
-                <span class="ux-tile-ic" style="background:#ede9fe;color:#7c3aed"><i data-lucide="scan-face"></i></span>
+                <span class="ux-tile-ic" style="background:#e6e4ff;color:#5b4cf0"><i data-lucide="scan-face"></i></span>
                 <div><b>Scan notes into a quiz</b><small>Take a photo of your notes or textbook page and get practice questions.</small></div>
                 <i data-lucide="chevron-right"></i>
               </a>
@@ -1666,7 +1666,7 @@
                   <span id="cbtProgressMeta">Question 0 / 20</span>
                 </div>
                 <div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner p-0.5">
-                  <div id="cbtProgressBar" class="h-full bg-gradient-to-r from-brand-600 via-indigo-600 to-brand-400 rounded-full transition-all duration-700 shadow-[0_0_15px_rgba(124,58,237,0.4)]" style="width: 0%"></div>
+                  <div id="cbtProgressBar" class="h-full bg-gradient-to-r from-brand-600 via-indigo-600 to-brand-400 rounded-full transition-all duration-700 shadow-[0_0_15px_rgba(91, 76, 240,0.4)]" style="width: 0%"></div>
                 </div>
               </div>
 
@@ -2036,7 +2036,7 @@
                   <circle id="meterCircle" cx="50" cy="50" r="45" fill="none" stroke="url(#gradient)" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" stroke-linecap="round" class="transition-all duration-1000 ease-out"/>
                   <defs>
                     <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stop-color="#8b5cf6" />
+                      <stop offset="0%" stop-color="#7468f5" />
                       <stop offset="100%" stop-color="#10b981" />
                     </linearGradient>
                   </defs>
@@ -2478,7 +2478,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10 w-full max-w-5xl">
             <!-- Card A: Your Deck -->
             <div id="fcVaultCard" onclick="window.transitionToFlashcardView('vault')" class="fc-action-card group relative cursor-pointer">
-              <div class="relative rounded-[36px] bg-white dark:bg-slate-900 border border-stone-100 dark:border-slate-800 shadow-[0_20px_50px_-25px_rgba(28,25,23,0.25)] p-10 sm:p-12 flex flex-col items-center text-center transition-all duration-500 overflow-hidden group-hover:-translate-y-2 group-hover:shadow-[0_30px_70px_-25px_rgba(124,58,237,0.3)]">
+              <div class="relative rounded-[36px] bg-white dark:bg-slate-900 border border-stone-100 dark:border-slate-800 shadow-[0_20px_50px_-25px_rgba(28,25,23,0.25)] p-10 sm:p-12 flex flex-col items-center text-center transition-all duration-500 overflow-hidden group-hover:-translate-y-2 group-hover:shadow-[0_30px_70px_-25px_rgba(91, 76, 240,0.3)]">
                 <div class="absolute top-14 sm:top-16 left-0 right-0 h-px bg-rose-200 dark:bg-rose-500/40"></div>
                 <div class="absolute top-0 bottom-0 left-9 sm:left-10 w-px bg-sky-100 dark:bg-sky-400/20"></div>
                 <div class="w-20 h-20 rounded-[22px] bg-brand-600 text-white flex items-center justify-center shadow-lg shadow-brand-500/20 mb-8 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3">
@@ -2596,7 +2596,7 @@
                   </div>
                   <!-- Back -->
                   <div class="absolute inset-0 backface-hidden rotate-y-180">
-                    <div class="relative w-full h-full rounded-[32px] bg-brand-600 text-white p-10 sm:p-16 flex flex-col items-center justify-center text-center overflow-hidden shadow-[0_25px_60px_-25px_rgba(124,58,237,0.5)]">
+                    <div class="relative w-full h-full rounded-[32px] bg-brand-600 text-white p-10 sm:p-16 flex flex-col items-center justify-center text-center overflow-hidden shadow-[0_25px_60px_-25px_rgba(91, 76, 240,0.5)]">
                       <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_60%)]"></div>
                       <span class="absolute top-5 right-6 sm:top-8 sm:right-10 px-4 sm:px-5 py-2 rounded-full bg-white/15 text-white text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] border border-white/20">Answer</span>
                       <h3 id="cardBack" class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-[1.15] max-w-3xl relative z-10">Answer will appear here</h3>
@@ -3773,7 +3773,7 @@
       </div>
     </div>
     
-    <button id="aiToggleBtn" onclick="toggleAiAssistant(true)" class="w-16 h-16 rounded-[24px] bg-brand-600 text-white flex items-center justify-center shadow-[0_20px_50px_rgba(124,58,237,0.4)] hover:scale-110 active:scale-95 transition-all pointer-events-auto group relative">
+    <button id="aiToggleBtn" onclick="toggleAiAssistant(true)" class="w-16 h-16 rounded-[24px] bg-brand-600 text-white flex items-center justify-center shadow-[0_20px_50px_rgba(91, 76, 240,0.4)] hover:scale-110 active:scale-95 transition-all pointer-events-auto group relative">
       <div class="absolute -inset-2 bg-brand-500 blur-2xl opacity-40 group-hover:opacity-60 transition-opacity"></div>
       <i data-lucide="sparkles" class="w-8 h-8 relative z-10"></i>
     </button>
@@ -4575,7 +4575,7 @@
 <!-- Zen Study Overlay -->
 <div id="zenOverlay" class="fixed inset-0 z-[300] hidden bg-slate-950 flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
   <div class="absolute inset-0 opacity-20 pointer-events-none">
-    <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(124,58,237,0.1),transparent_70%)]"></div>
+    <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(91, 76, 240,0.1),transparent_70%)]"></div>
   </div>
   
   <div class="max-w-4xl w-full space-y-12 relative z-10">
@@ -4791,7 +4791,7 @@
         </div>
 
         <!-- University Pass — 70 -->
-        <div style="background-color:#4c1d95;color:#ffffff" class="p-8 rounded-[2.5rem] bg-violet-900 text-white shadow-2xl shadow-violet-900/30 flex flex-col justify-between relative">
+        <div style="background-color:#342b8a;color:#ffffff" class="p-8 rounded-[2.5rem] bg-violet-900 text-white shadow-2xl shadow-violet-900/30 flex flex-col justify-between relative">
           <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white text-violet-900 text-[8px] font-black uppercase tracking-widest shadow-xl">Heavy Course Load</div>
           <div>
             <h4 class="text-xl font-black mb-2">University Pass — 70</h4>
@@ -5028,7 +5028,7 @@
         <i data-lucide="zap" class="w-6 h-6"></i>
         <span class="text-[10px] font-black uppercase tracking-widest">CBT</span>
       </button>
-      <button onclick="window.toggleAIAssistant(true)" class="bottom-nav-item flex flex-col items-center justify-center gap-1 flex-1 py-3 transition-all duration-300">
+      <button onclick="window.toggleAiAssistant(true)" class="bottom-nav-item flex flex-col items-center justify-center gap-1 flex-1 py-3 transition-all duration-300">
         <div class="w-14 h-14 rounded-full elite-gradient flex items-center justify-center shadow-2xl">
           <i data-lucide="sparkles" class="w-7 h-7 text-white"></i>
         </div>
@@ -5055,7 +5055,7 @@
     }
     
     .bottom-nav-item.active {
-      color: #7c3aed;
+      color: #5b4cf0;
     }
     
     .bottom-nav-item.active i {

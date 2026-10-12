@@ -85,17 +85,17 @@
 
 .zen-glow {
   @apply fixed inset-0 pointer-events-none z-[-1] opacity-20;
-  background: radial-gradient(circle at center, #7c3aed 0%, transparent 70%);
+  background: radial-gradient(circle at center, #5b4cf0 0%, transparent 70%);
   animation: zen-pulse 10s infinite ease-in-out;
 }
 
 /* Premium Utilities */
 .text-glow {
-  text-shadow: 0 0 15px rgba(124, 58, 237, 0.5);
+  text-shadow: 0 0 15px rgba(91, 76, 240, 0.5);
 }
 
 .shadow-glow {
-  box-shadow: 0 0 30px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 0 30px rgba(91, 76, 240, 0.4);
 }
 
 .perspective-1000 {
