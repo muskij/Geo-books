@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="ux.css">
 <script type="module" src="app.js"></script>
 <script type="module" src="university.js"></script>
+<script type="module" src="lecture-notes-ui.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -739,6 +740,10 @@
                 <i data-lucide="presentation" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Lectures</span>
                 <i id="universityLecturesLockBadge" data-lucide="lock" class="w-3.5 h-3.5 text-slate-300 hidden shrink-0"></i>
               </button>
+              <button data-target="lectureNotes" aria-label="Lecture to Notes" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
+                <i data-lucide="mic" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Lecture to Notes</span>
+                <span class="text-[8px] font-black uppercase text-indigo-500">New</span>
+              </button>
               <button data-target="universityCgpa" aria-label="CGPA Calculator" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
                 <i data-lucide="calculator" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">CGPA Calculator</span>
                 <span class="text-[8px] font-black uppercase text-emerald-500">Free</span>
@@ -870,6 +875,7 @@
       <!-- University Lectures Section (content filled by university.js) -->
       <section id="universityLectures" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
       <!-- CGPA Calculator — free, ungated, no Firestore reads at all -->
+      <section id="lectureNotes" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
       <section id="universityCgpa" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
 
       <!-- Japa Consultant Section -->

@@ -18,6 +18,7 @@ import { fileURLToPath } from 'url';
 import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { mountLectureNotes } from './lecture-notes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -459,6 +460,20 @@ async function requireAdmin(req, res, next) {
     console.error('Admin check failed:', e);
     return res.status(500).json({ error: 'Admin check failed' });
   }
+}
+
+
+// Same admin rules as requireAdmin, but as a plain function for modules that need to
+// exempt admins from quotas (e.g. lecture-notes.js).
+async function isAdminUser(user) {
+  try {
+    if (!user) return false;
+    if (user.admin === true) return true;
+    if (user.email && HARDCODED_ADMIN_EMAILS.includes(String(user.email).toLowerCase())) return true;
+    if ((await db.collection('admins').doc(user.uid).get()).exists) return true;
+    const u = await db.collection('users').doc(user.uid).get();
+    return u.exists && (u.data().role || '').toLowerCase() === 'admin';
+  } catch (e) { return false; }
 }
 
 // Configure Cloudflare R2
@@ -1902,6 +1917,8 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
+
+if (db) mountLectureNotes({ app, db, FieldValue, requireAuth, isAdminUser });
 
 const server = app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
