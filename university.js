@@ -178,7 +178,7 @@ function hasUniversityAccess() {
 
 function renderUniversityGate() {
   renderCgpaShell(); // free for everyone — render unconditionally, before any access check
-  const lockBadges = [$('#hostelFinderLockBadge'), $('#universityLecturesLockBadge'), $('#universityTimetableLockBadge'), $('#universityAnnouncementsLockBadge')];
+  const lockBadges = [$('#hostelFinderLockBadge'), $('#universityLecturesLockBadge')];
   if (hasUniversityAccess()) {
     lockBadges.forEach((el) => el && el.classList.add('hidden'));
     initUniversitySectionContent();
@@ -1359,10 +1359,6 @@ function initUniversitySectionContent() {
   watchCourseDesigns();
   watchMyBookmarks();
   fetchLectureQuota();
-  renderTimetableShell();
-  watchTimetable();
-  renderAnnouncementsShell();
-  watchAnnouncements();
 }
 
 // ============ ASSESSMENTS (AI + manual) ============

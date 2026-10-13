@@ -18,7 +18,6 @@
 <link rel="stylesheet" href="ux.css">
 <script type="module" src="app.js"></script>
 <script type="module" src="university.js"></script>
-<script src="attendance.js" defer></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -740,17 +739,6 @@
                 <i data-lucide="presentation" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Lectures</span>
                 <i id="universityLecturesLockBadge" data-lucide="lock" class="w-3.5 h-3.5 text-slate-300 hidden shrink-0"></i>
               </button>
-              <button data-target="universityAttendance" aria-label="Attendance" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
-                <i data-lucide="calendar-check" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Attendance</span>
-              </button>
-              <button data-target="universityTimetable" aria-label="Timetable & Exams" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
-                <i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Timetable & Exams</span>
-                <i id="universityTimetableLockBadge" data-lucide="lock" class="w-3.5 h-3.5 text-slate-300 hidden shrink-0"></i>
-              </button>
-              <button data-target="universityAnnouncements" aria-label="Announcements" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
-                <i data-lucide="megaphone" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Announcements</span>
-                <i id="universityAnnouncementsLockBadge" data-lucide="lock" class="w-3.5 h-3.5 text-slate-300 hidden shrink-0"></i>
-              </button>
               <button data-target="universityCgpa" aria-label="CGPA Calculator" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
                 <i data-lucide="calculator" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">CGPA Calculator</span>
                 <span class="text-[8px] font-black uppercase text-emerald-500">Free</span>
@@ -881,12 +869,6 @@
 
       <!-- University Lectures Section (content filled by university.js) -->
       <section id="universityLectures" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
-      <!-- Attendance tracker (content filled by attendance.js; replaced Assessments) -->
-      <section id="universityAttendance" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
-      <!-- Timetable & Exam Schedule (content filled by university.js) -->
-      <section id="universityTimetable" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
-      <!-- Announcements (content filled by university.js) -->
-      <section id="universityAnnouncements" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
       <!-- CGPA Calculator — free, ungated, no Firestore reads at all -->
       <section id="universityCgpa" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
 
