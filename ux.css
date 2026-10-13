@@ -179,3 +179,92 @@ html.dark .ux-tab.is-active{background:var(--ux-brand);color:#fff}
 /* category is driven by the chips; keep the select in the DOM for the filter logic */
 #filterCategory{display:none!important}
 .ux-panel{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+/* ── JAMB subject picker: clear selected state ── */
+.jb-card{position:relative;text-align:left;background:#fff;border:2px solid #e2e8f0;border-radius:26px;padding:20px;transition:transform .18s,border-color .18s,box-shadow .18s,opacity .18s;cursor:pointer;min-width:0}
+.jb-card:active{transform:scale(.97)}
+.jb-card h3{font-size:clamp(14px,4vw,18px)!important;overflow-wrap:break-word;word-break:normal}
+.jb-card{padding:16px}
+.jb-sub{font-size:12px;font-weight:700;color:#94a3b8}
+.jb-tick{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;border:2px solid #cbd5e1;display:flex;align-items:center;justify-content:center;color:#fff;transition:all .18s}
+.jb-card.is-on{border-color:#5b4cf0;background:#f1f0ff;box-shadow:0 8px 22px -10px rgba(91,76,240,.55)}
+.jb-card.is-on .jb-tick{background:#5b4cf0;border-color:#5b4cf0;animation:jbPop .22s ease-out}
+.jb-card.is-on .jb-sub{color:#4a3bd9}
+.jb-card.is-dim{opacity:.45}
+@keyframes jbPop{0%{transform:scale(.4)}70%{transform:scale(1.18)}100%{transform:scale(1)}}
+.jb-count{display:block;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#5b4cf0;margin-bottom:6px}
+.jb-chips{display:flex;flex-wrap:wrap;gap:6px}
+.jb-chip{display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;background:#5b4cf0;color:#fff;font-size:12px;font-weight:800}
+.jb-chip-empty{background:transparent;color:#94a3b8;border:1.5px dashed #cbd5e1}
+html.dark .jb-card{background:#0f172a;border-color:#1e293b}
+html.dark .jb-card.is-on{background:#1b1a45;border-color:#7468f5}
+html.dark .jb-chip-empty{border-color:#334155}
+@media (prefers-reduced-motion:reduce){.jb-card,.jb-tick{transition:none;animation:none!important}}
+
+/* ── Campus Hub v2 ── */
+.ux-campus{max-width:720px;margin:0 auto}
+.ch-post{display:flex;gap:12px;padding:16px;margin:0 0 12px;background:var(--ux-card,#fff);border:1px solid var(--ux-line,#e2e8f0);border-radius:22px;animation:chIn .28s ease-out both}
+@keyframes chIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.ch-avatar{flex:none;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;background:linear-gradient(135deg,#7468f5,#4a3bd9)}
+.ch-body{flex:1;min-width:0}
+.ch-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ch-who{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.ch-name{font-size:15px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.ch-role{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#4a3bd9;background:#f1f0ff;border-radius:999px;padding:3px 9px}
+.ch-more{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#94a3b8;background:transparent;border:0}
+.ch-more svg,.ch-act svg{width:18px;height:18px}
+.ch-meta{font-size:12px;font-weight:600;color:#94a3b8;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-text{font-size:15.5px;line-height:1.55;margin-top:10px;white-space:pre-wrap;overflow-wrap:anywhere}
+.ch-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ch-tag{font-size:12px;font-weight:800;color:#4a3bd9;background:#f1f0ff;border:0;border-radius:999px;padding:6px 12px}
+.ch-img{margin-top:12px;border-radius:18px;overflow:hidden;border:1px solid var(--ux-line,#e2e8f0);background:#f8fafc}
+.ch-img img{display:block;width:100%;max-height:420px;object-fit:cover;cursor:zoom-in}
+.ch-actions{display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-left:-8px;max-width:340px}
+.ch-act{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 10px;border-radius:999px;border:0;background:transparent;color:#64748b;font-size:13px;font-weight:800;transition:background .15s,color .15s,transform .12s}
+.ch-act:active{transform:scale(.9)}
+.ch-act:hover{background:#f1f5f9}
+.ch-act.is-on.ch-red{color:#e11d48}.ch-act.is-on.ch-red svg{fill:currentColor}
+.ch-act.is-on.ch-green{color:#059669}
+.ch-act.is-on.ch-amber{color:#d97706}.ch-act.is-on.ch-amber svg{fill:currentColor}
+.ch-pick{flex:none;border-radius:999px;border:1.5px solid var(--ux-line,#e2e8f0);background:var(--ux-card,#fff);color:#475569;font-size:13px;font-weight:800;padding:7px 14px;white-space:nowrap}
+.ch-pick.is-on{background:#5b4cf0;border-color:#5b4cf0;color:#fff}
+.ux-chips:has(.ch-pick){margin-top:8px}
+.ch-empty{padding:34px 18px;text-align:center;background:var(--ux-card,#fff);border:1px dashed #cbd5e1;border-radius:22px}
+.ch-empty-ico{width:56px;height:56px;margin:0 auto 12px;border-radius:18px;background:#f1f0ff;color:#5b4cf0;display:flex;align-items:center;justify-content:center}
+.ch-empty-ico svg{width:26px;height:26px}
+.ch-empty h3{font-size:18px;font-weight:900}
+.ch-empty p{font-size:13px;font-weight:600;color:#94a3b8;margin:4px 0 16px}
+.ch-starters{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ch-starter{display:flex;align-items:center;gap:8px;text-align:left;padding:12px;border-radius:16px;border:1.5px solid var(--ux-line,#e2e8f0);background:var(--ux-card,#fff);font-size:13px;font-weight:800;color:#334155;min-width:0}
+.ch-starter svg{width:18px;height:18px;color:#5b4cf0;flex:none}
+.ux-feed{background:transparent!important;border:0!important;border-radius:0!important;overflow:visible!important}
+.ux-composer{border-radius:22px}
+.ux-tabs .ux-tab{min-height:40px}
+html.dark .ch-post,html.dark .ch-empty,html.dark .ch-starter,html.dark .ch-pick{background:#0f172a;border-color:#1e293b;color:#e2e8f0}
+html.dark .ch-role,html.dark .ch-tag{background:#1b1a45;color:#b0a8ff}
+html.dark .ch-act:hover{background:#1e293b}
+@media (prefers-reduced-motion:reduce){.ch-post{animation:none}}
+
+/* ── Community (chats) polish ── */
+.cm-empty{padding:34px 22px;text-align:center}
+.cm-empty-ico{width:60px;height:60px;margin:0 auto 14px;border-radius:20px;background:#f1f0ff;color:#5b4cf0;display:flex;align-items:center;justify-content:center}
+.cm-empty-ico svg{width:28px;height:28px}
+.cm-empty h3{font-size:18px;font-weight:900}
+.cm-empty p{font-size:13px;font-weight:600;color:#94a3b8;margin:6px 0 16px}
+.cm-empty-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.cm-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:14px;border:1.5px solid #e2e8f0;background:#fff;font-weight:800;font-size:14px;color:#334155}
+.cm-btn svg{width:18px;height:18px}
+.cm-btn-main{background:#5b4cf0;border-color:#5b4cf0;color:#fff}
+@media (max-width:640px){
+  #community #chatFeed > .p-8{padding:16px 16px 6px!important}
+  #community #chatFeed h2{font-size:28px!important}
+  #community #chatFeed .mb-8{margin-bottom:14px!important}
+  #community #chatSearchInput{font-size:16px}
+  #community #snapFeedList > div{padding:12px 16px!important;gap:12px!important}
+  #community #chatFeed .m-6{margin:12px 16px calc(96px + env(safe-area-inset-bottom))!important}
+}
+html.dark .cm-btn{background:#0f172a;border-color:#1e293b;color:#e2e8f0}
+
+/* search icon alignment (utility classes like -translate-y-1/2 may be missing from compiled CSS) */
+.ux-search svg{top:50%!important;transform:translateY(-50%)!important}
+#community .relative > svg.absolute{top:50%;transform:translateY(-50%)}

@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="ux.css">
 <script type="module" src="app.js"></script>
 <script type="module" src="university.js"></script>
+<script src="attendance.js" defer></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -861,9 +862,8 @@ header.sticky .text-xl{ font-size:17px !important; line-height:1.2 !important; }
                 <i data-lucide="presentation" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Lectures</span>
                 <i id="universityLecturesLockBadge" data-lucide="lock" class="w-3.5 h-3.5 text-slate-300 hidden shrink-0"></i>
               </button>
-              <button data-target="universityAssessments" aria-label="Assessments" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
-                <i data-lucide="clipboard-check" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Assessments</span>
-                <i id="universityAssessmentsLockBadge" data-lucide="lock" class="w-3.5 h-3.5 text-slate-300 hidden shrink-0"></i>
+              <button data-target="universityAttendance" aria-label="Attendance" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
+                <i data-lucide="calendar-check" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Attendance</span>
               </button>
               <button data-target="universityTimetable" aria-label="Timetable & Exams" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
                 <i data-lucide="calendar-days" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Timetable & Exams</span>
@@ -1001,8 +1001,8 @@ header.sticky .text-xl{ font-size:17px !important; line-height:1.2 !important; }
       <!-- University Lectures Section (content filled by university.js) -->
       <section id="universityLectures" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
 
-      <!-- University Assessments Section (content filled by university.js) -->
-      <section id="universityAssessments" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
+      <!-- Attendance tracker (content filled by attendance.js; replaced Assessments) -->
+      <section id="universityAttendance" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
       <!-- Timetable & Exam Schedule (content filled by university.js) -->
       <section id="universityTimetable" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
       <!-- Announcements (content filled by university.js) -->
@@ -1216,7 +1216,7 @@ header.sticky .text-xl{ font-size:17px !important; line-height:1.2 !important; }
             <button type="button" class="pb-tile" onclick="window.showSection('universityTimetable')"><div class="pb-stat-ic o"><i data-lucide="calendar"></i></div><span>Timetable</span></button>
             <button type="button" class="pb-tile" onclick="window.showSection('universityCgpa')"><div class="pb-stat-ic g"><i data-lucide="calculator"></i></div><span>CGPA</span></button>
             <button type="button" class="pb-tile" onclick="window.showSection('hostelFinder')"><div class="pb-stat-ic c"><i data-lucide="home"></i></div><span>Hostels</span></button>
-            <button type="button" class="pb-tile" onclick="window.showSection('universityAssessments')"><div class="pb-stat-ic r"><i data-lucide="clipboard-check"></i></div><span>Assessments</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('universityAttendance')"><div class="pb-stat-ic r"><i data-lucide="calendar-check"></i></div><span>Attendance</span></button>
             <button type="button" class="pb-tile" onclick="window.showSection('universityAnnouncements')"><div class="pb-stat-ic i"><i data-lucide="megaphone"></i></div><span>Updates</span></button>
           </div>
         </div>
@@ -1947,7 +1947,7 @@ header.sticky .text-xl{ font-size:17px !important; line-height:1.2 !important; }
               </div>
               <div class="ux-search">
                 <i data-lucide="search"></i>
-                <input id="campusSearchInput" type="search" placeholder="Search posts, #tags or @people" autocomplete="off">
+                <input id="campusSearchInput" type="search" placeholder="Search posts, #tags, people" autocomplete="off">
               </div>
               <div id="campusHeaderTabsRow" class="ux-tabs">
                 <button id="campusTabForYou" onclick="window.setCampusTab('forYou')" class="ux-tab is-active">For you</button>

@@ -178,7 +178,7 @@ function hasUniversityAccess() {
 
 function renderUniversityGate() {
   renderCgpaShell(); // free for everyone — render unconditionally, before any access check
-  const lockBadges = [$('#hostelFinderLockBadge'), $('#universityLecturesLockBadge'), $('#universityAssessmentsLockBadge'), $('#universityTimetableLockBadge'), $('#universityAnnouncementsLockBadge')];
+  const lockBadges = [$('#hostelFinderLockBadge'), $('#universityLecturesLockBadge'), $('#universityTimetableLockBadge'), $('#universityAnnouncementsLockBadge')];
   if (hasUniversityAccess()) {
     lockBadges.forEach((el) => el && el.classList.add('hidden'));
     initUniversitySectionContent();
@@ -1359,8 +1359,6 @@ function initUniversitySectionContent() {
   watchCourseDesigns();
   watchMyBookmarks();
   fetchLectureQuota();
-  renderAssessmentsShell();
-  watchAssessments();
   renderTimetableShell();
   watchTimetable();
   renderAnnouncementsShell();

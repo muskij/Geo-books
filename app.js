@@ -4641,21 +4641,25 @@ function getSubjectColorClasses(colorName) {
 function renderJambSubjectGrid() {
   const grid = S('jambSubjectGrid');
   if (!grid) return;
-  
+  const sel = jambState.selectedSubjects;
+  const full = sel.length >= 4;
   grid.innerHTML = jambSubjectsList.map(subj => {
-    const isSelected = jambState.selectedSubjects.includes(subj.name);
+    const isSelected = sel.includes(subj.name);
+    const dim = full && !isSelected;
     const classes = getSubjectColorClasses(subj.color);
+    const order = isSelected ? sel.indexOf(subj.name) + 1 : 0;
     return `
-      <button onclick="window.toggleJambSubject('${subj.name}')" class="premium-card p-6 text-left group hover:border-brand-500/50 transition-all ${isSelected ? 'ring-2 ring-brand-500' : ''}">
-        <div class="w-12 h-12 rounded-2xl ${classes.bg} ${classes.text} flex items-center justify-center mb-4 group-hover:scale-110 transition-all">
+      <button type="button" onclick="window.toggleJambSubject('${subj.name}')" aria-pressed="${isSelected}" class="jb-card ${isSelected ? 'is-on' : ''} ${dim ? 'is-dim' : ''}">
+        <span class="jb-tick" aria-hidden="true">${isSelected ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : ''}</span>
+        <div class="w-12 h-12 rounded-2xl ${classes.bg} ${classes.text} flex items-center justify-center mb-4">
           <i data-lucide="${subj.icon}" class="w-6 h-6"></i>
         </div>
         <h3 class="text-lg font-black mb-1">${subj.name}</h3>
-        <p class="text-sm text-slate-500">${subj.mandatory ? 'Mandatory' : 'Optional'}</p>
+        <p class="jb-sub">${subj.mandatory ? 'Required' : (isSelected ? 'Selected · #' + order : (dim ? 'Limit reached' : 'Tap to add'))}</p>
       </button>
     `;
   }).join('');
-  
+
   updateJambSummary();
   if (window.lucide) window.lucide.createIcons();
 }
@@ -4685,14 +4689,17 @@ window.toggleJambSubject = (name) => {
 function updateJambSummary() {
   const summaryEl = S('jambSelectedSubjects');
   const startBtn = S('startJambExam');
-  
+  const sel = jambState.selectedSubjects;
+
   if (summaryEl) {
-    summaryEl.textContent = jambState.selectedSubjects.join(' • ');
+    const slots = [0, 1, 2, 3].map(i => sel[i]
+      ? `<span class="jb-chip">${escapeHTML(sel[i])}</span>`
+      : `<span class="jb-chip jb-chip-empty">+ pick</span>`).join('');
+    summaryEl.innerHTML = `<span class="jb-count">${sel.length}/4 selected</span><span class="jb-chips">${slots}</span>`;
   }
-  
+
   if (startBtn) {
-    const canStart = jambState.selectedSubjects.length === 4;
-    startBtn.disabled = !canStart;
+    startBtn.disabled = sel.length !== 4;
   }
 }
 
@@ -7075,7 +7082,21 @@ function renderSnapFeed(filterQuery = '') {
   });
 
   if (filteredChats.length === 0) {
-    list.innerHTML = `<div class="p-8 text-center text-slate-400 font-bold">No results found</div>`;
+    if (filterQuery) {
+      list.innerHTML = `<div class="cm-empty"><h3>No chats match</h3><p>Try a different name.</p></div>`;
+    } else {
+      list.innerHTML = `
+        <div class="cm-empty">
+          <div class="cm-empty-ico"><i data-lucide="messages-square"></i></div>
+          <h3>No chats yet</h3>
+          <p>Message a coursemate, or start a study group for your course.</p>
+          <div class="cm-empty-actions">
+            <button type="button" class="cm-btn cm-btn-main" onclick="window.toggleAddPeople(true)"><i data-lucide="user-plus"></i>Find people</button>
+            <button type="button" class="cm-btn" onclick="window.toggleCreateGroup(true)"><i data-lucide="users"></i>New group</button>
+          </div>
+        </div>`;
+      if (window.lucide) window.lucide.createIcons();
+    }
     return;
   }
   
@@ -8636,6 +8657,17 @@ function updateCampusComposerUI() {
   }
 }
 
+window.campusStarter = (text, tag) => {
+  const input = S('campusPostInput');
+  if (!input) return;
+  input.value = text;
+  app.state.campusSelectedTags = tag ? [tag] : [];
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  renderCampusTagChips();
+  input.focus();
+  try { input.setSelectionRange(input.value.length, input.value.length); } catch (_) {}
+};
+
 function renderCampusTagChips() {
   const wrap = S('campusTagChips');
   if (!wrap) return;
@@ -8649,11 +8681,7 @@ function renderCampusTagChips() {
   const selected = new Set(app.state.campusSelectedTags || []);
   wrap.innerHTML = presets.map(p => {
     const on = selected.has(p.id);
-    return `
-      <button onclick="window.toggleCampusPostTag('${p.id}')" class="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all active:scale-95 ${on ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-brand-300'}">
-        ${escapeHTML(p.label)}
-      </button>
-    `;
+    return `<button type="button" onclick="window.toggleCampusPostTag('${p.id}')" class="ch-pick${on ? ' is-on' : ''}" aria-pressed="${on}">${escapeHTML(p.label)}</button>`;
   }).join('');
   if (window.lucide) window.lucide.createIcons();
 }
@@ -9068,13 +9096,20 @@ function renderCampusPulse() {
   }
 
   if (!app.state.campusPosts || app.state.campusPosts.length === 0) {
+    const starters = [
+      ['help-circle', 'Ask a question', 'Does anyone have notes for…', 'Help'],
+      ['book-open', 'Find a study partner', 'Looking for a study partner for…', 'StudyPartner'],
+      ['calendar', 'Share an event', 'Happening on campus: ', 'Event'],
+      ['shopping-bag', 'Sell something', 'For sale: ', 'ForSale']
+    ];
     container.innerHTML = `
-      <div class="p-10 text-center">
-        <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4 text-slate-300">
-          <i data-lucide="sparkles" class="w-7 h-7"></i>
+      <div class="ch-empty">
+        <div class="ch-empty-ico"><i data-lucide="message-square-plus"></i></div>
+        <h3>Your campus feed is quiet</h3>
+        <p>Start the first conversation. Pick a starter and edit it.</p>
+        <div class="ch-starters">
+          ${starters.map(([ic, label, text, tag]) => `<button type="button" class="ch-starter" onclick="window.campusStarter(${JSON.stringify(text).replace(/"/g, '&quot;')}, '${tag}')"><i data-lucide="${ic}"></i>${label}</button>`).join('')}
         </div>
-        <p class="text-sm font-black text-slate-700 dark:text-slate-200">No posts yet</p>
-        <p class="text-xs font-bold text-slate-400 mt-2">Be the first to post something for your campus.</p>
       </div>
     `;
     renderCampusSidebar();
@@ -9156,71 +9191,31 @@ function renderCampusPulse() {
     const tags = Array.isArray(post.tags) ? post.tags : [];
     const safeContent = formatCampusContent(post.content || '');
     const imageUrl = safeUrl(post.imageUrl, '');
+    const act = (on, cls) => on ? ` is-on ${cls}` : '';
     return `
-      <div id="campusPost_${post.id}" class="px-4 sm:px-6 py-6 premium-card mx-4 sm:mx-0 mb-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-        <div class="flex gap-4">
-          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-lg shadow-brand-500/30">${escapeHTML(initials)}</div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <div class="flex items-center gap-2 min-w-0 flex-wrap">
-                  <p class="text-base font-black truncate">${escapeHTML(dn)}</p>
-                  <span class="px-3 py-1 rounded-full bg-gradient-to-r from-brand-100 to-indigo-100 dark:from-brand-900/40 dark:to-indigo-900/40 border border-brand-200 dark:border-brand-800 text-[9px] font-black uppercase tracking-widest text-brand-700 dark:text-brand-300">${escapeHTML(role)}</span>
-                  <p class="text-xs font-bold text-slate-500 truncate">${escapeHTML(handle)}</p>
-                  <span class="text-xs font-bold text-slate-300">·</span>
-                  <p class="text-xs font-bold text-slate-400">${escapeHTML(when)}</p>
-                </div>
-                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1 flex items-center gap-1">
-                  <i data-lucide="map-pin" class="w-3 h-3"></i>
-                  ${escapeHTML(uni)}
-                </p>
-              </div>
-              <button onclick="window.copyCampusPostLink('${post.id}')" class="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-brand-600 transition-all flex items-center justify-center">
-                <i data-lucide="more-horizontal" class="w-5 h-5"></i>
-              </button>
+      <article id="campusPost_${post.id}" class="ch-post">
+        <div class="ch-avatar" aria-hidden="true">${escapeHTML(initials)}</div>
+        <div class="ch-body">
+          <header class="ch-head">
+            <div class="ch-who">
+              <strong class="ch-name">${escapeHTML(dn)}</strong>
+              <span class="ch-role">${escapeHTML(role)}</span>
             </div>
-
-            <p class="text-base text-slate-800 dark:text-slate-100 leading-relaxed mt-4 whitespace-pre-wrap break-words">${safeContent}</p>
-            ${tags.length ? `
-              <div class="mt-4 flex flex-wrap gap-2">
-                ${tags.slice(0, 5).map(t => `
-                  <button data-campus-tag="${escapeHTML(toText(t).trim())}" class="campus-tag-btn px-4 py-2 rounded-2xl bg-gradient-to-r from-brand-500/10 to-indigo-500/10 dark:from-brand-500/20 dark:to-indigo-500/20 text-brand-700 dark:text-brand-300 text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all border border-brand-200/50 dark:border-brand-800/50">
-                    #${escapeHTML(toText(t).trim())}
-                  </button>
-                `).join('')}
-              </div>
-            ` : ''}
-            ${imageUrl ? `
-              <div class="mt-5 rounded-3xl overflow-hidden border border-slate-200/60 dark:border-slate-800/60 bg-slate-50 dark:bg-slate-900 shadow-xl shadow-slate-200/40 dark:shadow-black/20">
-                <img src="${escapeHTML(imageUrl)}" onerror="this.onerror=null;this.src='https://picsum.photos/seed/${encodeURIComponent(post.id)}/900/600'" class="w-full max-h-[520px] object-cover cursor-pointer transition-transform duration-500 hover:scale-[1.01]" onclick="window.openCampusImage('${escapeHTML(imageUrl)}')">
-              </div>
-            ` : ''}
-
-            <div class="mt-5 flex items-center justify-between max-w-lg text-slate-500">
-              <button onclick="window.toggleRepliesModal(true, '${post.id}')" class="flex items-center gap-2 text-sm font-black hover:text-brand-600 transition-all active:scale-95 px-3 py-2 rounded-full hover:bg-brand-50 dark:hover:bg-brand-900/30">
-                <i data-lucide="message-circle" class="w-5 h-5"></i>
-                <span>${comments ? comments.toLocaleString() : 'Reply'}</span>
-              </button>
-              <button onclick="window.repostPost('${post.id}')" class="flex items-center gap-2 text-sm font-black transition-all active:scale-95 px-3 py-2 rounded-full hover:bg-emerald-50 dark:hover:bg-emerald-900/30 ${isReposted ? 'text-emerald-600' : 'hover:text-emerald-600'}">
-                <i data-lucide="repeat-2" class="w-5 h-5"></i>
-                <span>${reposts ? reposts.toLocaleString() : 'Repost'}</span>
-              </button>
-              <button onclick="window.likePost('${post.id}')" class="flex items-center gap-2 text-sm font-black transition-all active:scale-95 px-3 py-2 rounded-full hover:bg-rose-50 dark:hover:bg-rose-900/30 ${isLiked ? 'text-rose-600' : 'hover:text-rose-600'}">
-                <i data-lucide="heart" class="w-5 h-5"></i>
-                <span>${likes ? likes.toLocaleString() : 'Like'}</span>
-              </button>
-              <div class="flex items-center gap-2">
-                <button onclick="window.toggleCampusBookmark('${post.id}')" class="flex items-center gap-2 text-sm font-black transition-all active:scale-95 px-3 py-2 rounded-full hover:bg-amber-50 dark:hover:bg-amber-900/30 ${isBookmarked ? 'text-amber-600' : 'hover:text-amber-600'}">
-                  <i data-lucide="bookmark" class="w-5 h-5"></i>
-                </button>
-                <button onclick="window.copyCampusPostLink('${post.id}')" class="flex items-center gap-2 text-sm font-black hover:text-indigo-600 transition-all active:scale-95 px-3 py-2 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/30">
-                  <i data-lucide="share-2" class="w-5 h-5"></i>
-                </button>
-              </div>
-            </div>
+            <button type="button" onclick="window.copyCampusPostLink('${post.id}')" class="ch-more" aria-label="Copy link"><i data-lucide="link-2"></i></button>
+          </header>
+          <p class="ch-meta">${escapeHTML(handle)} · ${escapeHTML(when)} · ${escapeHTML(uni)}</p>
+          <p class="ch-text">${safeContent}</p>
+          ${tags.length ? `<div class="ch-tags">${tags.slice(0, 5).map(t => `<button type="button" data-campus-tag="${escapeHTML(toText(t).trim())}" class="campus-tag-btn ch-tag">#${escapeHTML(toText(t).trim())}</button>`).join('')}</div>` : ''}
+          ${imageUrl ? `<div class="ch-img"><img loading="lazy" src="${escapeHTML(imageUrl)}" alt="" onerror="this.onerror=null;this.src='https://picsum.photos/seed/${encodeURIComponent(post.id)}/900/600'" onclick="window.openCampusImage('${escapeHTML(imageUrl)}')"></div>` : ''}
+          <div class="ch-actions">
+            <button type="button" onclick="window.toggleRepliesModal(true, '${post.id}')" class="ch-act" aria-label="Reply"><i data-lucide="message-circle"></i><span>${comments ? comments.toLocaleString() : ''}</span></button>
+            <button type="button" onclick="window.repostPost('${post.id}')" class="ch-act${act(isReposted, 'ch-green')}" aria-label="Repost"><i data-lucide="repeat-2"></i><span>${reposts ? reposts.toLocaleString() : ''}</span></button>
+            <button type="button" onclick="window.likePost('${post.id}')" class="ch-act${act(isLiked, 'ch-red')}" aria-label="Like"><i data-lucide="heart"></i><span>${likes ? likes.toLocaleString() : ''}</span></button>
+            <button type="button" onclick="window.toggleCampusBookmark('${post.id}')" class="ch-act${act(isBookmarked, 'ch-amber')}" aria-label="Save"><i data-lucide="bookmark"></i></button>
+            <button type="button" onclick="window.copyCampusPostLink('${post.id}')" class="ch-act" aria-label="Share"><i data-lucide="share-2"></i></button>
           </div>
         </div>
-      </div>
+      </article>
     `;
   };
 
