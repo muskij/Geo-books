@@ -19,6 +19,7 @@ import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { mountLectureNotes } from './lecture-notes.js';
+import { mountFinalYear } from './final-year.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1919,6 +1920,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 if (db) mountLectureNotes({ app, db, FieldValue, requireAuth, isAdminUser });
+if (db) mountFinalYear({ app, db, FieldValue, requireAuth, isAdminUser });
 
 const server = app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);

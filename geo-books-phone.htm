@@ -18,6 +18,7 @@
 <script type="module" src="app.js"></script>
 <script type="module" src="university.js"></script>
 <script type="module" src="lecture-notes-ui.js"></script>
+<script type="module" src="final-year-ui.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -866,6 +867,10 @@ header.sticky .text-xl{ font-size:17px !important; line-height:1.2 !important; }
                 <i data-lucide="mic" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Lecture to Notes</span>
                 <span class="text-[8px] font-black uppercase text-indigo-500">New</span>
               </button>
+              <button data-target="finalYear" aria-label="Final Year" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
+                <i data-lucide="clipboard-list" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">Final Year</span>
+                <span class="text-[8px] font-black uppercase text-indigo-500">New</span>
+              </button>
               <button data-target="universityCgpa" aria-label="CGPA Calculator" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
                 <i data-lucide="calculator" class="w-5 h-5 shrink-0"></i><span class="sidebar-text flex-1 text-left">CGPA Calculator</span>
                 <span class="text-[8px] font-black uppercase text-emerald-500">Free</span>
@@ -996,6 +1001,7 @@ header.sticky .text-xl{ font-size:17px !important; line-height:1.2 !important; }
 
       <!-- CGPA Calculator — free, ungated, no Firestore reads at all -->
       <section id="lectureNotes" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
+      <section id="finalYear" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
       <section id="universityCgpa" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
 
       <!-- Japa Consultant Section -->
@@ -1202,6 +1208,7 @@ header.sticky .text-xl{ font-size:17px !important; line-height:1.2 !important; }
           <div class="pb-grid3">
             <button type="button" class="pb-tile" onclick="window.showSection('universityLectures')"><div class="pb-stat-ic"><i data-lucide="play-circle"></i></div><span>Lectures</span></button>
             <button type="button" class="pb-tile" onclick="window.showSection('lectureNotes')"><div class="pb-stat-ic r"><i data-lucide="mic"></i></div><span>Lecture Notes</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('finalYear')"><div class="pb-stat-ic o"><i data-lucide="clipboard-list"></i></div><span>Final Year</span></button>
             <button type="button" class="pb-tile" onclick="window.showSection('universityCgpa')"><div class="pb-stat-ic g"><i data-lucide="calculator"></i></div><span>CGPA</span></button>
             <button type="button" class="pb-tile" onclick="window.showSection('hostelFinder')"><div class="pb-stat-ic c"><i data-lucide="home"></i></div><span>Hostels</span></button>
           </div>

@@ -18,7 +18,7 @@ const MAX_TRANSCRIPT_CHARS = 80000;
 const TRANSCRIBE_MODEL = process.env.LECTURE_TRANSCRIBE_MODEL || 'whisper-1';
 const NOTES_MODEL = process.env.LECTURE_NOTES_MODEL || 'gpt-4o-mini';
 
-const PASS_TIERS = ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70', 'STANDARD', 'STANDARD_ANNUAL', 'PREMIUM', 'PREMIUM_ANNUAL'];
+export const PASS_TIERS = ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70', 'STANDARD', 'STANDARD_ANNUAL', 'PREMIUM', 'PREMIUM_ANNUAL'];
 
 const clean = (v, max = 400) => String(v ?? '').replace(/\u0000/g, '').trim().slice(0, max);
 const arr = (v, n) => (Array.isArray(v) ? v.slice(0, n) : []);

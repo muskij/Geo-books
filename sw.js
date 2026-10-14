@@ -1,7 +1,7 @@
 // Geo-Books Service Worker for Offline Support
 
-const STATIC_CACHE = 'geo-books-static-v12';
-const DYNAMIC_CACHE = 'geo-books-dynamic-v12';
+const STATIC_CACHE = 'geo-books-static-v13';
+const DYNAMIC_CACHE = 'geo-books-dynamic-v13';
 const APP_SHELL_FILES = [
   'index.htm', 
   'geo-books.htm', 
@@ -14,6 +14,8 @@ const APP_SHELL_FILES = [
   'cbt.js',
   'university.js',
   'lecture-notes-ui.js',
+  'final-year-ui.js',
+  'final-year-cite.js',
   'manifest.json'
 ];
 const APP_SHELL_URLS = APP_SHELL_FILES.map((p) => new URL(p, self.registration.scope).toString());
