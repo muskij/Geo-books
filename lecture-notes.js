@@ -11,10 +11,10 @@ import multer from 'multer';
 
 const FREE_SECONDS = Number(process.env.LECTURE_NOTES_FREE_SECONDS) || 10 * 60;
 const PASS_SECONDS = Number(process.env.LECTURE_NOTES_PASS_SECONDS) || 240 * 60;
-const MAX_SEGMENT_BYTES = 6 * 1024 * 1024;
-const MAX_SEGMENT_SECONDS = 600;
-const BYTES_PER_SECOND_BUDGET = 12000; // ~96 kbps allowance; real phone audio is far smaller
-const MAX_TRANSCRIPT_CHARS = 80000;
+const MAX_SEGMENT_BYTES = 24 * 1024 * 1024; // a live 4-minute segment is ~1 MB; an uploaded file may be up to Whisper's 25 MB limit
+const MAX_SEGMENT_SECONDS = 3 * 3600;
+const BYTES_PER_SECOND_BUDGET = 36000; // ~288 kbps allowance: fits 16 kHz mono WAV (32 KB/s) made in the browser; live audio is ~3 KB/s
+const MAX_TRANSCRIPT_CHARS = 200000; // ~3 hours of speech
 const TRANSCRIBE_MODEL = process.env.LECTURE_TRANSCRIBE_MODEL || 'whisper-1';
 const NOTES_MODEL = process.env.LECTURE_NOTES_MODEL || 'gpt-4o-mini';
 
@@ -40,6 +40,17 @@ Return ONLY valid JSON with exactly this shape:
  "questions": [{"q": string, "opts": [string,string,string,string], "correct": 0-3, "exp": string}] (6-10 multiple choice questions answerable from the transcript),
  "lowConfidence": boolean
 }`;
+
+
+// Whisper decides the format from the file name, so the name must match the real type.
+const AUDIO_EXT = { mp3: 'mp3', mpeg: 'mp3', mpga: 'mp3', m4a: 'm4a', mp4: 'mp4', wav: 'wav', ogg: 'ogg', oga: 'ogg', opus: 'ogg', webm: 'webm', flac: 'flac' };
+const MIME_EXT = { 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/m4a': 'm4a', 'video/mp4': 'mp4', 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/wave': 'wav', 'audio/vnd.wave': 'wav', 'audio/ogg': 'ogg', 'application/ogg': 'ogg', 'audio/opus': 'ogg', 'audio/webm': 'webm', 'video/webm': 'webm', 'audio/flac': 'flac', 'audio/x-flac': 'flac' };
+function audioExt(mimetype, originalname) {
+  const m = String(mimetype || '').split(';')[0].trim().toLowerCase();
+  if (MIME_EXT[m]) return MIME_EXT[m];
+  const e = String(originalname || '').split('.').pop().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(AUDIO_EXT, e) ? AUDIO_EXT[e] : null;
+}
 
 function normaliseNotes(raw, fallbackTitle) {
   const o = raw && typeof raw === 'object' ? raw : {};
@@ -71,7 +82,7 @@ export function mountLectureNotes({ app, db, FieldValue, requireAuth, isAdminUse
   const audio = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: MAX_SEGMENT_BYTES, files: 1 },
-    fileFilter: (req, file, cb) => (/^audio\/|^video\/webm$/.test(file.mimetype) ? cb(null, true) : cb(new Error('UNSUPPORTED_AUDIO'))),
+    fileFilter: (req, file, cb) => (/^audio\/|^application\/ogg|^video\/(webm|mp4)/.test(file.mimetype) && audioExt(file.mimetype, file.originalname) ? cb(null, true) : cb(new Error('UNSUPPORTED_AUDIO'))),
   });
 
   const today = () => new Date().toISOString().slice(0, 10);
@@ -126,7 +137,7 @@ export function mountLectureNotes({ app, db, FieldValue, requireAuth, isAdminUse
   app.post('/api/lecture-notes/transcribe', requireAuth, (req, res, next) => {
     audio.single('audio')(req, res, (err) => {
       if (err) {
-        const msg = err.code === 'LIMIT_FILE_SIZE' ? 'That recording segment is too large.' : err.message === 'UNSUPPORTED_AUDIO' ? 'Unsupported audio type.' : 'Upload failed.';
+        const msg = err.code === 'LIMIT_FILE_SIZE' ? 'That audio file is too large (the limit is 24 MB per upload).' : err.message === 'UNSUPPORTED_AUDIO' ? 'Unsupported audio type. Use mp3, m4a, wav, ogg, webm or flac.' : 'Upload failed.';
         return res.status(400).json({ error: msg });
       }
       next();
@@ -144,7 +155,7 @@ export function mountLectureNotes({ app, db, FieldValue, requireAuth, isAdminUse
 
     try {
       const form = new FormData();
-      form.append('file', new Blob([req.file.buffer], { type: req.file.mimetype }), req.file.mimetype.includes('mp4') ? 'seg.mp4' : 'seg.webm');
+      form.append('file', new Blob([req.file.buffer], { type: req.file.mimetype }), 'segment.' + audioExt(req.file.mimetype, req.file.originalname));
       form.append('model', TRANSCRIBE_MODEL);
       form.append('response_format', 'json');
       form.append('prompt', 'A university lecture in Nigeria, spoken in English. It may include technical terms, course codes and names.');
@@ -259,4 +270,4 @@ export function mountLectureNotes({ app, db, FieldValue, requireAuth, isAdminUse
   console.log('[lecture-notes] enabled');
 }
 
-export const __test = { normaliseNotes };
+export const __test = { normaliseNotes, audioExt };
