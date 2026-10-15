@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(cp /tmp/claude-0/-home-claude-geo-books/d2d9d949-25d8-524d-9458-b1e10cd5bee1/scratchpad/zipx/chemistry-pastpaper/*.png _bridge-import/chemistry-pastpaper/)",
-      "Bash(cp /root/.claude/uploads/d2d9d949-25d8-524d-9458-b1e10cd5bee1/e5e00f86-chemistry-jamb.xml _bridge-import/chemistry-jamb.xml)"
-    ]
-  }
-}
