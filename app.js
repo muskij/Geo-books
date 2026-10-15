@@ -568,9 +568,7 @@ const initSearchInstance = (inputId, panelId, { closeSheetOnSelect = false } = {
     { name: 'Marketplace', section: 'marketplace', icon: 'shopping-bag' },
     { name: 'Scholar Network', section: 'community', icon: 'users' },
     { name: 'Notebook', section: 'notes', icon: 'sticky-note' },
-    { name: 'Skill Academy', section: 'skillAcademy', icon: 'graduation-cap' },
-    { name: 'Japa Consultant', section: 'japaConsultant', icon: 'plane-takeoff' },
-    { name: 'Elite Lounge', section: 'eliteLounge', icon: 'diamond' }
+    { name: 'Skill Academy', section: 'skillAcademy', icon: 'graduation-cap' }
   ];
 
   const select = (sectionId) => {
@@ -1823,17 +1821,17 @@ function renderLeaderboardPodium(scholars = []) {
   const s2 = pick(1);
   const s3 = pick(2);
 
-  if (S('podium1Initial')) S('podium1Initial').textContent = s1 ? initials(s1.name) : 'S1';
-  if (S('podium1Name')) S('podium1Name').textContent = s1 ? toText(s1.name) : 'Loading...';
+  if (S('podium1Initial')) S('podium1Initial').textContent = s1 ? initials(s1.name) : '?';
+  if (S('podium1Name')) S('podium1Name').textContent = s1 ? toText(s1.name) : 'Open spot';
   if (S('podium1Score')) S('podium1Score').textContent = s1 ? fmtScore(s1.xp) : '—';
-  if (S('podium1Badge')) S('podium1Badge').textContent = s1 ? (s1.badge || 'Grandmaster') : 'Grandmaster';
+  if (S('podium1Badge')) S('podium1Badge').textContent = s1 ? (s1.badge || 'Top scholar') : '—';
 
-  if (S('podium2Initial')) S('podium2Initial').textContent = s2 ? initials(s2.name) : 'S2';
-  if (S('podium2Name')) S('podium2Name').textContent = s2 ? toText(s2.name) : 'Loading...';
+  if (S('podium2Initial')) S('podium2Initial').textContent = s2 ? initials(s2.name) : '?';
+  if (S('podium2Name')) S('podium2Name').textContent = s2 ? toText(s2.name) : 'Open spot';
   if (S('podium2Score')) S('podium2Score').textContent = s2 ? fmtScore(s2.xp) : '—';
 
-  if (S('podium3Initial')) S('podium3Initial').textContent = s3 ? initials(s3.name) : 'S3';
-  if (S('podium3Name')) S('podium3Name').textContent = s3 ? toText(s3.name) : 'Loading...';
+  if (S('podium3Initial')) S('podium3Initial').textContent = s3 ? initials(s3.name) : '?';
+  if (S('podium3Name')) S('podium3Name').textContent = s3 ? toText(s3.name) : 'Open spot';
   if (S('podium3Score')) S('podium3Score').textContent = s3 ? fmtScore(s3.xp) : '—';
 }
 
@@ -10707,6 +10705,7 @@ function initNotesSync() {
     const notes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       .sort((a, b) => (toMillis(b.updatedAt) || toMillis(b.createdAt) || 0) - (toMillis(a.updatedAt) || toMillis(a.createdAt) || 0));
     app.state.notes = notes;
+    app.state.notesLoaded = true;
     store.set('notes', notes);
     renderNotesList();
   }, (error) => {
@@ -10953,7 +10952,7 @@ function renderNotesList() {
   if (!list) return;
 
   if (app.state.notes.length === 0) {
-    list.innerHTML = `<div class="p-4 skeleton h-8 rounded-xl mb-2"></div>`;
+    list.innerHTML = `<p class="nb-empty">${app.state.notesLoaded ? 'No notes yet. Write one and tap Save Note.' : 'Loading…'}</p>`;
     return;
   }
 

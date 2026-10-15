@@ -582,6 +582,22 @@
     margin: 0;
   }
 </style>
+<style id="nb-layout">
+.nb-body{display:flex;flex:1;min-height:0;overflow:hidden;flex-direction:column}
+.nb-side{border-bottom-width:1px;padding:10px 12px;flex:none}
+.nb-label{margin-bottom:6px}
+.nb-list{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.nb-list>*{flex:none;max-width:180px;white-space:nowrap}
+.nb-list .nb-empty{font-size:12px;color:#94a3b8;font-weight:600;padding:6px 2px;white-space:normal}
+.nb-edit{flex:1;min-height:0;display:flex;flex-direction:column;padding:12px}
+.nb-edit textarea{flex:1;min-height:0}
+@media(min-width:640px){.nb-body{flex-direction:row}.nb-side{width:16rem;border-bottom-width:0;border-right-width:1px;padding:16px;overflow-y:auto}.nb-label{margin-bottom:16px}.nb-list{display:block;overflow:visible}.nb-list>*{max-width:none;white-space:normal;margin-bottom:8px}.nb-edit{padding:32px}}
+#notes h2{white-space:nowrap}
+#notes #saveNote,#notes #newNote{white-space:nowrap}
+@media(max-width:639px){#notes h2{font-size:16px;gap:8px}#notes #saveNote,#notes #newNote{padding:8px 12px}#fcEntryScreen{padding:20px 16px}#fcEntryScreen>div:first-child{margin-bottom:20px}}
+#fcEntryScreen{justify-content:flex-start;overflow-y:auto}
+#fcEntryScreen>:first-child{margin-top:auto}#fcEntryScreen>:last-child{margin-bottom:auto}
+</style>
 </head>
 <body class="bg-[#F8FAFC] text-slate-900 dark:bg-[#020617] dark:text-slate-100 font-sans selection:bg-brand-100 selection:text-brand-900">
   <canvas id="neuralCanvas" class="fixed inset-0 pointer-events-none z-[-1] opacity-20"></canvas>
@@ -701,12 +717,6 @@
               <button data-target="dashboard" aria-label="Dashboard" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
                 <i data-lucide="layout-grid" class="w-5 h-5 shrink-0"></i><span class="sidebar-text">Dashboard</span>
               </button>
-              <button data-target="eliteLounge" data-premium-only="true" aria-label="Elite Lounge" class="tab-btn hidden w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-gold-50 dark:hover:bg-gold-900/20 transition-all text-sm font-bold text-slate-500 border border-transparent hover:border-elite-gold/30">
-                <i data-lucide="diamond" class="w-5 h-5 shrink-0 text-elite-gold"></i><span class="sidebar-text elite-gradient-text">Elite Lounge</span>
-              </button>
-              <button data-target="japaConsultant" data-premium-only="true" aria-label="Japa Consultant" class="tab-btn hidden w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all text-sm font-bold text-slate-500">
-                <i data-lucide="plane-takeoff" class="w-5 h-5 shrink-0 text-emerald-600"></i><span class="sidebar-text">Japa Consultant</span>
-              </button>
               <button data-target="community" aria-label="Community" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
                 <i data-lucide="users" class="w-5 h-5 shrink-0"></i><span class="sidebar-text">Community</span>
               </button>
@@ -811,69 +821,6 @@
     <!-- Main Content Area -->
     <main class="flex-1 min-w-0 w-full overflow-y-auto overflow-x-hidden custom-scrollbar bg-slate-50/50 dark:bg-slate-950/50">
       
-      <!-- Elite Lounge Section -->
-      <section id="eliteLounge" class="section hidden space-y-8 animate-in fade-in zoom-in-95 duration-700 p-4 sm:p-6 lg:p-8">
-        <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-          <div>
-            <h2 class="text-4xl font-black tracking-tight elite-gradient-text">The Elite Lounge</h2>
-            <p class="text-slate-500 dark:text-slate-400 mt-1">Networking with Nigeria's top scholars and future leaders.</p>
-          </div>
-          <div class="flex items-center gap-4">
-            <div class="px-6 py-3 rounded-2xl elite-glass flex items-center gap-3">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span class="text-xs font-black uppercase tracking-widest text-emerald-600">12 Members Online</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div class="lg:col-span-2 space-y-8">
-            <div class="elite-card p-8 space-y-6">
-              <h3 class="text-xl font-black">Private Discussion Forum</h3>
-              <div id="eliteForum" class="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
-                <div class="p-6 rounded-3xl bg-slate-50 dark:bg-emerald-900/10 border border-elite-gold/10">
-                  <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-xl bg-elite-gold text-white flex items-center justify-center font-bold">TA</div>
-                      <div>
-                        <h4 class="text-sm font-black">Tunde_Ade (LSE Grad)</h4>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase">Just now • Career Tips</p>
-                      </div>
-                    </div>
-                    <span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-widest">Trending</span>
-                  </div>
-                  <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300 font-medium">How I secured my ₦45m scholarship to London School of Economics as a Nigerian student. AMA session starting at 8 PM!</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="space-y-8">
-            <div class="elite-card p-8 bg-gradient-to-br from-emerald-950 to-emerald-900 text-white border-none">
-              <h3 class="text-xl font-black mb-6">Concierge Support</h3>
-              <p class="text-sm text-emerald-100/80 mb-8 leading-relaxed">Direct 24/7 access to your personal mentor and visa consultant.</p>
-              <button onclick="window.contactConcierge()" class="w-full py-4 rounded-2xl bg-elite-gold text-emerald-950 font-black uppercase tracking-widest hover:bg-white transition-all shadow-xl shadow-elite-gold/20 active:scale-95 flex items-center justify-center gap-2">
-                <i data-lucide="message-square" class="w-5 h-5"></i> Chat with Mentor
-              </button>
-            </div>
-
-            <div class="elite-card p-8">
-              <h3 class="text-xl font-black mb-6">Trending Insights</h3>
-              <div class="space-y-4">
-                <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-emerald-900/10">
-                  <span class="text-xs font-bold">Chevening 2026 Strategy</span>
-                  <span class="text-[10px] font-black text-emerald-600">92% SUCCESS</span>
-                </div>
-                <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-emerald-900/10">
-                  <span class="text-xs font-bold">Tech Internship (Paystack)</span>
-                  <span class="text-[10px] font-black text-emerald-600">ELITE ONLY</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- Hostel Finder Section (content filled by university.js) -->
       <section id="hostelFinder" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
 
@@ -883,104 +830,6 @@
       <section id="lectureNotes" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
       <section id="finalYear" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
       <section id="universityCgpa" class="section hidden animate-in fade-in slide-in-from-right-4 duration-500"></section>
-
-      <!-- Japa Consultant Section -->
-      <section id="japaConsultant" class="section hidden space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 p-4 sm:p-6 lg:p-8">
-        <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-          <div>
-            <h2 class="text-3xl font-black tracking-tight elite-text">Global Scholarship Engine</h2>
-            <p class="text-slate-500 dark:text-slate-400 mt-1">Automated WES tracking & Scholarship Auto-Matcher.</p>
-          </div>
-          <button onclick="window.openDocumentVault()" class="px-6 py-3 rounded-2xl elite-glass border-elite-gold/30 text-elite-gold text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-elite-gold/10 transition-all">
-            <i data-lucide="folder-lock" class="w-4 h-4"></i> Document Vault
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div class="lg:col-span-2 premium-card p-10 space-y-8 relative overflow-hidden">
-            <div id="japaNeuralOverlay" class="absolute inset-0 z-20 bg-slate-900/90 backdrop-blur-xl hidden flex flex-col items-center justify-center p-12 text-center animate-in fade-in duration-500">
-              <div class="relative w-32 h-32 mb-8">
-                <div class="absolute inset-0 rounded-full border-4 border-brand-500/20 animate-ping"></div>
-                <div class="absolute inset-2 rounded-full border-4 border-brand-500/40 animate-pulse"></div>
-                <div class="absolute inset-0 flex items-center justify-center">
-                  <i data-lucide="brain-circuit" class="w-12 h-12 text-brand-500 animate-bounce"></i>
-                </div>
-              </div>
-              <h4 class="text-2xl font-black text-white mb-2">Neural Auto-Matcher</h4>
-              <p class="text-white/50 text-sm font-medium max-w-sm">Scanning 4,500+ global scholarship databases for your profile...</p>
-              <div class="w-64 h-1.5 bg-white/10 rounded-full mt-8 overflow-hidden">
-                <div id="japaNeuralProgress" class="h-full bg-brand-500 transition-all duration-[2000ms] ease-out" style="width: 0%"></div>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-2xl font-black flex items-center gap-4">
-                  <i data-lucide="sparkles" class="w-8 h-8 text-brand-500"></i> Best Matches <span class="elite-text">For You</span>
-                </h3>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Based on AI Profile Protocol</p>
-              </div>
-              <button onclick="window.triggerJapaSync()" class="px-6 py-3 rounded-2xl bg-brand-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-brand-500/20 hover:scale-105 active:scale-95 transition-all">Neural Sync</button>
-            </div>
-            
-            <div id="scholarshipMatches" class="space-y-4">
-              <div class="p-6 rounded-3xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 flex items-center justify-between group">
-                <div class="flex items-center gap-5">
-                  <div class="w-14 h-14 rounded-2xl bg-white dark:bg-emerald-950 flex items-center justify-center text-2xl shadow-sm">🇬🇧</div>
-                  <div>
-                    <h4 class="font-black text-slate-900 dark:text-white">Chevening Scholarship 2026</h4>
-                    <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Full Funding • UK Universities</p>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div class="text-emerald-600 font-black text-lg">98% Match</div>
-                  <button class="mt-2 text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline">Draft SOP with AI</button>
-                </div>
-              </div>
-              
-              <div class="p-6 rounded-3xl bg-slate-50 dark:bg-emerald-900/10 border border-slate-100 dark:border-emerald-900/30 flex items-center justify-between opacity-60">
-                <div class="flex items-center gap-5">
-                  <div class="w-14 h-14 rounded-2xl bg-white dark:bg-emerald-950 flex items-center justify-center text-2xl shadow-sm">🇨🇦</div>
-                  <div>
-                    <h4 class="font-black text-slate-900 dark:text-white">Mastercard Foundation Scholars</h4>
-                    <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">UofT • McGill • UBC</p>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div class="text-slate-400 font-black text-lg">85% Match</div>
-                  <p class="text-[10px] font-bold text-rose-400">Needs IELTS 7.5+</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="space-y-8">
-            <div class="elite-card p-8 space-y-6">
-              <h3 class="text-xl font-black">WES Tracker</h3>
-              <div class="space-y-6">
-                <div class="relative pl-8 border-l-2 border-emerald-500/30 space-y-8">
-                  <div class="relative">
-                    <div class="absolute -left-[41px] top-0 w-5 h-5 rounded-full bg-emerald-500 border-4 border-white dark:border-emerald-950"></div>
-                    <p class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Step 1: Completed</p>
-                    <h4 class="text-sm font-bold mt-1">Transcript Verification</h4>
-                  </div>
-                  <div class="relative">
-                    <div class="absolute -left-[41px] top-0 w-5 h-5 rounded-full bg-amber-500 animate-pulse border-4 border-white dark:border-emerald-950"></div>
-                    <p class="text-[10px] font-black text-amber-500 uppercase tracking-widest">Step 2: In Progress</p>
-                    <h4 class="text-sm font-bold mt-1">WES Evaluation Report</h4>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="elite-card p-8 bg-gradient-to-br from-elite-gold to-yellow-600 text-emerald-950 border-none">
-              <h3 class="text-lg font-black">Elite Internship Plug</h3>
-              <p class="text-xs font-medium mt-2 leading-relaxed opacity-80">Guaranteed first-round interviews with Moniepoint & Paystack for Elite members.</p>
-              <button class="mt-6 w-full py-3 rounded-xl bg-emerald-950 text-white text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">View Pipelines</button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <!-- Support Section -->
       <section id="support" class="section h-full flex flex-col hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -2269,17 +2118,6 @@
               <!-- Snapchat-style feed items -->
             </div>
 
-            <!-- Scholar Map Button (Snap Map style) -->
-            <div class="mt-auto">
-              <button onclick="toggleSnapMap(true)" class="m-6 p-4 rounded-[24px] bg-gradient-to-r from-emerald-500 to-teal-500 text-white flex items-center justify-between group overflow-hidden relative shadow-lg shadow-emerald-500/20">
-                <div class="relative z-10">
-                  <p class="text-[10px] font-black uppercase tracking-widest opacity-80">Scholar Map</p>
-                  <h4 class="text-sm font-black">Explore active study zones</h4>
-                </div>
-                <i data-lucide="map-pin" class="w-6 h-6 relative z-10 group-hover:scale-125 transition-transform"></i>
-                <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              </button>
-            </div>
           </div>
 
           <!-- Snap Empty State (Splash) -->
@@ -2312,7 +2150,7 @@
                   <h4 id="snapHeaderName" class="text-lg font-black tracking-tight">Username</h4>
                   <div id="snapHeaderPresence" class="flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Studying Physics</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Scholar</p>
                   </div>
                 </div>
               </div>
@@ -2354,34 +2192,6 @@
             </div>
           </div>
 
-          <!-- Snap Map Modal (Simulated) -->
-          <div id="snapMapOverlay" class="hidden fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-500 flex flex-col">
-            <div class="p-8 flex items-center justify-between text-white">
-              <div>
-                <h3 class="text-3xl font-black tracking-tight">Scholar Map</h3>
-                <p class="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">Live Study Clusters in Nigeria</p>
-              </div>
-              <button onclick="toggleSnapMap(false)" class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
-                <i data-lucide="x" class="w-6 h-6"></i>
-              </button>
-            </div>
-            <div class="flex-1 relative m-8 mt-0 rounded-[40px] bg-slate-900 overflow-hidden border border-white/10 shadow-2xl">
-              <!-- Simulated Map Grid -->
-              <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
-              <div id="mapContent" class="relative w-full h-full flex items-center justify-center">
-                <!-- Scholar dots will be injected here -->
-                <div class="absolute top-1/4 left-1/3 w-4 h-4 rounded-full bg-brand-500 animate-ping"></div>
-                <div class="absolute top-1/2 left-1/2 w-6 h-6 rounded-full bg-emerald-500 animate-ping shadow-2xl shadow-emerald-500/50"></div>
-                <div class="absolute bottom-1/4 right-1/4 w-3 h-3 rounded-full bg-rose-500 animate-ping"></div>
-                
-                <div class="text-center p-12">
-                  <i data-lucide="navigation" class="w-16 h-16 text-brand-500 mx-auto mb-6 animate-float"></i>
-                  <h4 class="text-xl font-black text-white">Exploring Nearby Scholars...</h4>
-                  <p class="text-white/40 text-sm mt-2 font-medium">1,402 scholars currently in deep focus sessions</p>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <div id="addPeopleOverlay" class="hidden fixed inset-0 z-[110] bg-slate-950/70 backdrop-blur-xl animate-in fade-in duration-300">
             <div class="absolute inset-0" onclick="window.toggleAddPeople(false)"></div>
@@ -2720,12 +2530,12 @@
               <button id="newNote" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all">New</button>
             </div>
           </div>
-          <div class="flex flex-1 overflow-hidden">
-            <div class="hidden sm:block w-56 sm:w-64 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-4 overflow-y-auto custom-scrollbar">
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Saved Notes</p>
-              <div id="notesList" class="space-y-2"></div>
+          <div class="nb-body">
+            <div class="nb-side border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 custom-scrollbar">
+              <p class="nb-label text-[10px] font-bold text-slate-400 uppercase tracking-widest">Saved Notes</p>
+              <div id="notesList" class="nb-list"></div>
             </div>
-            <div class="flex-1 p-4 sm:p-8">
+            <div class="nb-edit">
               <input id="noteTitle" type="text" placeholder="Note Title..." class="w-full text-2xl font-bold bg-transparent outline-none mb-4 placeholder:opacity-30 px-3 py-2">
               <textarea id="noteContent" placeholder="Start typing your study notes here..." class="w-full h-full bg-transparent outline-none resize-none custom-scrollbar leading-relaxed placeholder:opacity-20 p-4"></textarea>
             </div>
