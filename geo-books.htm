@@ -598,6 +598,93 @@
 #fcEntryScreen{justify-content:flex-start;overflow-y:auto}
 #fcEntryScreen>:first-child{margin-top:auto}#fcEntryScreen>:last-child{margin-bottom:auto}
 </style>
+<style id="dash-home">
+#dashboard{--pb-card:#fff;--pb-ink:#0c1126;--pb-ink2:#4b5476;--pb-ink3:#7d86a6;--pb-line:rgba(12,17,38,.08);--pb-brand:#5b4cf0;--pb-brand2:#8b5cf6;--pb-soft:rgba(91,76,240,.10);--pb-shadow:0 14px 34px -18px rgba(34,28,110,.35)}
+html.dark #dashboard{--pb-card:#0f1530;--pb-ink:#f4f6ff;--pb-ink2:#aab3d1;--pb-ink3:#7882a6;--pb-line:rgba(255,255,255,.09);--pb-brand:#8b7dff;--pb-soft:rgba(139,125,255,.16);--pb-shadow:0 14px 34px -18px rgba(0,0,0,.7)}
+.font-tabular{font-variant-numeric:tabular-nums}
+.dash-greeting-title{line-height:1.1}
+/* ---- Home ---- */
+.pb-home{ max-width:560px; margin:0 auto; padding:16px 16px 8px !important; }
+.pb-home > * + *{ margin-top:18px; }
+.pb-hello{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.pb-eyebrow{ font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--pb-brand); margin-bottom:6px; }
+.pb-h1{ font-size:27px !important; line-height:1.1 !important; font-weight:800 !important; letter-spacing:-.025em; color:var(--pb-ink); }
+.pb-sub{ margin-top:6px; font-size:13px; font-weight:600; color:var(--pb-ink3); }
+.pb-rank{ flex:none; display:flex; flex-direction:column; align-items:center; gap:1px; padding:9px 14px; border-radius:18px; background:var(--pb-card); border:1px solid var(--pb-line); box-shadow:var(--pb-shadow); color:var(--pb-ink); min-width:64px; }
+.pb-rank svg{ width:16px !important; height:16px !important; color:#f59e0b; }
+.pb-rank .pb-rank-l{ font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--pb-ink3); }
+.pb-rank b{ font-size:16px; font-weight:800; line-height:1.2; }
+.pb-rank b *{ font-size:11px !important; }
+
+.pb-hero{ position:relative; overflow:hidden; border-radius:26px; padding:22px 20px; color:#fff;
+  background:linear-gradient(135deg,#4a3be0 0%,#6a55f3 55%,#9a6bff 100%); box-shadow:0 24px 40px -22px rgba(74,59,224,.8); }
+.pb-hero::before,.pb-hero::after{ content:''; position:absolute; border-radius:50%; background:rgba(255,255,255,.13); pointer-events:none; animation:pbDrift 12s ease-in-out infinite alternate; }
+.pb-hero::before{ width:200px; height:200px; right:-70px; top:-90px; } .pb-hero::after{ width:140px; height:140px; left:-50px; bottom:-70px; animation-direction:alternate-reverse; }
+@keyframes pbDrift{ to{ transform:translate(18px,14px) scale(1.1); } }
+.pb-hero > *{ position:relative; z-index:1; }
+.pb-hero-k{ font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; opacity:.8; }
+.pb-hero h2{ font-size:23px; font-weight:800; letter-spacing:-.02em; line-height:1.15; margin:6px 0 8px; }
+.pb-hero p.pb-hero-d{ font-size:14px; line-height:1.5; opacity:.88; max-width:34ch; }
+.pb-hero-actions{ display:flex; gap:10px; margin-top:18px; }
+.pb-btn{ flex:1; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 14px; border-radius:16px; font-size:14px; font-weight:700; transition:transform .15s; }
+.pb-btn:active{ transform:scale(.97); } .pb-btn svg{ width:18px !important; height:18px !important; }
+.pb-btn-white{ background:#fff; color:#2c2180; box-shadow:0 12px 22px -12px rgba(0,0,0,.45); }
+.pb-btn-glass{ background:rgba(255,255,255,.17); border:1.5px solid rgba(255,255,255,.35); color:#fff; }
+
+.pb-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.pb-stat{ background:var(--pb-card); border:1px solid var(--pb-line); border-radius:20px; padding:14px 12px; box-shadow:var(--pb-shadow); }
+.pb-stat-ic{ width:34px; height:34px; border-radius:11px; display:grid; place-items:center; margin-bottom:10px; background:var(--pb-soft); color:var(--pb-brand); }
+.pb-stat-ic.o{ background:rgba(245,158,11,.14); color:#d97706; } .pb-stat-ic.g{ background:rgba(16,185,129,.13); color:#059669; }
+.pb-stat-ic svg{ width:18px !important; height:18px !important; }
+.pb-num{ font-size:21px !important; line-height:1.1 !important; font-weight:800 !important; letter-spacing:-.02em; color:var(--pb-ink); }
+.pb-num span{ font-size:11px !important; font-weight:700 !important; color:var(--pb-ink3) !important; text-transform:none !important; letter-spacing:0 !important; margin-left:2px; }
+.pb-lab{ margin-top:4px; font-size:11px; font-weight:700; color:var(--pb-ink3); }
+
+.pb-goal{ width:100%; display:flex; align-items:center; gap:12px; text-align:left; padding:14px 16px; border-radius:20px; background:var(--pb-card); border:1px solid var(--pb-line); box-shadow:var(--pb-shadow); }
+.pb-goal .pb-stat-ic{ margin:0; flex:none; } .pb-goal > div{ flex:1; min-width:0; }
+.pb-goal-n{ font-size:15px !important; font-weight:800 !important; color:var(--pb-ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px; }
+.pb-goal > svg{ width:18px !important; height:18px !important; color:var(--pb-ink3); flex:none; }
+
+.pb-title{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.pb-title h3{ font-size:16px; font-weight:800; letter-spacing:-.01em; color:var(--pb-ink); }
+.pb-grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.pb-grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.pb-tile{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:14px 4px 12px; border-radius:20px; background:var(--pb-card); border:1px solid var(--pb-line);
+  transition:transform .2s, border-color .2s, box-shadow .2s; min-width:0; }
+.pb-tile:active{ transform:scale(.95); } @media (hover:hover){ .pb-tile:hover{ transform:translateY(-3px); border-color:var(--pb-brand); box-shadow:var(--pb-shadow); } }
+.pb-tile .pb-stat-ic{ margin:0; width:40px; height:40px; border-radius:13px; }
+.pb-tile .pb-stat-ic svg{ width:20px !important; height:20px !important; }
+.pb-tile span{ font-size:12px; font-weight:700; color:var(--pb-ink2); text-align:center; line-height:1.15; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 2px; }
+.pb-stat-ic.r{ background:rgba(244,63,94,.12); color:#e11d48; } .pb-stat-ic.c{ background:rgba(6,182,212,.13); color:#0891b2; } .pb-stat-ic.i{ background:rgba(99,102,241,.13); color:#4f46e5; }
+
+/* rise-in for the Home blocks */
+.pb-home > *{ animation:pbRise .6s cubic-bezier(.16,1,.3,1) both; }
+.pb-home > *:nth-child(2){ animation-delay:.05s } .pb-home > *:nth-child(3){ animation-delay:.1s } .pb-home > *:nth-child(4){ animation-delay:.15s }
+.pb-home > *:nth-child(5){ animation-delay:.2s } .pb-home > *:nth-child(6){ animation-delay:.25s } .pb-home > *:nth-child(7){ animation-delay:.3s }
+@keyframes pbRise{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
+/* wide screens: same blocks, more room */
+@media(min-width:1024px){
+  .pb-home{max-width:1080px;padding:28px 32px 16px !important}
+  .pb-home > * + *{margin-top:26px}
+  .pb-h1{font-size:38px !important}
+  .pb-hero{padding:34px 36px;border-radius:30px}
+  .pb-hero h2{font-size:32px}
+  .pb-hero p.pb-hero-d{font-size:16px;max-width:52ch}
+  .pb-hero-actions{max-width:440px}
+  .pb-stat{padding:20px 18px}.pb-num{font-size:28px !important}
+  .pb-grid4,.pb-grid3{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+  .pb-tile{padding:18px 6px 14px}
+}
+@media(prefers-reduced-motion:reduce){.pb-home > *,.pb-hero::before,.pb-hero::after{animation:none !important}}
+</style>
+<style id="gb-motion">
+/* Section entrance. The old animate-in/fade-in classes are not in the compiled CSS, so sections used to just pop in. */
+@keyframes gbIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.section:not(.hidden):not(#dashboard){animation:gbIn .3s cubic-bezier(.16,1,.3,1) backwards}
+.ux-tile,.fc-action-card{transition:transform .18s ease,box-shadow .2s ease}
+.ux-tile:active,.fc-action-card:active{transform:scale(.97)}
+@media(prefers-reduced-motion:reduce){.section:not(.hidden){animation:none !important}}
+</style>
 </head>
 <body class="bg-[#F8FAFC] text-slate-900 dark:bg-[#020617] dark:text-slate-100 font-sans selection:bg-brand-100 selection:text-brand-900">
   <canvas id="neuralCanvas" class="fixed inset-0 pointer-events-none z-[-1] opacity-20"></canvas>
@@ -867,306 +954,92 @@
       </section>
 
       <!-- Dashboard Section -->
-      <section id="dashboard" class="section space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700 p-4 sm:p-6 lg:p-8">
-        <!-- Header: Minimalist & High-End -->
-        <div class="flex flex-col md:flex-row items-center justify-between gap-8"> 
-           <div class="flex items-center gap-6 group cursor-default"> 
-             <div class="relative"> 
-               <div class="absolute -inset-2 bg-brand-500 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity"></div> 
-               <div class="w-20 h-20 rounded-[32px] bg-gradient-to-br from-brand-600 to-indigo-600 flex items-center justify-center shadow-2xl shadow-brand-500/30 animate-pulse-slow relative z-10 group-hover:scale-105 transition-transform grain-overlay"> 
-                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="brain-circuit" aria-hidden="true" class="lucide lucide-brain-circuit w-10 h-10 text-white"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M9 13a4.5 4.5 0 0 0 3-4"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M12 13h4"></path><path d="M12 18h6a2 2 0 0 1 2 2v1"></path><path d="M12 8h8"></path><path d="M16 8V5a2 2 0 0 1 2-2"></path><circle cx="16" cy="13" r=".5"></circle><circle cx="18" cy="3" r=".5"></circle><circle cx="20" cy="21" r=".5"></circle><circle cx="20" cy="8" r=".5"></circle></svg> 
-               </div> 
-             </div> 
-             <div> 
-               <div class="flex items-center gap-3"> 
-                 <h1 class="text-5xl font-black tracking-tighter text-slate-900 dark:text-white leading-none">Hello, <span id="dashGreetingName" class="elite-text">superadmin</span>!</h1> 
-                 <div class="px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800 text-[10px] font-black uppercase tracking-widest text-brand-600">Beta v2.5</div> 
-               </div> 
-               <div class="flex items-center gap-3 mt-4"> 
-                 <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600"> 
-                   <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> 
-                   <p class="text-[10px] font-black uppercase tracking-widest">AI Sync: Active</p> 
-                 </div> 
-                 <div class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700"></div> 
-                 <p id="dashUniversityName" class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">University Student Scholar</p> 
-               </div> 
-             </div> 
-           </div> 
-           <div class="flex items-center gap-6"> 
-             <div class="hidden sm:flex flex-col items-end px-8 border-r border-slate-200 dark:border-slate-800"> 
-               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Scholar Rank</p> 
-               <div class="flex items-center gap-3"> 
-                 <p id="globalRank" class="text-2xl font-black text-slate-900 dark:text-white font-tabular">#2 </p> 
-                 <div class="flex items-center gap-1 text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-lg"> 
-                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="trending-up" aria-hidden="true" class="lucide lucide-trending-up w-3 h-3"><path d="M16 7h6v6"></path><path d="m22 7-8.5 8.5-5-5L2 17"></path></svg> 0 
-                 </div> 
-               </div> 
-             </div> 
-             <button onclick="toggleFocusMode(true)" class="group relative px-8 py-4 rounded-[28px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-2xl hover:scale-105 active:scale-95 transition-all overflow-hidden"> 
-               <div class="absolute inset-0 bg-gradient-to-r from-brand-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div> 
-               <div class="relative flex items-center gap-3"> 
-                 <div class="w-8 h-8 rounded-xl bg-white/10 dark:bg-slate-900/10 flex items-center justify-center"> 
-                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="zap" aria-hidden="true" class="lucide lucide-zap w-4 h-4"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path></svg> 
-                 </div> 
-                 <span class="text-xs font-black uppercase tracking-[0.2em]">Enter Zen</span> 
-               </div> 
-             </button> 
-           </div> 
-         </div>
-
-        <!-- Quick Stats Row -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 parallax-wrap stagger">
-          <div class="premium-card p-10 group relative overflow-hidden parallax-card">
-            <div class="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-              <i data-lucide="flame" class="w-24 h-24"></i>
-            </div>
-            <div class="w-16 h-16 rounded-3xl bg-orange-50 dark:bg-orange-900/20 text-orange-500 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shadow-lg shadow-orange-500/10">
-              <i data-lucide="flame" class="w-8 h-8"></i>
-            </div>
-            <p class="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Study Streak</p>
-            <p class="text-4xl font-black mt-2 tracking-tighter font-tabular" id="currentStreakCount">0 <span class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Days</span></p>
-            <div class="flex items-center gap-2 mt-6 text-emerald-500 text-[10px] font-black uppercase tracking-widest">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Consistency: 98%</span>
-            </div>
+            <section id="dashboard" class="section pb-home">
+        <div class="pb-hello">
+          <div style="min-width:0">
+            <p class="pb-eyebrow" id="pbGreet">Welcome back</p>
+            <h1 class="dash-greeting-title pb-h1">Hello, <span id="dashGreetingName">Scholar</span></h1>
+            <p id="dashUniversityName" class="pb-sub">University Student Scholar</p>
           </div>
-
-          <div class="premium-card p-10 group relative overflow-hidden parallax-card">
-            <div class="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-              <i data-lucide="sparkles" class="w-24 h-24"></i>
-            </div>
-            <div class="w-16 h-16 rounded-3xl bg-brand-50 dark:bg-brand-900/20 text-brand-600 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-brand-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-brand-500/10">
-              <i data-lucide="sparkles" class="w-8 h-8"></i>
-            </div>
-            <p class="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Scholar XP</p>
-            <p class="text-4xl font-black mt-2 tracking-tighter font-tabular" id="totalXPPoints">0 <span class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Points</span></p>
-            <div class="flex items-center gap-2 mt-6 text-brand-500 text-[10px] font-black uppercase tracking-widest">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
-              <span>Top 5% Nationwide</span>
-            </div>
-          </div>
-
-          <div class="premium-card p-10 group relative overflow-hidden parallax-card">
-            <div class="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-              <i data-lucide="target" class="w-24 h-24"></i>
-            </div>
-            <div class="w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500 shadow-lg shadow-emerald-500/10">
-              <i data-lucide="target" class="w-8 h-8"></i>
-            </div>
-            <p class="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Active Goal</p>
-            <p class="text-4xl font-black mt-2 tracking-tighter truncate" id="activeGoalName">None</p>
-            <div class="flex items-center gap-2 mt-6 text-emerald-500 text-[10px] font-black uppercase tracking-widest animate-pulse">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span>In Progress</span>
-            </div>
-          </div>
-
-          <div class="premium-card p-10 group relative overflow-hidden parallax-card">
-            <div class="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-              <i data-lucide="brain" class="w-24 h-24"></i>
-            </div>
-            <div class="w-16 h-16 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-lg shadow-indigo-500/10">
-              <i data-lucide="brain" class="w-8 h-8"></i>
-            </div>
-            <p class="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">AI IQ</p>
-            <p class="text-4xl font-black mt-2 tracking-tighter font-tabular" id="aiIntelligenceScore">0<span class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">/100</span></p>
-            <p class="text-[10px] text-slate-400 font-bold mt-6 uppercase tracking-widest">Neural Learning Active</p>
-          </div>
-        </div>
-
-        <!-- Quick Actions Grid -->
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 stagger">
-          <button onclick="window.showSection('cbt')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-brand-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-900/40 text-brand-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="zap" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Start CBT</span>
-          </button>
-          <button onclick="window.showSection('aiscan')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-emerald-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="scan-line" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">AI Scan</span>
-          </button>
-          <button onclick="window.showSection('marketplace')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-indigo-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="shopping-bag" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Market</span>
-          </button>
-          <button onclick="window.showSection('community')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-amber-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/40 text-amber-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="users" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Network</span>
-          </button>
-          <button onclick="window.showSection('notes')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-rose-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-900/40 text-rose-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="sticky-note" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Notes</span>
-          </button>
-          <button onclick="window.showSection('skillAcademy')" class="elite-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-cyan-500 transition-all duration-500">
-            <div class="w-12 h-12 rounded-2xl bg-cyan-50 dark:bg-cyan-900/40 text-cyan-600 group-hover:bg-white/20 group-hover:text-white flex items-center justify-center transition-all">
-              <i data-lucide="graduation-cap" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Academy</span>
+          <button type="button" class="pb-rank" onclick="window.showSection('leaderboardSection')" aria-label="Open the ranking">
+            <i data-lucide="trophy"></i>
+            <span class="pb-rank-l">Rank</span>
+            <b id="globalRank" class="font-tabular">#–</b>
           </button>
         </div>
 
-        <!-- Elite Analytics Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
-          <div class="lg:col-span-8 premium-card p-10 flex flex-col">
-            <div class="flex items-center justify-between mb-10">
-              <div>
-                <h3 class="text-2xl font-black">Velocity <span class="elite-text">Analysis</span></h3>
-                <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Real-time study performance tracking</p>
-              </div>
-              <div class="flex gap-2">
-                <div class="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-[10px] font-black uppercase text-slate-400">7 Day Cycle</div>
-              </div>
-            </div>
-            
-            <div class="flex-1 flex items-end justify-between gap-4 h-48 mb-8">
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 40%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">M</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 70%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">T</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 45%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">W</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 90%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">T</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 65%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">F</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 80%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">S</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-3 group h-full">
-                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-2xl relative overflow-hidden h-full">
-                  <div class="absolute bottom-0 left-0 right-0 elite-gradient transition-all duration-1000 group-hover:brightness-110" style="height: 100%"></div>
-                </div>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">S</span>
-              </div>
-            </div>
-            
-            <div class="grid grid-cols-3 gap-6 pt-8 border-t border-slate-100 dark:border-slate-800">
-              <div>
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Peak Intensity</p>
-                <p class="text-xl font-black text-slate-900 dark:text-white">92.4%</p>
-              </div>
-              <div>
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Focus</p>
-                <p class="text-xl font-black text-slate-900 dark:text-white">24.5h</p>
-              </div>
-              <div>
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Efficiency</p>
-                <p class="text-xl font-black text-emerald-500">+12%</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="lg:col-span-4 premium-card p-10 flex flex-col bg-slate-900 text-white border-none relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-10 opacity-10"><i data-lucide="zap" class="w-32 h-32"></i></div>
-            <div class="relative z-10 h-full flex flex-col">
-              <h3 class="text-xl font-black mb-8">Daily <span class="text-brand-400">Milestones</span></h3>
-              <div class="space-y-6 flex-1">
-                <div class="flex items-center gap-4 group cursor-pointer">
-                  <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-all">
-                    <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-400"></i>
-                  </div>
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-white">Morning Protocol</p>
-                    <p class="text-[10px] text-slate-400 font-bold">Review Study Notes</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-4 group cursor-pointer">
-                  <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-all">
-                    <i data-lucide="circle" class="w-6 h-6 text-slate-600"></i>
-                  </div>
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-white">Deep Work Session</p>
-                    <p class="text-[10px] text-slate-400 font-bold">Complete 1 CBT Exam</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-4 group cursor-pointer">
-                  <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-all">
-                    <i data-lucide="circle" class="w-6 h-6 text-slate-600"></i>
-                  </div>
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-white">Market Review</p>
-                    <p class="text-[10px] text-slate-400 font-bold">Check new gig opportunities</p>
-                  </div>
-                </div>
-              </div>
-              <div class="mt-8 pt-8 border-t border-white/10">
-                <div class="flex items-center justify-between mb-4">
-                  <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Day Progress</span>
-                  <span class="text-[10px] font-black text-brand-400">33%</span>
-                </div>
-                <div class="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div class="h-full elite-gradient" style="width: 33%"></div>
-                </div>
-              </div>
-            </div>
+        <div class="pb-hero">
+          <p class="pb-hero-k">Today</p>
+          <h2>Ready to practise?</h2>
+          <p class="pb-hero-d">Timed JAMB and WAEC questions, with an AI explanation whenever you get one wrong.</p>
+          <div class="pb-hero-actions">
+            <button type="button" class="pb-btn pb-btn-white" onclick="window.showSection('cbt')"><i data-lucide="zap"></i>Start CBT</button>
+            <button type="button" class="pb-btn pb-btn-glass" onclick="window.toggleAiAssistant(true)"><i data-lucide="sparkles"></i>Ask AI</button>
           </div>
         </div>
 
-        <div class="space-y-10">
-          <!-- Interactive Study Pulse -->
-          <div class="p-10 rounded-[3rem] bg-slate-900 text-white border border-white/5 shadow-2xl relative overflow-hidden group">
-            <div class="absolute inset-0 bg-gradient-to-br from-brand-600/20 to-transparent"></div>
-            <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-              <div class="space-y-4">
-                <h3 class="text-2xl font-black tracking-tight">Your Neural Pulse</h3>
-                <p class="text-white/50 text-sm font-medium leading-relaxed max-w-sm">Real-time analysis of your focus intensity and memory retention across all subjects.</p>
-                <div class="flex gap-4 pt-2">
-                  <div class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-                    <p class="text-[9px] font-black uppercase text-white/30 tracking-widest">Focus</p>
-                    <p class="text-lg font-black">92%</p>
-                  </div>
-                  <div class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-                    <p class="text-[9px] font-black uppercase text-white/30 tracking-widest">Retention</p>
-                    <p class="text-lg font-black">88%</p>
-                  </div>
-                </div>
-              </div>
-              <div class="flex-1 w-full h-32 flex items-end justify-center gap-1.5 px-4">
-                <!-- Pulse bars injected via JS -->
-                <div class="w-2 bg-brand-500 rounded-full animate-pulse-slow" style="height: 40%"></div>
-                <div class="w-2 bg-brand-400 rounded-full animate-pulse-slow" style="height: 60%; animation-delay: 0.2s"></div>
-                <div class="w-2 bg-indigo-500 rounded-full animate-pulse-slow" style="height: 85%; animation-delay: 0.4s"></div>
-                <div class="w-2 bg-brand-600 rounded-full animate-pulse-slow" style="height: 50%; animation-delay: 0.1s"></div>
-                <div class="w-2 bg-brand-400 rounded-full animate-pulse-slow" style="height: 75%; animation-delay: 0.3s"></div>
-                <div class="w-2 bg-indigo-400 rounded-full animate-pulse-slow" style="height: 95%; animation-delay: 0.5s"></div>
-                <div class="w-2 bg-brand-500 rounded-full animate-pulse-slow" style="height: 30%; animation-delay: 0.2s"></div>
-                <div class="w-2 bg-brand-600 rounded-full animate-pulse-slow" style="height: 70%; animation-delay: 0.4s"></div>
-                <div class="w-2 bg-indigo-600 rounded-full animate-pulse-slow" style="height: 55%; animation-delay: 0.1s"></div>
-                <div class="w-2 bg-brand-400 rounded-full animate-pulse-slow" style="height: 80%; animation-delay: 0.3s"></div>
-              </div>
-            </div>
+        <div class="pb-stats">
+          <div class="pb-stat">
+            <div class="pb-stat-ic o"><i data-lucide="flame"></i></div>
+            <p id="currentStreakCount" class="pb-num font-tabular">0 <span>Days</span></p>
+            <p class="pb-lab">Study streak</p>
+          </div>
+          <div class="pb-stat">
+            <div class="pb-stat-ic"><i data-lucide="sparkles"></i></div>
+            <p id="totalXPPoints" class="pb-num font-tabular">0 <span>XP</span></p>
+            <p class="pb-lab">Scholar XP</p>
+          </div>
+          <div class="pb-stat">
+            <div class="pb-stat-ic g"><i data-lucide="brain"></i></div>
+            <p id="aiIntelligenceScore" class="pb-num font-tabular">0<span>/100</span></p>
+            <p class="pb-lab">AI IQ</p>
+          </div>
+        </div>
+
+        <button type="button" class="pb-goal" onclick="window.showSection('cbt')">
+          <div class="pb-stat-ic g"><i data-lucide="target"></i></div>
+          <div>
+            <p class="pb-lab" style="margin:0">Active goal</p>
+            <p id="activeGoalName" class="pb-goal-n">None</p>
+          </div>
+          <i data-lucide="chevron-right"></i>
+        </button>
+
+        <div>
+          <div class="pb-title"><h3>Study</h3></div>
+          <div class="pb-grid4">
+            <button type="button" class="pb-tile" onclick="window.showSection('cbt')"><div class="pb-stat-ic"><i data-lucide="zap"></i></div><span>Practice</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('aiscan')"><div class="pb-stat-ic g"><i data-lucide="scan-line"></i></div><span>AI Scan</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('flashcards')"><div class="pb-stat-ic o"><i data-lucide="layers"></i></div><span>Flashcards</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('leaderboardSection')"><div class="pb-stat-ic r"><i data-lucide="trophy"></i></div><span>Ranking</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('books')"><div class="pb-stat-ic i"><i data-lucide="book-open"></i></div><span>Library</span></button>
+            <button type="button" class="pb-tile" onclick="window.toggleFocusMode(true)"><div class="pb-stat-ic i"><i data-lucide="timer"></i></div><span>Focus mode</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('notes')"><div class="pb-stat-ic c"><i data-lucide="sticky-note"></i></div><span>Notes</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('tutorHub')"><div class="pb-stat-ic"><i data-lucide="graduation-cap"></i></div><span>Tutors</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('marketplace')"><div class="pb-stat-ic g"><i data-lucide="shopping-bag"></i></div><span>Market</span></button>
+          </div>
+        </div>
+
+        <div>
+          <div class="pb-title"><h3>University</h3></div>
+          <div class="pb-grid3">
+            <button type="button" class="pb-tile" onclick="window.showSection('universityLectures')"><div class="pb-stat-ic"><i data-lucide="play-circle"></i></div><span>Lectures</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('lectureNotes')"><div class="pb-stat-ic r"><i data-lucide="mic"></i></div><span>Lecture Notes</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('finalYear')"><div class="pb-stat-ic o"><i data-lucide="clipboard-list"></i></div><span>Final Year</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('universityCgpa')"><div class="pb-stat-ic g"><i data-lucide="calculator"></i></div><span>CGPA</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('hostelFinder')"><div class="pb-stat-ic c"><i data-lucide="home"></i></div><span>Hostels</span></button>
+          </div>
+        </div>
+
+        <div>
+          <div class="pb-title"><h3>Community</h3></div>
+          <div class="pb-grid3">
+            <button type="button" class="pb-tile" onclick="window.showSection('community')"><div class="pb-stat-ic"><i data-lucide="users"></i></div><span>Network</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('warRooms')"><div class="pb-stat-ic r"><i data-lucide="swords"></i></div><span>War Rooms</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('campusHub')"><div class="pb-stat-ic g"><i data-lucide="map-pin"></i></div><span>Campus Hub</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('gigsBoard')"><div class="pb-stat-ic o"><i data-lucide="briefcase"></i></div><span>Gigs</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('skillAcademy')"><div class="pb-stat-ic c"><i data-lucide="award"></i></div><span>Academy</span></button>
+            <button type="button" class="pb-tile" onclick="window.showSection('support')"><div class="pb-stat-ic i"><i data-lucide="life-buoy"></i></div><span>Support</span></button>
           </div>
         </div>
       </section>

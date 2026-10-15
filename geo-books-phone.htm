@@ -752,6 +752,14 @@ header.sticky .text-xl{ font-size:17px !important; line-height:1.2 !important; }
 #fcEntryScreen{justify-content:flex-start;overflow-y:auto}
 #fcEntryScreen>:first-child{margin-top:auto}#fcEntryScreen>:last-child{margin-bottom:auto}
 </style>
+<style id="gb-motion">
+/* Section entrance. The old animate-in/fade-in classes are not in the compiled CSS, so sections used to just pop in. */
+@keyframes gbIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.section:not(.hidden):not(#dashboard){animation:gbIn .3s cubic-bezier(.16,1,.3,1) backwards}
+.ux-tile,.fc-action-card{transition:transform .18s ease,box-shadow .2s ease}
+.ux-tile:active,.fc-action-card:active{transform:scale(.97)}
+@media(prefers-reduced-motion:reduce){.section:not(.hidden){animation:none !important}}
+</style>
 </head>
 <body class="bg-[#F8FAFC] text-slate-900 dark:bg-[#020617] dark:text-slate-100 font-sans selection:bg-brand-100 selection:text-brand-900">
   <canvas id="neuralCanvas" class="fixed inset-0 pointer-events-none z-[-1] opacity-20"></canvas>

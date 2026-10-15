@@ -414,6 +414,20 @@ const questionImportLimiter = rateLimit({
 // before this fix — a 70-page PDF produced zero extracted questions, not a
 // partial result, since 100kb doesn't even fit one page image alone.
 app.use(express.json({ limit: '20mb' }));
+// The project root is the web root, so keep server-side code, config and docs out of it. Everything the
+// browser needs (pages, client scripts, css, images, manifest, service worker) is still served.
+const NON_PUBLIC = [
+  /^\/(backend|functions|node_modules|\.git|\.github|\.firebase)(\/|$)/i,
+  /^\/(server|set-admin-claim|lecture-notes|final-year|multipart-upload|functions-premium-gate-EXAMPLE)(\.js)$/i,
+  /^\/(firestore\.rules|storage\.rules|firestore\.indexes\.json|firebase\.json|package(-lock)?\.json|gitignore|tailwind\.config\.js|input\.css)$/i,
+  /\.(md|map|env|log|example)$/i,
+];
+app.use((req, res, next) => {
+  let p;
+  try { p = decodeURIComponent(req.path); } catch { return res.status(400).end(); }
+  if (NON_PUBLIC.some((re) => re.test(p)) || p.split('/').some((seg) => seg.startsWith('.') && seg !== '.well-known')) return res.status(404).end();
+  next();
+});
 app.use(express.static(__dirname, { index: 'index.htm' })); // Serve static files from project root; landing page is index.htm, not the express.static default of index.html
 
 // ---------------------------------------------------------------------------
