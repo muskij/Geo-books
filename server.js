@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import {
   S3Client,
   PutObjectCommand,
+  HeadObjectCommand,
   CreateMultipartUploadCommand,
   UploadPartCommand,
   CompleteMultipartUploadCommand,
@@ -418,7 +419,7 @@ app.use(express.json({ limit: '20mb' }));
 // The project root is the web root, so keep server-side code, config and docs out of it. Everything the
 // browser needs (pages, client scripts, css, images, manifest, service worker) is still served.
 const NON_PUBLIC = [
-  /^\/(backend|functions|node_modules|\.git|\.github|\.firebase)(\/|$)/i,
+  /^\/(backend|functions|_bridge-import|node_modules|\.git|\.github|\.firebase)(\/|$)/i,
   /^\/(server|claude-admin-mcp|set-admin-claim|lecture-notes|final-year|multipart-upload|functions-premium-gate-EXAMPLE)(\.js)$/i,
   /^\/(firestore\.rules|storage\.rules|firestore\.indexes\.json|firebase\.json|package(-lock)?\.json|gitignore|tailwind\.config\.js|input\.css)$/i,
   /\.(md|map|env|log|example)$/i,
@@ -1936,7 +1937,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 if (db) mountLectureNotes({ app, db, FieldValue, requireAuth, isAdminUser });
 if (db) mountFinalYear({ app, db, FieldValue, requireAuth, isAdminUser });
-mountClaudeAdminMcp({ app, db, FieldValue }); // no-op unless CLAUDE_MCP_SECRET is set
+mountClaudeAdminMcp({ app, db, FieldValue, r2: { client: r2Client, bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME, publicUrl: process.env.CLOUDFLARE_R2_PUBLIC_URL, PutObjectCommand, HeadObjectCommand, baseDir: __dirname } }); // no-op unless CLAUDE_MCP_SECRET is set
 
 const server = app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);

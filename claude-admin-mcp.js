@@ -8,6 +8,8 @@
 // Deliberately NOT exposed: tokens, passwords, payment/escrow mutation, bans, deletes,
 // subscription changes, raw Firestore access. Only the tools listed below exist.
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
 const REPORT_STATUSES = ['pending', 'reviewing', 'resolved', 'dismissed'];
 // Content collections Claude may create/edit. No users, admins, payments, promos or subscriptions.
@@ -31,7 +33,7 @@ function pick(obj, keys) {
   return out;
 }
 
-export function mountClaudeAdminMcp({ app, db, FieldValue }) {
+export function mountClaudeAdminMcp({ app, db, FieldValue, r2 }) {
   const secret = process.env.CLAUDE_MCP_SECRET || '';
   if (secret.length < 32) {
     console.log('[claude-mcp] disabled (set CLAUDE_MCP_SECRET to 32+ chars to enable)');
@@ -145,7 +147,94 @@ export function mountClaudeAdminMcp({ app, db, FieldValue }) {
           await db.collection(collection).doc(id).update(restore);
           return { reverted: 'fields restored', id };
         }
+        if (tool === 'import_past_papers' && Array.isArray(result.createdIds) && result.createdIds.length) {
+          for (const eid of result.createdIds) { const d = await db.collection('exams').doc(eid).get(); if (d.exists && d.data().createdBy === 'claude-mcp') await d.ref.delete(); }
+          return { reverted: 'imported exams removed', count: result.createdIds.length };
+        }
         throw new Error('this entry cannot be reverted');
+      },
+    },
+
+    r2_import_images: {
+      description: 'WRITE (logged): copy image files that were staged in the deployed app\'s _bridge-import/<folder>/ directory into the R2 bucket under the same folder name. Never overwrites an existing object. Returns public URLs.',
+      inputSchema: { type: 'object', required: ['folder'], properties: { folder: { type: 'string', description: 'lowercase letters, digits and dashes, e.g. chemistry-pastpaper' } } },
+      write: true,
+      run: async ({ folder }) => {
+        if (!r2) throw new Error('R2 is not configured on this server');
+        if (!/^[a-z0-9][a-z0-9-]{2,60}$/.test(String(folder))) throw new Error('bad folder name');
+        const dir = path.join(r2.baseDir, '_bridge-import', folder);
+        if (!fs.existsSync(dir)) throw new Error('nothing staged at _bridge-import/' + folder);
+        const TYPES = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
+        const uploaded = []; const skipped = []; const rejected = [];
+        for (const name of fs.readdirSync(dir)) {
+          const ext = path.extname(name).toLowerCase();
+          if (!/^[\w.-]+$/.test(name) || !TYPES[ext]) { rejected.push(name); continue; }
+          const body = fs.readFileSync(path.join(dir, name));
+          if (body.length > 5 * 1024 * 1024) { rejected.push(name + ' (too large)'); continue; }
+          const Key = folder + '/' + name;
+          let exists = false;
+          try { await r2.client.send(new r2.HeadObjectCommand({ Bucket: r2.bucket, Key })); exists = true; } catch { /* not found */ }
+          if (exists) { skipped.push(name); continue; }
+          await r2.client.send(new r2.PutObjectCommand({ Bucket: r2.bucket, Key, Body: body, ContentType: TYPES[ext], CacheControl: 'public, max-age=31536000, immutable' }));
+          uploaded.push(name);
+        }
+        return { folder, publicBase: (r2.publicUrl || '').replace(/\/$/, '') + '/' + folder + '/', uploaded: uploaded.length, skippedExisting: skipped, rejected, sample: uploaded.slice(0, 3) };
+      },
+    },
+    import_past_papers: {
+      description: 'WRITE (logged, undoable): create CBT exams (the Past Papers) from an <exam-paper> XML file staged at _bridge-import/<xmlFile>. Optional imagesManifest (CSV with columns file,year,question) staged beside it attaches diagram images stored in R2 under imagesFolder. dryRun defaults to true and writes nothing. Exams that already exist (same subject, year, type) are skipped.',
+      inputSchema: { type: 'object', required: ['xmlFile'], properties: { xmlFile: { type: 'string' }, imagesManifest: { type: 'string' }, imagesFolder: { type: 'string' }, skipBroken: { type: 'boolean', description: 'import the good questions of a paper and drop the broken ones (reported in dropped). Default false: a paper with any broken question is skipped whole.' }, dryRun: { type: 'boolean' } } },
+      write: true,
+      run: async ({ xmlFile, imagesManifest, imagesFolder, skipBroken = false, dryRun = true }) => {
+        const safe = (n) => { if (!/^[\w.-]+$/.test(String(n))) throw new Error('bad file name'); return path.join(r2base(), '_bridge-import', String(n)); };
+        const r2base = () => { if (!r2) throw new Error('not configured'); return r2.baseDir; };
+        const dec = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, '&');
+        const clean = (s) => dec(String(s || '').replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
+        const tag = (blk, t) => { const mm = blk.match(new RegExp('<' + t + '>([\\s\\S]*?)</' + t + '>')); return mm ? clean(mm[1]) : ''; };
+        const xml = fs.readFileSync(safe(xmlFile), 'utf8');
+        const img = {};
+        if (imagesManifest) {
+          if (!imagesFolder || !/^[a-z0-9][a-z0-9-]{2,60}$/.test(imagesFolder)) throw new Error('imagesFolder required with imagesManifest');
+          const base = (r2.publicUrl || '').replace(/\/$/, '') + '/' + imagesFolder + '/';
+          for (const line of fs.readFileSync(safe(imagesManifest), 'utf8').split(/\r?\n/).slice(1)) {
+            const [file, , year, question] = line.split(',');
+            if (file && year && question && /^[\w.-]+$/.test(file)) img[year + '|' + question] = base + file;
+          }
+        }
+        const papers = [];
+        for (const pm of xml.matchAll(/<exam-paper\b([^>]*)>([\s\S]*?)<\/exam-paper>/g)) {
+          const attr = (n) => { const a = pm[1].match(new RegExp(n + '="([^"]*)"')); return a ? dec(a[1]).trim() : ''; };
+          const subject = attr('subject'); const year = attr('year');
+          const examType = (attr('type') || 'JAMB').toUpperCase() === 'JAMB' ? 'JAMB' : 'Other';
+          const duration = parseInt(attr('duration')) || 40;
+          const title = attr('title') || (subject + ' ' + year);
+          const problems = []; const questions = [];
+          [...pm[2].matchAll(/<question\b([^>]*)>([\s\S]*?)<\/question>/g)].forEach((qm, i) => {
+            const n = i + 1;
+            const ans = ((qm[1].match(/answer="([^"]*)"/) || [])[1] || '').toUpperCase();
+            const a = ['A', 'B', 'C', 'D', 'E'].indexOf(ans);
+            const all = ['a', 'b', 'c', 'd', 'e'].map((l) => tag(qm[2], 'choice-' + l));
+            const opts = (all[4] || a === 4) ? all : all.slice(0, 4);
+            const q = tag(qm[2], 'question-text');
+            if (!q || a === -1 || opts.some((o) => !o) || /^\[(not extracted|RAW)/i.test(q)) { problems.push('Q' + n); return; }
+            questions.push({ q, opts, a, exp: tag(qm[2], 'explanation'), image: tag(qm[2], 'image-url') || img[year + '|' + n] || null });
+          });
+          papers.push({ title, subject, year, examType, duration, questions, problems });
+        }
+        if (!papers.length) throw new Error('no <exam-paper> blocks found');
+        const plan = []; const createdIds = [];
+        for (const p of papers) {
+          const dup = await db.collection('exams').where('jambSubject', '==', p.subject).where('jambYear', '==', p.year).where('examType', '==', p.examType).limit(1).get();
+          const row = { title: p.title, questions: p.questions.length, withImages: p.questions.filter((q) => q.image).length, dropped: p.problems, duplicate: !dup.empty };
+          if (!dryRun && !dup.empty) row.action = 'skipped (already exists)';
+          else if (!dryRun && p.problems.length && !skipBroken) row.action = 'skipped (has broken questions; use skipBroken to drop them)';
+          else if (!dryRun) {
+            const ref = await db.collection('exams').add({ title: p.title, subject: p.subject, duration: p.duration, questions: p.questions, examType: p.examType, jambSubject: p.examType === 'JAMB' ? p.subject : null, jambYear: p.examType === 'JAMB' ? (p.year || null) : null, createdBy: 'claude-mcp', createdAt: FieldValue.serverTimestamp() });
+            createdIds.push(ref.id); row.action = 'created';
+          }
+          plan.push(row);
+        }
+        return { dryRun: !!dryRun, papers: plan.length, questions: plan.reduce((s, r) => s + r.questions, 0), images: plan.reduce((s, r) => s + r.withImages, 0), created: createdIds.length, createdIds, plan };
       },
     },
     set_report_status: {
