@@ -17,6 +17,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { mountClaudeAdminMcp } from './claude-admin-mcp.js';
 import { getAuth } from 'firebase-admin/auth';
 import { mountLectureNotes } from './lecture-notes.js';
 import { mountFinalYear } from './final-year.js';
@@ -418,7 +419,7 @@ app.use(express.json({ limit: '20mb' }));
 // browser needs (pages, client scripts, css, images, manifest, service worker) is still served.
 const NON_PUBLIC = [
   /^\/(backend|functions|node_modules|\.git|\.github|\.firebase)(\/|$)/i,
-  /^\/(server|set-admin-claim|lecture-notes|final-year|multipart-upload|functions-premium-gate-EXAMPLE)(\.js)$/i,
+  /^\/(server|claude-admin-mcp|set-admin-claim|lecture-notes|final-year|multipart-upload|functions-premium-gate-EXAMPLE)(\.js)$/i,
   /^\/(firestore\.rules|storage\.rules|firestore\.indexes\.json|firebase\.json|package(-lock)?\.json|gitignore|tailwind\.config\.js|input\.css)$/i,
   /\.(md|map|env|log|example)$/i,
 ];
@@ -1935,6 +1936,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 if (db) mountLectureNotes({ app, db, FieldValue, requireAuth, isAdminUser });
 if (db) mountFinalYear({ app, db, FieldValue, requireAuth, isAdminUser });
+mountClaudeAdminMcp({ app, db, FieldValue }); // no-op unless CLAUDE_MCP_SECRET is set
 
 const server = app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
