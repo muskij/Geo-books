@@ -1002,13 +1002,20 @@ function watchLectures() {
 function watchCourseTopicsForPicker() {
   if (courseTopicsUnsub) return;
   const institutionId = myInstitutionId();
-  const q = institutionId
-    ? query(collection(db, 'courseTopics'), where('institutionId', '==', institutionId), orderBy('createdAt', 'desc'), limit(300))
-    : query(collection(db, 'courseTopics'), orderBy('createdAt', 'desc'), limit(300));
-
-  courseTopicsUnsub = onSnapshot(q, async (snap) => {
+  // Topics with institutionId "all" are national courses (MTH 101, PHY 101 ...) meant for every university.
+  // A student who has an institution sees their own university's topics plus those, so there are two listeners
+  // whose results are merged (a single "in" query would need a new composite index).
+  const sources = institutionId
+    ? [
+        query(collection(db, 'courseTopics'), where('institutionId', '==', institutionId), orderBy('createdAt', 'desc'), limit(300)),
+        query(collection(db, 'courseTopics'), where('institutionId', '==', 'all'), orderBy('createdAt', 'desc'), limit(300)),
+      ]
+    : [query(collection(db, 'courseTopics'), orderBy('createdAt', 'desc'), limit(300))];
+  const parts = sources.map(() => []);
+  const handle = async () => {
+    const docs = parts.flat().sort((a, b) => ((b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0)));
     const info = new Map();
-    snap.docs.forEach((d) => {
+    docs.forEach((d) => {
       const data = d.data();
       const courseId = data.courseId;
       if (!courseId) return;
@@ -1016,9 +1023,7 @@ function watchCourseTopicsForPicker() {
       if (existing) {
         existing.count += 1;
       } else {
-        // Docs are already ordered by createdAt desc, so the first one we
-        // see per courseId is the most recent topic — same "most recent
-        // uploader is the tile's face" convention allLectures uses below.
+        // Newest topic first, so the first one seen per courseId supplies the tile's face (same convention as allLectures).
         info.set(courseId, {
           count: 1,
           uploadedByName: data.uploadedByName || null,
@@ -1045,11 +1050,12 @@ function watchCourseTopicsForPicker() {
 
     allTopicCourseIds = info;
     renderCoursePicker();
-  }, (err) => {
-    // Non-fatal: lecture-backed courses still render fine without this,
-    // just silently missing any topics-only courses until it recovers.
+  };
+  const unsubs = sources.map((q, i) => onSnapshot(q, (snap) => { parts[i] = snap.docs; handle(); }, (err) => {
+    // Non-fatal: lecture-backed courses still render fine without this, just silently missing any topics-only courses until it recovers.
     console.warn('Course topics listener error (picker will still show lecture-backed courses):', err);
-  });
+  }));
+  courseTopicsUnsub = () => unsubs.forEach((u) => u());
 }
 
 // Chip row is built from what's actually in the current result set (plus
