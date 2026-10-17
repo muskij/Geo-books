@@ -13,7 +13,7 @@ import path from 'path';
 
 const REPORT_STATUSES = ['pending', 'reviewing', 'resolved', 'dismissed'];
 // Content collections Claude may create/edit. No users, admins, payments, promos or subscriptions.
-const CONTENT = ['books', 'questions', 'scholarships', 'hostels', 'courseTopics', 'videoLessons'];
+const CONTENT = ['books', 'questions', 'scholarships', 'hostels', 'courseTopics', 'videoLessons', 'tutorCourses', 'tutorTopics'];
 const MAX_BYTES = 20000;
 const USER_FIELDS = ['displayName', 'email', 'university', 'role', 'level', 'xp', 'streak', 'subscription', 'createdAt'];
 
