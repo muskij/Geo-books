@@ -681,6 +681,8 @@ html.dark #dashboard{--pb-card:#0f1530;--pb-ink:#f4f6ff;--pb-ink2:#aab3d1;--pb-i
 /* Section entrance. The old animate-in/fade-in classes are not in the compiled CSS, so sections used to just pop in. */
 @keyframes gbIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .section:not(.hidden):not(#dashboard){animation:gbIn .3s cubic-bezier(.16,1,.3,1) backwards}
+/* Below lg the sidebar is an off-canvas drawer. Its class list has both fixed and relative, and the compiled CSS lets relative win, so it kept 300px of the flex row (blank left strip, content pushed off-screen on phones). */
+@media(max-width:1023px){#sidebar{position:fixed}}
 .ux-tile,.fc-action-card{transition:transform .18s ease,box-shadow .2s ease}
 .ux-tile:active,.fc-action-card:active{transform:scale(.97)}
 @media(prefers-reduced-motion:reduce){.section:not(.hidden){animation:none !important}}
