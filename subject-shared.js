@@ -143,11 +143,15 @@ export async function checkSubjectAccess(user, kind, courseKey) {
     try {
       const course = await getDoc(doc(db, 'tutorCourses', courseKey));
       if (course.exists() && course.data().tutorId === user.uid) return { ok: true };
+      // Tutor courses are included with an active, verified Tutor Pass or University Pass.
+      const userSnap = await getDoc(doc(db, 'users', user.uid));
+      const sub = userSnap.exists() ? userSnap.data().subscription : null;
+      if (sub && ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70', 'TUTOR_PASS'].includes(sub.tier) && sub.verified === true && sub.status === 'active') return { ok: true };
       const purchase = await getDoc(doc(db, 'tutorPurchases', `${user.uid}_${courseKey}`));
       if (purchase.exists() && purchase.data().status === 'verified') return { ok: true };
       if (purchase.exists()) return { ok: false, pending: true, reason: 'Your enrollment is recorded and awaiting admin verification. Check back shortly.' };
     } catch (e) { console.error('Tutor access check failed:', e); }
-    return { ok: false, reason: 'Enroll in this tutor course to view its lessons.' };
+    return { ok: false, reason: 'You need an active Tutor Pass or University Pass to view these lessons.' };
   }
 
   try {

@@ -1105,6 +1105,7 @@
                   <option value="EXAM_PASS_ANNUAL">Exam Pass (Annual)</option>
                   <option value="UNIVERSITY_PASS_30">University Pass (30/mo)</option>
                   <option value="UNIVERSITY_PASS_70">University Pass (70/mo)</option>
+                  <option value="TUTOR_PASS">Tutor Pass (Tutor Hub)</option>
                 </select>
               </div>
             </div>
@@ -3120,7 +3121,7 @@
             </div>
           </td>
           <td class="px-10 py-6">
-            <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${s.subscription.tier === 'PREMIUM' ? 'bg-emerald-50 text-emerald-600' : (s.subscription.tier === 'UNIVERSITY_PASS_30' || s.subscription.tier === 'UNIVERSITY_PASS_70') ? 'bg-violet-50 text-violet-600' : 'bg-brand-50 text-brand-600'}">
+            <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${s.subscription.tier === 'PREMIUM' ? 'bg-emerald-50 text-emerald-600' : (s.subscription.tier === 'UNIVERSITY_PASS_30' || s.subscription.tier === 'UNIVERSITY_PASS_70') ? 'bg-violet-50 text-violet-600' : s.subscription.tier === 'TUTOR_PASS' ? 'bg-teal-50 text-teal-700' : 'bg-brand-50 text-brand-600'}">
               ${escapeHTML(s.subscription.tier)}
             </span>
           </td>
@@ -3384,7 +3385,7 @@
         exams = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         if (adminState.activeTab === 'cbt') renderExams();
       });
-      onSnapshot(query(collection(db, "users"), where("subscription.tier", "in", ["STANDARD", "PREMIUM", "UNIVERSITY_PASS_30", "UNIVERSITY_PASS_70"])), (snap) => document.getElementById('stat-upgrades').textContent = snap.size.toLocaleString());
+      onSnapshot(query(collection(db, "users"), where("subscription.tier", "in", ["STANDARD", "PREMIUM", "UNIVERSITY_PASS_30", "UNIVERSITY_PASS_70", "TUTOR_PASS"])), (snap) => document.getElementById('stat-upgrades').textContent = snap.size.toLocaleString());
       
       // Count unique users who sent messages
       onSnapshot(collection(db, "support_messages"), (snap) => {
@@ -5222,7 +5223,7 @@
     // Pricing mirrors app.js's SUBSCRIPTION_TIERS (STANDARD NGN1,500/mo,
     // PREMIUM NGN3,500/mo, *_ANNUAL NGN15,000 / NGN35,000 per year).
     // ==========================================================================
-    const TIER_PRICING = { STANDARD: 1500, PREMIUM: 3500, STANDARD_ANNUAL: 15000, PREMIUM_ANNUAL: 35000, UNIVERSITY_PASS_30: 5000, UNIVERSITY_PASS_70: 10000 };
+    const TIER_PRICING = { STANDARD: 1500, PREMIUM: 3500, STANDARD_ANNUAL: 15000, PREMIUM_ANNUAL: 35000, UNIVERSITY_PASS_30: 5000, UNIVERSITY_PASS_70: 10000, TUTOR_PASS: 3000 };
     const analyticsCharts = {};
 
     function drawChart(canvasId, config) {
@@ -5263,7 +5264,7 @@
         });
         document.getElementById('an-users-week').textContent = `+${newThisWeek} this week`;
 
-        const tierCounts = { STANDARD: 0, PREMIUM: 0, STANDARD_ANNUAL: 0, PREMIUM_ANNUAL: 0, UNIVERSITY_PASS_30: 0, UNIVERSITY_PASS_70: 0 };
+        const tierCounts = { STANDARD: 0, PREMIUM: 0, STANDARD_ANNUAL: 0, PREMIUM_ANNUAL: 0, UNIVERSITY_PASS_30: 0, UNIVERSITY_PASS_70: 0, TUTOR_PASS: 0 };
         let paidVerifiedCount = 0;
         users.forEach(u => {
           const tier = u.subscription?.tier;

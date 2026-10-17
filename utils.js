@@ -195,7 +195,7 @@ export function hasAiAccess(userDataOrClaims) {
 // of real purchasable tiers rather than just the top two.
 const PAID_TIERS = [
   'STANDARD', 'STANDARD_ANNUAL', 'PREMIUM', 'PREMIUM_ANNUAL', 'ELITE',
-  'EXAM_PASS_SEASON', 'EXAM_PASS_ANNUAL', 'UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'
+  'EXAM_PASS_SEASON', 'EXAM_PASS_ANNUAL', 'UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70', 'TUTOR_PASS'
 ];
 export function hasAnyPaidPlan(userDataOrClaims) {
   const u = userDataOrClaims && typeof userDataOrClaims === 'object' ? userDataOrClaims : {};

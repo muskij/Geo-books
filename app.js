@@ -2243,7 +2243,7 @@ window.setBillingCycle = (cycle) => {
 
   // Free + Exam Pass + University Pass cards don't change with the billing
   // toggle (all flat/monthly, no annual variant).
-  ['FREE', 'EXAM_PASS_SEASON', 'EXAM_PASS_ANNUAL', 'UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'].forEach(tier => {
+  ['FREE', 'EXAM_PASS_SEASON', 'EXAM_PASS_ANNUAL', 'UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70', 'TUTOR_PASS'].forEach(tier => {
     const btn = S(`planBtn${tier}`);
     if (!btn) return;
     if (tier === currentPlan) {
@@ -2252,7 +2252,7 @@ window.setBillingCycle = (cycle) => {
       btn.className = 'w-full py-4 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-400 font-black uppercase tracking-widest text-[10px]';
     } else {
       btn.disabled = false;
-      btn.textContent = tier === 'FREE' ? 'Switch to Free' : (tier.startsWith('UNIVERSITY_PASS') ? 'Get University Pass' : 'Get Exam Pass');
+      btn.textContent = tier === 'FREE' ? 'Switch to Free' : (tier === 'TUTOR_PASS' ? 'Get Tutor Pass' : (tier.startsWith('UNIVERSITY_PASS') ? 'Get University Pass' : 'Get Exam Pass'));
     }
   });
 };
@@ -2337,6 +2337,11 @@ const PLAN_PRICES = {
   // "/month" pricing shown on both cards.
   UNIVERSITY_PASS_30: { amount: 5000, durationDays: 30, label: 'University Pass — 30' },
   UNIVERSITY_PASS_70: { amount: 10000, durationDays: 30, label: 'University Pass — 70' },
+  // Tutor Hub courses only (no hostel finder / lecture recordings). Monthly,
+  // manually verified like every other plan. Access is checked by tier string
+  // in firestore.rules (hasTutorAccess), tutor-courses.htm, tutor-course-viewer.html,
+  // subject-shared.js and server.js (canReadSubjectTopic).
+  TUTOR_PASS: { amount: 3000, durationDays: 30, label: 'Tutor Pass' },
 };
 
 // Billing-cycle toggle for Standard/Premium in the pricing modal. Exam

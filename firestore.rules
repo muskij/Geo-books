@@ -488,6 +488,20 @@ service cloud.firestore {
       );
     }
 
+    // Tutor Hub access: everything a University Pass gets for tutor content,
+    // plus the standalone TUTOR_PASS. Deliberately NOT used for university
+    // content (courseTopics, lectures, hostels) — a Tutor Pass must not
+    // unlock those.
+    function hasTutorAccess() {
+      return hasUniversityAccess() || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscription.tier == 'TUTOR_PASS' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscription.verified == true &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscription.status == 'active'
+      );
+    }
+
     // Written only by server.js (Admin SDK, bypasses these rules entirely)
     // via /api/lectures/:id/view. Read-only here so a student can show
     // their own "X/30 lectures this month" progress in the UI.
@@ -637,7 +651,8 @@ service cloud.firestore {
     }
 
     match /assessments/{assessmentId} {
-      allow read: if hasUniversityAccess();
+      // Tutor-authored quizzes are also readable with a Tutor Pass.
+      allow read: if hasUniversityAccess() || (resource.data.get('uploadedByRole', '') == 'tutor' && hasTutorAccess());
       allow create: if isAuthenticated() && (
         isAdmin() ||
         (
@@ -712,7 +727,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isAdmin() ||
         resource.data.createdBy == request.auth.uid ||
-        hasUniversityAccess() ||
+        hasTutorAccess() ||
         (
           exists(/databases/$(database)/documents/tutorPurchases/$(request.auth.uid + '_' + resource.data.tutorCourseId)) &&
           get(/databases/$(database)/documents/tutorPurchases/$(request.auth.uid + '_' + resource.data.tutorCourseId)).data.status == 'verified'

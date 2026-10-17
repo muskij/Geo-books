@@ -1130,6 +1130,7 @@ const CBT_GENERATION_DAILY_CAP = {
   UNIVERSITY_PASS_30: 1,
   UNIVERSITY_PASS_70: 1,
   TUTOR_COURSE_PASS: 1,
+  TUTOR_PASS: 1,
   STANDARD: 20,
   STANDARD_ANNUAL: 20,
   PREMIUM: 20,
@@ -1623,10 +1624,10 @@ async function canReadSubjectTopic(user, kind, topic) {
     if (courseSnap.exists && courseSnap.data().tutorId === user.uid) return true;
     const p = await db.collection('tutorPurchases').doc(`${user.uid}_${courseId}`).get();
     if (p.exists && p.data().status === 'verified') return true; // legacy per-course purchase
-    // Tutor courses are included with an active, verified University Pass.
+    // Tutor courses are included with an active, verified University Pass or Tutor Pass.
     const us = await db.collection('users').doc(user.uid).get();
     const s = us.exists ? us.data().subscription : null;
-    return !!(s && ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70'].includes(s.tier) && s.verified === true && s.status === 'active');
+    return !!(s && ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70', 'TUTOR_PASS'].includes(s.tier) && s.verified === true && s.status === 'active');
   }
   const u = await db.collection('users').doc(user.uid).get();
   const sub = u.exists ? u.data().subscription : null;
