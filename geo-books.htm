@@ -901,8 +901,11 @@ html.dark #dashboard{--pb-card:#0f1530;--pb-ink:#f4f6ff;--pb-ink2:#aab3d1;--pb-i
       </div>
 
       <div class="mt-auto p-4 sidebar-footer">
-        <button data-target="profile" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500 mb-4">
+        <button data-target="profile" class="tab-btn w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold text-slate-500">
           <i data-lucide="user-circle" class="w-5 h-5 shrink-0"></i><span class="sidebar-text">My Profile</span>
+        </button>
+        <button type="button" id="sidebarLogoutBtn" onclick="window.logout()" class="w-full flex items-center justify-start px-6 gap-3 py-3 rounded-2xl hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all text-sm font-bold text-rose-500 mb-4">
+          <i data-lucide="log-out" class="w-5 h-5 shrink-0"></i><span class="sidebar-text">Log out</span>
         </button>
       </div>
     </aside>
