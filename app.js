@@ -10778,6 +10778,18 @@ async function loadTutorHubPreview() {
       grid.innerHTML = `<p class="col-span-full text-center py-16 text-slate-300 font-bold">No tutor courses published yet — check back soon, or be the first to <a href="tutor.html" class="underline">become a tutor</a>.</p>`;
       return;
     }
+    // Subscription courses are included with a Tutor Pass / University Pass, so
+    // they never show a naira price (a bare "₦0" read as "free" or "unpaid").
+    const sub = app.state.userData?.subscription;
+    const hasPass = !!sub && ['UNIVERSITY_PASS_30', 'UNIVERSITY_PASS_70', 'TUTOR_PASS'].includes(sub.tier) && sub.verified === true && sub.status === 'active';
+    const priceLabel = (c) => {
+      if (c.access === 'subscription' || !Number(c.price)) {
+        return hasPass
+          ? `<span class="text-[10px] font-black uppercase tracking-widest text-emerald-600">Included with your pass</span>`
+          : `<span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Included with Tutor Pass</span>`;
+      }
+      return `<span class="text-sm font-black">₦${Number(c.price).toLocaleString()}</span>`;
+    };
     grid.innerHTML = courses.map((c) => `
       <a href="tutor-courses.htm?course=${encodeURIComponent(c.id)}" class="block bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden hover:border-brand-300 transition-colors">
         <div class="h-28 bg-gradient-to-br from-brand-100 to-brand-50 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
@@ -10787,7 +10799,7 @@ async function loadTutorHubPreview() {
           ${c.subject ? `<p class="text-[9px] font-black uppercase tracking-widest text-brand-600 mb-1">${escapeHTML(c.subject)}</p>` : ''}
           <h3 class="font-black text-sm mb-1 truncate">${escapeHTML(c.title || 'Untitled course')}</h3>
           <p class="text-[10px] text-slate-400 font-bold mb-3 truncate">By ${escapeHTML(c.tutorName || 'Tutor')}</p>
-          <span class="text-sm font-black">₦${Number(c.price || 0).toLocaleString()}</span>
+          ${priceLabel(c)}
         </div>
       </a>`).join('');
     if (window.lucide) window.lucide.createIcons();
