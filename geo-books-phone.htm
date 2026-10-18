@@ -604,6 +604,8 @@ html.dark{
 /* ---- keep: phone-only chrome (the sidebar is the only route to several sections) ---- */
 #bottomNav{ display:block !important; }
 aside#sidebar{ position:fixed !important; z-index:250 !important; }
+/* The floating bottom dock (z 400) sits over the drawer, so keep the drawer's last items (My Profile) scrollable above it. */
+aside#sidebar{ padding-bottom:calc(112px + env(safe-area-inset-bottom)) !important; }
 
 /* ---- keep: wordmark helpers referenced by the markup ---- */
 .gb-wordmark{ font-weight:800; letter-spacing:-.02em; }
