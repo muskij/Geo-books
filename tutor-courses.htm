@@ -114,8 +114,9 @@
 
   async function loadCourses() {
     try {
-      const snap = await getDocs(query(collection(db, 'tutorCourses'), where('status', '==', 'published'), orderBy('createdAt', 'desc')));
-      allCourses = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const snap = await getDocs(query(collection(db, 'tutorCourses'), where('status', '==', 'published')));
+      const tsMs = ((x)=>x?.toMillis?x.toMillis():(x?.seconds||0)*1000);
+      allCourses = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt));
     } catch (e) {
       console.error('Failed to load tutor courses:', e);
     }

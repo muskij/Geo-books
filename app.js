@@ -10769,11 +10769,12 @@ async function loadTutorHubPreview() {
   try {
     const snap = await getDocs(query(
       collection(db, 'tutorCourses'),
-      where('status', '==', 'published'),
-      orderBy('createdAt', 'desc'),
-      limit(6)
+      where('status', '==', 'published')
     ));
-    const courses = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const tsMs = ((x)=>x?.toMillis?x.toMillis():(x?.seconds||0)*1000);
+    const courses = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt))
+      .slice(0, 6);
     if (!courses.length) {
       grid.innerHTML = `<p class="col-span-full text-center py-16 text-slate-300 font-bold">No tutor courses published yet — check back soon, or be the first to <a href="tutor.html" class="underline">become a tutor</a>.</p>`;
       return;

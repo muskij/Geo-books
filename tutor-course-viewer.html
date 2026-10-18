@@ -151,8 +151,8 @@
       document.getElementById('courseKicker').textContent = course.subject || 'Tutor Course';
       document.getElementById('courseTitle').textContent = course.title || cid;
 
-      const snap = await getDocs(query(collection(db, 'tutorTopics'), where('tutorCourseId', '==', cid), orderBy('topicNumber', 'asc')));
-      allTopics = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const snap = await getDocs(query(collection(db, 'tutorTopics'), where('tutorCourseId', '==', cid)));
+      allTopics = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (Number(a.topicNumber) || 0) - (Number(b.topicNumber) || 0));
       // A course made entirely of AI Subjects topics gets the full MedPhysio-style course page.
       if (allTopics.length && allTopics.every((t) => t.contentFormat === 'medphysio')) {
         window.location.replace(`subject.htm?kind=tutor&course=${encodeURIComponent(cid)}`);
