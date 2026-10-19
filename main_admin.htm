@@ -1765,6 +1765,26 @@
     <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="window.closeQuestionModal()"></div>
     <div class="relative w-full max-w-6xl bg-white rounded-[40px] p-12 shadow-2xl max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-10"><h3 class="text-3xl font-black" id="qModalExamTitle">Questions</h3><button onclick="window.closeQuestionModal()" class="text-slate-400"><i data-lucide="x" class="w-8 h-8"></i></button></div>
+      <!-- Exam details (title, subject, time, JAMB subject / year) -->
+      <div class="mb-12 p-6 rounded-[28px] bg-slate-50 border border-slate-200 space-y-4">
+        <h4 class="font-black text-slate-400 uppercase">Exam Details</h4>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <input type="text" id="edTitle" placeholder="Title" class="md:col-span-2 px-5 py-3 rounded-xl bg-white border border-slate-200 outline-none font-bold text-sm">
+          <input type="text" id="edSubject" placeholder="Subject" class="px-5 py-3 rounded-xl bg-white border border-slate-200 outline-none font-bold text-sm">
+          <input type="number" min="1" id="edDuration" placeholder="Minutes" class="px-5 py-3 rounded-xl bg-white border border-slate-200 outline-none font-bold text-sm">
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+          <select id="edExamType" onchange="window.toggleEditExamType()" class="px-5 py-3 rounded-xl bg-white border border-slate-200 outline-none font-bold text-sm">
+            <option value="JAMB">JAMB</option>
+            <option value="Other">Other</option>
+          </select>
+          <input type="text" id="edJambSubject" list="edJambSubjectList" placeholder="JAMB subject" class="md:col-span-2 px-5 py-3 rounded-xl bg-white border border-slate-200 outline-none font-bold text-sm">
+          <input type="text" id="edJambYear" list="edJambYearList" placeholder="JAMB year" class="px-5 py-3 rounded-xl bg-white border border-slate-200 outline-none font-bold text-sm">
+          <datalist id="edJambSubjectList"><option value="Mathematics"><option value="English Language"><option value="Physics"><option value="Chemistry"><option value="Biology"><option value="Economics"><option value="Government"><option value="Literature in English"><option value="Commerce"><option value="Accounting"><option value="Geography"><option value="History"><option value="CRS"></datalist>
+          <datalist id="edJambYearList"><option value="2025"><option value="2024"><option value="2023"><option value="2022"><option value="2021"><option value="2020"><option value="2019"><option value="2018"><option value="2017"><option value="2016"><option value="2015"></datalist>
+        </div>
+        <button id="edSaveBtn" onclick="window.saveExamDetails()" class="px-8 py-3 rounded-xl bg-slate-900 text-white font-black uppercase text-[10px]">Save Details</button>
+      </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
         <div class="space-y-10">
           <!-- Add / edit one question -->
@@ -5295,8 +5315,77 @@
     window.manageQuestions = (idx) => {
       activeExamId = idx; const exam = exams[idx];
       document.getElementById('qModalExamTitle').textContent = exam.title;
-      resetExamQuestionForm(); resetExamGroupForm();
+      resetExamQuestionForm(); resetExamGroupForm(); fillExamDetailsForm(exam);
       document.getElementById('questionModal').classList.replace('hidden', 'flex'); renderQuestionsInModal();
+    };
+
+    // --- Exam details -----------------------------------------------------
+    window.toggleEditExamType = () => {
+      const isJamb = document.getElementById('edExamType').value === 'JAMB';
+      ['edJambSubject', 'edJambYear'].forEach(id => { document.getElementById(id).classList.toggle('hidden', !isJamb); });
+    };
+
+    function fillExamDetailsForm(exam) {
+      document.getElementById('edTitle').value = exam.title || '';
+      document.getElementById('edSubject').value = exam.subject || exam.jambSubject || '';
+      document.getElementById('edDuration').value = exam.duration || '';
+      document.getElementById('edExamType').value = exam.examType === 'JAMB' ? 'JAMB' : 'Other';
+      document.getElementById('edJambSubject').value = exam.jambSubject || '';
+      document.getElementById('edJambYear').value = exam.jambYear == null ? '' : String(exam.jambYear);
+      window.toggleEditExamType();
+    }
+
+    window.saveExamDetails = async () => {
+      const exam = exams[activeExamId];
+      if (!exam) return;
+      const val = (id) => document.getElementById(id).value.trim();
+      const title = val('edTitle'), subject = val('edSubject'), duration = parseInt(val('edDuration'), 10);
+      const examType = document.getElementById('edExamType').value === 'JAMB' ? 'JAMB' : 'Other';
+      const jambSubject = examType === 'JAMB' ? (val('edJambSubject') || subject) : null;
+      const jambYear = examType === 'JAMB' ? (val('edJambYear') || null) : null;
+      const btn = document.getElementById('edSaveBtn');
+
+      if (!title || !subject) { window.toast("Title and subject are required", "error"); return; }
+      if (!Number.isInteger(duration) || duration < 1) { window.toast("Duration must be a whole number of minutes", "error"); return; }
+      if (examType === 'JAMB' && !jambYear) { window.toast("Enter the JAMB year (students pick papers by year)", "error"); return; }
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="animate-pulse">Saving...</span>';
+        const fields = { title, subject, duration, examType, jambSubject, jambYear };
+        await updateDoc(doc(db, "exams", exam.id), fields);
+        Object.assign(exams[activeExamId] || exam, fields);
+        document.getElementById('qModalExamTitle').textContent = title;
+        renderExams();
+        try {
+          await addDoc(collection(db, "activity_logs"), { title: "Exam Details Edited: " + title, user: auth.currentUser.email, tag: "CBT", timestamp: serverTimestamp() });
+        } catch (logErr) { console.warn("Activity log failed:", logErr); }
+        window.toast("Exam details saved", "success");
+      } catch (e) {
+        console.error("Save exam details error:", e);
+        window.toast("Failed to save exam details", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Save Details";
+      }
+    };
+
+    // Moves a question up/down. Passage / directions membership lives on the
+    // question itself, so it travels with it; only the numbering changes.
+    window.moveExamQuestion = async (qIdx, dir) => {
+      const exam = exams[activeExamId];
+      const to = qIdx + dir;
+      const qs = [...(exam.questions || [])];
+      if (to < 0 || to >= qs.length) return;
+      [qs[qIdx], qs[to]] = [qs[to], qs[qIdx]];
+      try {
+        await saveExamContent(qs, exam.groups || []);
+        resetExamQuestionForm();
+        renderQuestionsInModal();
+      } catch (e) {
+        console.error("Move question error:", e);
+        window.toast("Failed to move question", "error");
+      }
     };
     window.closeQuestionModal = () => {
       document.getElementById('questionModal').classList.replace('flex', 'hidden');
@@ -5515,6 +5604,8 @@
               ${(q.a === null || q.a === undefined) ? '<span class="px-2 py-1 rounded-full bg-rose-50 text-rose-600 text-[9px] font-black uppercase">Answer needed</span>' : ''}
             </div>
             <div class="flex items-center gap-1 shrink-0">
+              <button onclick="window.moveExamQuestion(${i}, -1)" class="p-2 text-slate-400 hover:text-brand-500 ${i === 0 ? 'opacity-20 pointer-events-none' : ''}"><i data-lucide="chevron-up" class="w-4 h-4"></i></button>
+              <button onclick="window.moveExamQuestion(${i}, 1)" class="p-2 text-slate-400 hover:text-brand-500 ${i === questions.length - 1 ? 'opacity-20 pointer-events-none' : ''}"><i data-lucide="chevron-down" class="w-4 h-4"></i></button>
               <button onclick="window.editExamQuestion(${i})" class="p-2 text-slate-400 hover:text-brand-500"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
               <button onclick="window.removeQuestionFromExam(${i})" class="p-2 text-slate-400 hover:text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </div>
