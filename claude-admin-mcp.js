@@ -182,7 +182,7 @@ export function mountClaudeAdminMcp({ app, db, FieldValue, r2 }) {
       },
     },
     import_past_papers: {
-      description: 'WRITE (logged, undoable): create CBT exams (the Past Papers) from an <exam-paper> XML file staged at _bridge-import/<xmlFile>. Optional imagesManifest (CSV with columns file,year,question) staged beside it attaches diagram images stored in R2 under imagesFolder. dryRun defaults to true and writes nothing. Exams that already exist (same subject, year, type) are skipped.',
+      description: 'WRITE (logged, undoable): create CBT exams (the Past Papers) from an <exam-paper> XML file staged at _bridge-import/<xmlFile>. English papers may add <passage from="11" to="21" title="..."> / <shared from to> / <directions from to> blocks (from/to are question numbers) whose text is shown with every question in that range; a block with a bad range or empty text counts as a problem and skips the paper unless skipBroken. Optional imagesManifest (CSV with columns file,year,question) staged beside it attaches diagram images stored in R2 under imagesFolder. dryRun defaults to true and writes nothing. Exams that already exist (same subject, year, type) are skipped.',
       inputSchema: { type: 'object', required: ['xmlFile'], properties: { xmlFile: { type: 'string' }, imagesManifest: { type: 'string' }, imagesFolder: { type: 'string' }, skipBroken: { type: 'boolean', description: 'import the good questions of a paper and drop the broken ones (reported in dropped). Default false: a paper with any broken question is skipped whole.' }, dryRun: { type: 'boolean' } } },
       write: true,
       run: async ({ xmlFile, imagesManifest, imagesFolder, skipBroken = false, dryRun = true }) => {
@@ -208,8 +208,9 @@ export function mountClaudeAdminMcp({ app, db, FieldValue, r2 }) {
           const examType = (attr('type') || 'JAMB').toUpperCase() === 'JAMB' ? 'JAMB' : 'Other';
           const duration = parseInt(attr('duration')) || 40;
           const title = attr('title') || (subject + ' ' + year);
-          const problems = []; const questions = [];
-          [...pm[2].matchAll(/<question\b([^>]*)>([\s\S]*?)<\/question>/g)].forEach((qm, i) => {
+          const problems = []; const questions = []; const byN = {};
+          const qBlocks = [...pm[2].matchAll(/<question\b([^>]*)>([\s\S]*?)<\/question>/g)];
+          qBlocks.forEach((qm, i) => {
             const n = i + 1;
             const ans = ((qm[1].match(/answer="([^"]*)"/) || [])[1] || '').toUpperCase();
             const a = ['A', 'B', 'C', 'D', 'E'].indexOf(ans);
@@ -217,19 +218,36 @@ export function mountClaudeAdminMcp({ app, db, FieldValue, r2 }) {
             const opts = (all[4] || a === 4) ? all : all.slice(0, 4);
             const q = tag(qm[2], 'question-text');
             if (!q || a === -1 || opts.some((o) => !o) || /^\[(not extracted|RAW)/i.test(q)) { problems.push('Q' + n); return; }
-            questions.push({ q, opts, a, exp: tag(qm[2], 'explanation'), image: tag(qm[2], 'image-url') || img[year + '|' + n] || null });
+            const qObj = { q, opts, a, exp: tag(qm[2], 'explanation'), image: tag(qm[2], 'image-url') || img[year + '|' + n] || null };
+            questions.push(qObj); byN[n] = qObj;
           });
-          papers.push({ title, subject, year, examType, duration, questions, problems });
+          // <passage from to title>, <shared from to>, <directions from to>: text shown with every question in the
+          // range (see attachExamGroups in utils.js). from/to are the original question numbers in the paper, before
+          // any broken question is dropped. <shared> keeps line breaks; the others join wrapped lines.
+          const cleanPara = (s, keepLines) => dec(String(s || '').replace(/<[^>]+>/g, '')).replace(/\r/g, '').split(/\n\s*\n/)
+            .map((p) => keepLines ? p.split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n') : p.replace(/\s+/g, ' ').trim())
+            .filter(Boolean).join('\n\n');
+          const groups = [];
+          [...pm[2].matchAll(/<(passage|shared|directions)\b([^>]*)>([\s\S]*?)<\/\1>/g)].forEach((gm, gi) => {
+            const gattr = (nm) => { const a = gm[2].match(new RegExp(nm + '="([^"]*)"')); return a ? dec(a[1]).trim() : ''; };
+            const from = parseInt(gattr('from'), 10); const to = parseInt(gattr('to'), 10);
+            const text = cleanPara(gm[3], gm[1] === 'shared');
+            if (!text || !Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to < from || to > qBlocks.length) { problems.push(gm[1] + '#' + (gi + 1)); return; }
+            const id = 'g' + (gi + 1);
+            groups.push({ id, kind: gm[1], title: gattr('title'), text });
+            for (let n = from; n <= to; n++) if (byN[n]) byN[n].groups = [...(byN[n].groups || []), id];
+          });
+          papers.push({ title, subject, year, examType, duration, questions, groups, problems });
         }
         if (!papers.length) throw new Error('no <exam-paper> blocks found');
         const plan = []; const createdIds = [];
         for (const p of papers) {
           const dup = await db.collection('exams').where('jambSubject', '==', p.subject).where('jambYear', '==', p.year).where('examType', '==', p.examType).limit(1).get();
-          const row = { title: p.title, questions: p.questions.length, withImages: p.questions.filter((q) => q.image).length, dropped: p.problems, duplicate: !dup.empty };
+          const row = { title: p.title, questions: p.questions.length, groups: p.groups.length, withImages: p.questions.filter((q) => q.image).length, dropped: p.problems, duplicate: !dup.empty };
           if (!dryRun && !dup.empty) row.action = 'skipped (already exists)';
           else if (!dryRun && p.problems.length && !skipBroken) row.action = 'skipped (has broken questions; use skipBroken to drop them)';
           else if (!dryRun) {
-            const ref = await db.collection('exams').add({ title: p.title, subject: p.subject, duration: p.duration, questions: p.questions, examType: p.examType, jambSubject: p.examType === 'JAMB' ? p.subject : null, jambYear: p.examType === 'JAMB' ? (p.year || null) : null, createdBy: 'claude-mcp', createdAt: FieldValue.serverTimestamp() });
+            const ref = await db.collection('exams').add({ title: p.title, subject: p.subject, duration: p.duration, questions: p.questions, ...(p.groups.length ? { groups: p.groups } : {}), examType: p.examType, jambSubject: p.examType === 'JAMB' ? p.subject : null, jambYear: p.examType === 'JAMB' ? (p.year || null) : null, createdBy: 'claude-mcp', createdAt: FieldValue.serverTimestamp() });
             createdIds.push(ref.id); row.action = 'created';
           }
           plan.push(row);

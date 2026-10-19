@@ -132,12 +132,90 @@ function startTimer(onTimeOut) {
   }, 1000);
 }
 
+// --- Passages, shared context and directions (English papers) ---
+// A question can carry `grps` (see attachExamGroups in utils.js): directions
+// ("In each of questions 22 to 30, select the option nearest in meaning..."),
+// a reading passage for questions 11-21, or a short stimulus shared by two
+// questions ("use this dialogue to answer 35 and 36"). They are shown above
+// the question and are NOT re-rendered when the next question belongs to the
+// same group, so the student's scroll position inside a long passage (and
+// whether they collapsed it) survives moving between its questions.
+const numberOf = (i) => (isJamb() ? subjectIndices(subjectOf(i)).indexOf(i) + 1 : i + 1);
+
+function describeNumbers(nums) {
+  if (nums.length === 1) return String(nums[0]);
+  const contiguous = nums.every((n, k) => k === 0 || n === nums[k - 1] + 1);
+  if (contiguous) return nums.length === 2 ? `${nums[0]} and ${nums[1]}` : `${nums[0]} to ${nums[nums.length - 1]}`;
+  return `${nums.slice(0, -1).join(', ')} and ${nums[nums.length - 1]}`;
+}
+
+function groupNumbers(key) {
+  const nums = [];
+  cbt.questions.forEach((q, i) => {
+    if ((q.grps || []).some(g => g.key === key)) nums.push(numberOf(i));
+  });
+  return nums;
+}
+
+function groupHasPassageLike(q) {
+  return (q?.grps || []).some(g => g.kind === 'passage' || g.kind === 'shared');
+}
+
+let renderedGroupSig = '';
+function renderGroups(q) {
+  const wrap = S('cbtGroupWrap');
+  if (!wrap) return;
+  const grps = Array.isArray(q?.grps) ? q.grps : [];
+  if (!grps.length) {
+    wrap.classList.add('hidden');
+    wrap.innerHTML = '';
+    renderedGroupSig = '';
+    return;
+  }
+  const ordered = grps.slice().sort((a, b) => (a.kind === 'directions' ? 0 : 1) - (b.kind === 'directions' ? 0 : 1));
+  const sig = ordered.map(g => g.key).join('|');
+  wrap.classList.remove('hidden');
+  if (sig === renderedGroupSig) return;
+  renderedGroupSig = sig;
+
+  wrap.innerHTML = ordered.map((g) => {
+    const nums = groupNumbers(g.key);
+    const range = nums.length ? `Question${nums.length > 1 ? 's' : ''} ${describeNumbers(nums)}` : '';
+    if (g.kind === 'directions') {
+      return `
+        <div class="p-5 rounded-3xl bg-amber-50 dark:bg-amber-900/10 border border-amber-500/30">
+          <p class="text-[10px] font-black uppercase tracking-[0.25em] text-amber-600 mb-2">${escapeHTML(g.title || 'Directions')}${range ? ` · ${escapeHTML(range)}` : ''}</p>
+          <div class="font-bold text-base leading-relaxed text-slate-700 dark:text-slate-200 cbt-group-text">${renderRichContent(g.text)}</div>
+        </div>`;
+    }
+    const fallbackTitle = g.kind === 'shared' ? 'Read this first' : 'Passage';
+    return `
+      <details open class="rounded-3xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+        <summary class="cursor-pointer select-none px-5 py-4 flex flex-wrap items-center justify-between gap-2">
+          <span class="text-[10px] font-black uppercase tracking-[0.25em] text-brand-600">${escapeHTML(g.title || fallbackTitle)}</span>
+          ${range ? `<span class="text-[10px] font-black uppercase tracking-widest text-slate-400">${escapeHTML(range)}</span>` : ''}
+        </summary>
+        <div class="cbt-passage-body cbt-group-text px-5 pb-5 text-lg leading-relaxed font-medium text-slate-700 dark:text-slate-200 overflow-y-auto" style="max-height:50vh">${renderRichContent(g.text)}</div>
+      </details>`;
+  }).join('');
+
+  try {
+    if (typeof window.renderMathInElement === 'function') {
+      window.renderMathInElement(wrap, {
+        delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }],
+        throwOnError: false
+      });
+    }
+  } catch (e) { console.warn('KaTeX render (group) failed:', e); }
+}
+
 // --- Rendering ---
 function renderQuestion() {
   const q = cbt.questions[cbt.i];
   const container = S('cbtQuestionContainer');
   if (!q || !container) return;
 
+  renderGroups(q);
   if (S('cbtQuestionText')) renderRichInto(S('cbtQuestionText'), q.q);
   const activeSubject = isJamb() ? subjectOf(cbt.i) : toText(cbt.subject || 'General');
   cbt.activeSubject = activeSubject;
@@ -247,7 +325,7 @@ function renderQuestionMap() {
         : cbt.answers[idx] !== null && cbt.answers[idx] !== undefined
           ? 'bg-emerald-500 border-emerald-500 text-white'
           : 'border-slate-100 dark:border-slate-800 text-slate-400'
-    } ${cbt.flags[idx] ? 'ring-2 ring-amber-400/60' : ''}">
+    } ${cbt.flags[idx] ? 'ring-2 ring-amber-400/60' : ''}" ${groupHasPassageLike(cbt.questions[idx]) ? 'title="Part of a passage" style="box-shadow:inset 0 -4px 0 #818cf8"' : ''}>
       ${pos + 1}
     </button>
   `).join('');

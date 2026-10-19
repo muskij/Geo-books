@@ -1766,16 +1766,58 @@
     <div class="relative w-full max-w-6xl bg-white rounded-[40px] p-12 shadow-2xl max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-10"><h3 class="text-3xl font-black" id="qModalExamTitle">Questions</h3><button onclick="window.closeQuestionModal()" class="text-slate-400"><i data-lucide="x" class="w-8 h-8"></i></button></div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        <div class="space-y-8">
-          <textarea id="qText" rows="4" placeholder="Question" class="w-full px-6 py-4 rounded-[24px] bg-slate-50 border border-slate-200 outline-none font-bold"></textarea>
-          <div class="grid grid-cols-2 gap-4">
-            <input type="text" id="qOptA" placeholder="A" class="px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold">
-            <input type="text" id="qOptB" placeholder="B" class="px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold">
-            <input type="text" id="qOptC" placeholder="C" class="px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold">
-            <input type="text" id="qOptD" placeholder="D" class="px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold">
+        <div class="space-y-10">
+          <!-- Add / edit one question -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <h4 class="font-black text-slate-400 uppercase" id="qFormTitle">Add Question</h4>
+              <span id="qEditBadge" class="hidden px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-[9px] font-black uppercase">Editing</span>
+            </div>
+            <textarea id="qText" rows="4" placeholder="Question  (underline a word with [u]word[/u])" class="w-full px-6 py-4 rounded-[24px] bg-slate-50 border border-slate-200 outline-none font-bold"></textarea>
+            <div class="grid grid-cols-2 gap-4">
+              <input type="text" id="qOptA" placeholder="A" class="px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold">
+              <input type="text" id="qOptB" placeholder="B" class="px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold">
+              <input type="text" id="qOptC" placeholder="C" class="px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold">
+              <input type="text" id="qOptD" placeholder="D" class="px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold">
+              <input type="text" id="qOptE" placeholder="E (optional)" class="px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold col-span-2">
+            </div>
+            <select id="qCorrect" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold"><option value="0">Correct: A</option><option value="1">Correct: B</option><option value="2">Correct: C</option><option value="3">Correct: D</option><option value="4">Correct: E</option></select>
+            <textarea id="qExp" rows="2" placeholder="Explanation (optional)" class="w-full px-6 py-4 rounded-[24px] bg-slate-50 border border-slate-200 outline-none font-bold"></textarea>
+            <input type="text" id="qImage" placeholder="Image URL (optional, https://...)" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold">
+            <div class="flex gap-3">
+              <button id="qSubmitBtn" onclick="window.addQuestionToExam()" class="flex-1 py-4 rounded-2xl bg-slate-900 text-white font-black uppercase text-xs">Add Question</button>
+              <button id="qCancelEditBtn" onclick="window.cancelExamQuestionEdit()" class="hidden px-6 py-4 rounded-2xl bg-slate-100 text-slate-600 font-black uppercase text-xs">Cancel</button>
+            </div>
           </div>
-          <select id="qCorrect" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select>
-          <button onclick="window.addQuestionToExam()" class="w-full py-4 rounded-2xl bg-slate-900 text-white font-black uppercase text-xs">Add Question</button>
+
+          <!-- Passages, shared context and directions -->
+          <div class="space-y-4 pt-8 border-t border-slate-100">
+            <div>
+              <h4 class="font-black text-slate-400 uppercase">Passages &amp; Directions (<span id="qGroupCount">0</span>)</h4>
+              <p class="text-[11px] font-bold text-slate-400 mt-1 leading-relaxed">For English: a reading passage for questions 11 to 21, a dialogue or sentence several questions refer to ("use this to answer 35 and 36"), or directions that apply to a range ("select the option nearest in meaning"). Students see it with every question in the range. A question can be in more than one.</p>
+            </div>
+            <div id="qGroupList" class="space-y-3"></div>
+            <div class="p-6 rounded-[24px] bg-slate-50 border border-slate-200 space-y-3">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400" id="qgFormTitle">Add passage / directions</p>
+              <div class="grid grid-cols-2 gap-3">
+                <select id="qgKind" class="px-4 py-3 rounded-xl bg-white border border-slate-200 outline-none font-bold text-sm">
+                  <option value="passage">Passage (reading text)</option>
+                  <option value="shared">Shared context (use this for Q..)</option>
+                  <option value="directions">Directions (instruction banner)</option>
+                </select>
+                <input type="text" id="qgTitle" placeholder="Title (e.g. Passage I)" class="px-4 py-3 rounded-xl bg-white border border-slate-200 outline-none font-bold text-sm">
+              </div>
+              <textarea id="qgText" rows="6" placeholder="Passage / context / directions text. Blank line = new paragraph." class="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 outline-none font-bold text-sm"></textarea>
+              <div class="grid grid-cols-2 gap-3">
+                <input type="number" min="1" id="qgFrom" placeholder="From question no." class="px-4 py-3 rounded-xl bg-white border border-slate-200 outline-none font-bold text-sm">
+                <input type="number" min="1" id="qgTo" placeholder="To question no." class="px-4 py-3 rounded-xl bg-white border border-slate-200 outline-none font-bold text-sm">
+              </div>
+              <div class="flex gap-3">
+                <button id="qgSaveBtn" onclick="window.saveExamGroup()" class="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-black uppercase text-[10px]">Save</button>
+                <button id="qgCancelBtn" onclick="window.cancelExamGroupEdit()" class="hidden px-5 py-3 rounded-xl bg-slate-100 text-slate-600 font-black uppercase text-[10px]">Cancel</button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="space-y-4"><h4 class="font-black text-slate-400 uppercase">Question List (<span id="qCountInModal">0</span>)</h4><div id="qListInModal" class="space-y-4"></div></div>
       </div>
@@ -1826,6 +1868,9 @@
     window.db = db; window.auth = auth;
     let exams = [], activeExamId = null, activeChatId = null, unsubMessages = null;
     let builderQuestions = [];
+    // Passages / shared context / directions for the exam being built; questions
+    // point at them through their own `groups: [id]` list (see attachExamGroups in utils.js).
+    let builderGroups = [];
     let currentBuilderImage = null;
     const adminState = { activeTab: 'overview' };
     // Admin authorization is claim-first: the canonical grant/revoke path is
@@ -4514,6 +4559,16 @@
   - Formulas: write LaTeX between $...$ for inline math, or $$...$$ for a centered block,
     e.g. "If $2x + 3 = 11$" or "$$\\frac{a}{b} = c$$". Works in question text, choices and explanation.
   - To type < > or & inside text, write &lt; &gt; &amp;
+  - English / Literature: wrap a word in [u]...[/u] to underline it, [b]...[/b] for bold,
+    [i]...[/i] for italics (e.g. "the word [u]ephemeral[/u] means"). Blanks can just be ______.
+  - PASSAGES, SHARED CONTEXT AND DIRECTIONS (all optional, put them next to the questions):
+      <passage from="11" to="21" title="Passage I">...text, blank line between paragraphs...</passage>
+      <shared from="35" to="36">a dialogue / poem / sentence several questions refer to</shared>
+      <directions from="22" to="30">In each of questions 22 to 30, select the option nearest in meaning...</directions>
+    from / to are question NUMBERS in this paper (1 = the first <question>), both inclusive.
+    The same question may sit inside several of these (a passage AND its directions).
+    Passage and shared text appear above every question in the range; directions show as a banner.
+    <shared> keeps your line breaks (dialogues, poems); <passage> joins wrapped lines and keeps blank-line paragraphs.
   - This comment is ignored - leave it or delete it.
 -->
 
@@ -4566,6 +4621,16 @@
     function parsePastPaperTemplate(html) {
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const clean = (el) => el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+      // Passages keep their paragraph breaks (a blank line between paragraphs);
+      // hard-wrapped lines inside a paragraph are joined. With keepLines (used
+      // for <shared>: dialogues, poems) every line break is kept as typed.
+      const cleanPara = (el, keepLines = false) => {
+        if (!el) return '';
+        return el.textContent.replace(/\r/g, '').split(/\n\s*\n/).map(p => keepLines
+          ? p.split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n')
+          : p.replace(/\s+/g, ' ').trim()
+        ).filter(Boolean).join('\n\n');
+      };
       const nodes = [...doc.querySelectorAll('exam-paper')];
       if (!nodes.length) return { papers: [], fatal: 'No <exam-paper> block found. Paste the filled template, including the opening and closing <exam-paper> tags.' };
 
@@ -4631,7 +4696,30 @@
         });
 
         if (qNodes.length && noExp) warnings.push(`${noExp} question(s) have no explanation`);
-        return { key: `pp${i}`, title, subject, year, examType, duration, questions, errors, warnings, duplicateOf: null, created: false };
+
+        // Passages / shared context / directions: <passage|shared|directions from to title>
+        const groups = [];
+        [...node.querySelectorAll('passage, shared, directions')].forEach((gn, gi) => {
+          const kind = gn.tagName.toLowerCase();
+          const from = parseInt(gn.getAttribute('from'), 10);
+          const to = parseInt(gn.getAttribute('to'), 10);
+          const text = cleanPara(gn, kind === 'shared');
+          const gTitle = (gn.getAttribute('title') || '').trim();
+          const problems = [];
+          if (gn.querySelector('question')) problems.push('swallowed a <question> - is a closing tag missing?');
+          if (!text) problems.push('has no text');
+          if (!Number.isInteger(from) || !Number.isInteger(to)) problems.push('needs from="N" to="N" (question numbers)');
+          else if (from < 1 || to < from || to > qNodes.length) problems.push(`range ${from}-${to} is outside questions 1-${qNodes.length}`);
+          if (problems.length) { errors.push(`<${kind}> #${gi + 1}: ${problems.join('; ')}`); return; }
+          groups.push({ id: `g${gi + 1}`, kind, title: gTitle, text, from, to });
+        });
+        groups.forEach((g) => {
+          for (let n = g.from; n <= g.to; n++) {
+            const qq = questions[n - 1];
+            if (qq) qq.groups = [...(qq.groups || []), g.id];
+          }
+        });
+        return { key: `pp${i}`, title, subject, year, examType, duration, questions, groups, errors, warnings, duplicateOf: null, created: false };
       });
       return { papers, fatal: null };
     }
@@ -4731,6 +4819,7 @@
 
             <div class="flex items-center gap-3 text-[10px] font-bold text-slate-400 mt-4 flex-wrap">
               <span>${p.questions.length} question(s)</span>
+              ${(p.groups || []).length ? `<span>${p.groups.length} passage/direction block(s)</span>` : ''}
               <button onclick="window.togglePastPaperPreview('${p.key}')" class="text-slate-500 hover:text-slate-700 underline">${isOpen ? 'Hide' : 'Preview'} questions</button>
               ${hasErr ? '' : `<button onclick="window.openPastPaperInBuilder('${p.key}')" class="text-slate-500 hover:text-slate-700 underline">Edit in builder</button>`}
               <div class="ml-auto">
@@ -4741,9 +4830,14 @@
             </div>
 
             <div id="ppPreview-${p.key}" data-key="${p.key}" data-pp-open="${isOpen ? '1' : '0'}" class="${isOpen ? '' : 'hidden'} mt-4 space-y-3 max-h-96 overflow-y-auto custom-scrollbar pr-2">
+              ${(p.groups || []).map((g) => `
+                <div class="p-4 rounded-2xl ${g.kind === 'directions' ? 'bg-amber-50 border border-amber-200' : 'bg-indigo-50 border border-indigo-100'}">
+                  <p class="text-[10px] font-black uppercase tracking-widest ${g.kind === 'directions' ? 'text-amber-600' : 'text-indigo-600'} mb-1">${escapeHTML(g.kind)}${g.title ? ' · ' + escapeHTML(g.title) : ''} · Q${g.from}–${g.to}</p>
+                  <div class="text-[11px] font-bold text-slate-600 max-h-32 overflow-y-auto">${renderRichContent(g.text)}</div>
+                </div>`).join('')}
               ${p.questions.map((q, qi) => `
                 <div class="p-4 rounded-2xl bg-white border border-slate-100">
-                  <p class="text-xs font-bold text-slate-700 mb-2"><span class="text-slate-400">${qi + 1}.</span> ${escapeHTML(q.q)}</p>
+                  <p class="text-xs font-bold text-slate-700 mb-2"><span class="text-slate-400">${qi + 1}.</span> ${renderRichContent(q.q)}</p>
                   ${q.image ? `<p class="text-[10px] font-bold text-slate-400 mb-2">🖼 ${escapeHTML(q.image)}</p>` : ''}
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     ${q.opts.map((o, oi) => `<div class="text-[11px] font-bold px-3 py-1.5 rounded-lg ${oi === q.a ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-50 text-slate-500'}">${'ABCDE'[oi]}. ${escapeHTML(o)}</div>`).join('')}
@@ -4792,6 +4886,15 @@
       const p = ppFind(key);
       if (!p) return;
       builderQuestions = [...builderQuestions, ...p.questions.map(q => ({ q: q.q, opts: q.opts, a: q.a, exp: q.exp || '', image: q.image }))];
+      // Re-key the group ids so they can't clash with groups already in the builder.
+      if ((p.groups || []).length) {
+        const stamp = Date.now().toString(36);
+        const start = builderQuestions.length - p.questions.length;
+        p.groups.forEach(g => builderGroups.push({ id: `${g.id}_${stamp}`, kind: g.kind, title: g.title, text: g.text }));
+        p.questions.forEach((q, qi) => {
+          if (q.groups && q.groups.length) builderQuestions[start + qi].groups = q.groups.map(id => `${id}_${stamp}`);
+        });
+      }
       document.getElementById('newExamSubject').value = p.subject || '';
       document.getElementById('newExamTitle').value = p.title || '';
       document.getElementById('newExamDuration').value = p.duration || '';
@@ -4815,7 +4918,8 @@
           title: p.title.trim(),
           subject: p.subject.trim(),
           duration: parseInt(p.duration) || 40,
-          questions: p.questions.map(q => ({ q: q.q, opts: q.opts, a: q.a, exp: q.exp || '', image: q.image || null })),
+          questions: p.questions.map(q => ({ q: q.q, opts: q.opts, a: q.a, exp: q.exp || '', image: q.image || null, ...(q.groups && q.groups.length ? { groups: q.groups } : {}) })),
+          ...((p.groups || []).length ? { groups: p.groups.map(g => ({ id: g.id, kind: g.kind, title: g.title, text: g.text })) } : {}),
           examType: p.examType,
           jambSubject: p.examType === 'JAMB' ? p.subject.trim() : null,
           jambYear: p.examType === 'JAMB' ? (p.year || null) : null,
@@ -4892,7 +4996,14 @@
         return;
       }
 
-      const questionData = { q, opts, a, image: currentBuilderImage };
+      // Editing must not silently drop the explanation or the passage /
+      // directions this question belongs to.
+      const prev = editingQuestionIdx !== null ? builderQuestions[editingQuestionIdx] : null;
+      const questionData = {
+        q, opts, a, image: currentBuilderImage,
+        ...(prev && prev.exp ? { exp: prev.exp } : {}),
+        ...(prev && prev.groups && prev.groups.length ? { groups: prev.groups } : {})
+      };
 
       if (editingQuestionIdx !== null) {
         builderQuestions[editingQuestionIdx] = questionData;
@@ -4996,6 +5107,7 @@
       if (builderQuestions.length === 0) return;
       if (confirm("Are you sure you want to clear all questions in the list?")) {
         builderQuestions = [];
+        builderGroups = [];
         window.cancelQuestionEdit();
         window.renderBuilderQuestions();
         window.toast("List cleared", "info");
@@ -5029,6 +5141,7 @@
               <span class="w-8 h-8 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-[10px] font-black">${i + 1}</span>
               <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Question</span>
               ${(q.a === null || q.a === undefined) ? '<span class="px-2 py-1 rounded-full bg-rose-50 text-rose-600 text-[9px] font-black uppercase">Answer needed</span>' : ''}
+              ${(q.groups || []).map(id => builderGroups.find(g => g.id === id)).filter(Boolean).map(g => `<span class="px-2 py-1 rounded-full ${g.kind === 'directions' ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-indigo-600'} text-[9px] font-black uppercase">${escapeHTML(g.kind)}${g.title ? ' · ' + escapeHTML(g.title) : ''}</span>`).join('')}
               ${q.answerSource === 'ai_solved' ? (q.confidence === 'low'
                 ? `<span title="${jsAttr(q.exp || '')}" class="px-2 py-1 rounded-full bg-rose-50 text-rose-600 text-[9px] font-black uppercase cursor-help">AI-solved · low confidence</span>`
                 : `<span title="${jsAttr(q.exp || '')}" class="px-2 py-1 rounded-full bg-amber-50 text-amber-600 text-[9px] font-black uppercase cursor-help">AI-solved${q.confidence ? ` · ${q.confidence} confidence` : ''}</span>`
@@ -5109,7 +5222,8 @@
           title, 
           subject, 
           duration: parseInt(duration), 
-          questions: builderQuestions, 
+          questions: builderQuestions,
+          ...(builderGroups.length ? { groups: builderGroups.filter(g => builderQuestions.some(q => (q.groups || []).includes(g.id))) } : {}),
           examType,
           jambSubject: examType === 'JAMB' ? jambSubject : null,
           jambYear: examType === 'JAMB' ? jambYear : null,
@@ -5149,52 +5263,280 @@
         }
       }
     };
+    // --- Manage an existing exam: edit questions, passages & directions -------
+    let editingExamQIdx = null;      // index of the question loaded into the form, or null when adding
+    let editingExamGroupId = null;   // id of the group loaded into the group form, or null when adding
+    const EXAM_Q_INPUTS = ['qText', 'qOptA', 'qOptB', 'qOptC', 'qOptD', 'qOptE', 'qExp', 'qImage'];
+    const EXAM_GROUP_KIND_STYLE = {
+      passage: 'bg-indigo-50 text-indigo-600',
+      shared: 'bg-sky-50 text-sky-600',
+      directions: 'bg-amber-50 text-amber-600'
+    };
+
+    function resetExamQuestionForm() {
+      editingExamQIdx = null;
+      EXAM_Q_INPUTS.forEach(id => { document.getElementById(id).value = ''; });
+      document.getElementById('qCorrect').value = '0';
+      document.getElementById('qFormTitle').textContent = 'Add Question';
+      document.getElementById('qSubmitBtn').textContent = 'Add Question';
+      document.getElementById('qCancelEditBtn').classList.add('hidden');
+      document.getElementById('qEditBadge').classList.add('hidden');
+    }
+
+    function resetExamGroupForm() {
+      editingExamGroupId = null;
+      ['qgTitle', 'qgText', 'qgFrom', 'qgTo'].forEach(id => { document.getElementById(id).value = ''; });
+      document.getElementById('qgKind').value = 'passage';
+      document.getElementById('qgFormTitle').textContent = 'Add passage / directions';
+      document.getElementById('qgSaveBtn').textContent = 'Save';
+      document.getElementById('qgCancelBtn').classList.add('hidden');
+    }
+
     window.manageQuestions = (idx) => {
       activeExamId = idx; const exam = exams[idx];
       document.getElementById('qModalExamTitle').textContent = exam.title;
+      resetExamQuestionForm(); resetExamGroupForm();
       document.getElementById('questionModal').classList.replace('hidden', 'flex'); renderQuestionsInModal();
     };
-    window.closeQuestionModal = () => { document.getElementById('questionModal').classList.replace('flex', 'hidden'); activeExamId = null; };
+    window.closeQuestionModal = () => {
+      document.getElementById('questionModal').classList.replace('flex', 'hidden');
+      activeExamId = null;
+      resetExamQuestionForm(); resetExamGroupForm();
+    };
+
+    // One write for questions + groups so a question can never point at a group that was saved separately.
+    async function saveExamContent(questions, groups) {
+      const exam = exams[activeExamId], ref = doc(db, "exams", exam.id);
+      // Drop groups nothing points at any more, and empty `groups` lists on questions.
+      const used = new Set(questions.flatMap(q => q.groups || []));
+      const cleanGroups = (groups || []).filter(g => used.has(g.id));
+      const cleanQs = questions.map(q => {
+        if (q.groups && q.groups.length) return q;
+        const { groups: _drop, ...rest } = q;
+        return rest;
+      });
+      await updateDoc(ref, { questions: cleanQs, groups: cleanGroups });
+      // The snapshot listener normally refreshes exams[] first; set it directly as well so the re-render is never stale.
+      const live = exams[activeExamId];
+      if (live) { live.questions = cleanQs; live.groups = cleanGroups; }
+    }
+
+    const examGroupNumbers = (exam, id) =>
+      (exam.questions || []).reduce((acc, q, i) => { if ((q.groups || []).includes(id)) acc.push(i + 1); return acc; }, []);
+    const describeExamNumbers = (nums) => {
+      if (!nums.length) return 'no questions';
+      const contiguous = nums.every((n, k) => k === 0 || n === nums[k - 1] + 1);
+      if (nums.length === 1) return `Q${nums[0]}`;
+      return contiguous ? `Q${nums[0]}–Q${nums[nums.length - 1]}` : `Q${nums.join(', Q')}`;
+    };
+
+    window.cancelExamQuestionEdit = () => resetExamQuestionForm();
+
+    window.editExamQuestion = (qIdx) => {
+      const exam = exams[activeExamId], q = (exam.questions || [])[qIdx];
+      if (!q) return;
+      editingExamQIdx = qIdx;
+      document.getElementById('qText').value = q.q || '';
+      ['qOptA', 'qOptB', 'qOptC', 'qOptD', 'qOptE'].forEach((id, k) => { document.getElementById(id).value = (q.opts || [])[k] || ''; });
+      document.getElementById('qCorrect').value = Number.isInteger(q.a) ? String(q.a) : '0';
+      document.getElementById('qExp').value = q.exp || '';
+      document.getElementById('qImage').value = q.image || '';
+      document.getElementById('qFormTitle').textContent = `Edit Question ${qIdx + 1}`;
+      document.getElementById('qSubmitBtn').textContent = 'Save Changes';
+      document.getElementById('qCancelEditBtn').classList.remove('hidden');
+      document.getElementById('qEditBadge').classList.remove('hidden');
+      document.getElementById('qFormTitle').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    window.cancelExamGroupEdit = () => resetExamGroupForm();
+
+    window.editExamGroup = (id) => {
+      const exam = exams[activeExamId], g = (exam.groups || []).find(x => x.id === id);
+      if (!g) return;
+      const nums = examGroupNumbers(exam, id);
+      editingExamGroupId = id;
+      document.getElementById('qgKind').value = g.kind || 'passage';
+      document.getElementById('qgTitle').value = g.title || '';
+      document.getElementById('qgText').value = g.text || '';
+      document.getElementById('qgFrom').value = nums.length ? nums[0] : '';
+      document.getElementById('qgTo').value = nums.length ? nums[nums.length - 1] : '';
+      document.getElementById('qgFormTitle').textContent = 'Edit passage / directions';
+      document.getElementById('qgSaveBtn').textContent = 'Save Changes';
+      document.getElementById('qgCancelBtn').classList.remove('hidden');
+      document.getElementById('qgFormTitle').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    window.saveExamGroup = async () => {
+      const exam = exams[activeExamId];
+      const total = (exam.questions || []).length;
+      const kind = document.getElementById('qgKind').value;
+      const title = document.getElementById('qgTitle').value.trim();
+      // Keep the line breaks the admin typed (dialogues and poems need them), tidy the spaces around them.
+      const text = document.getElementById('qgText').value.replace(/\r/g, '').split('\n').map(l => l.replace(/[ \t]+/g, ' ').trim()).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+      const from = parseInt(document.getElementById('qgFrom').value, 10);
+      const to = parseInt(document.getElementById('qgTo').value, 10);
+
+      if (!text) { window.toast("Type the passage / directions text first", "error"); return; }
+      if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to < from || to > total) {
+        window.toast(`Question range must be between 1 and ${total} (from ≤ to)`, "error");
+        return;
+      }
+
+      const id = editingExamGroupId || `g${Date.now().toString(36)}`;
+      const groups = [...(exam.groups || []).filter(g => g.id !== id), { id, kind, title, text }];
+      const questions = (exam.questions || []).map((q, i) => {
+        const others = (q.groups || []).filter(x => x !== id);
+        const inRange = i + 1 >= from && i + 1 <= to;
+        return { ...q, groups: inRange ? [...others, id] : others };
+      });
+
+      try {
+        await saveExamContent(questions, groups);
+        window.toast(editingExamGroupId ? "Passage / directions updated" : "Passage / directions added", "success");
+        resetExamGroupForm();
+        renderQuestionsInModal();
+      } catch (e) {
+        console.error("Save group error:", e);
+        window.toast("Failed to save passage / directions", "error");
+      }
+    };
+
+    window.deleteExamGroup = async (id) => {
+      const exam = exams[activeExamId];
+      if (!confirm("Remove this passage / directions from the exam? The questions themselves stay.")) return;
+      try {
+        const questions = (exam.questions || []).map(q => ({ ...q, groups: (q.groups || []).filter(x => x !== id) }));
+        await saveExamContent(questions, (exam.groups || []).filter(g => g.id !== id));
+        if (editingExamGroupId === id) resetExamGroupForm();
+        renderQuestionsInModal();
+      } catch (e) {
+        console.error("Delete group error:", e);
+        window.toast("Failed to remove passage / directions", "error");
+      }
+    };
+    // Adds a new question, or saves the edit when one is loaded in the form.
     window.addQuestionToExam = async () => {
-      const qInput = document.getElementById('qText'), aInput = document.getElementById('qOptA'), bInput = document.getElementById('qOptB'), cInput = document.getElementById('qOptC'), dInput = document.getElementById('qOptD');
-      const q = qInput.value.trim(), opts = [aInput.value.trim(), bInput.value.trim(), cInput.value.trim(), dInput.value.trim()], a = parseInt(document.getElementById('qCorrect').value);
-      const btn = document.querySelector('#questionModal button[onclick="window.addQuestionToExam()"]');
+      const exam = exams[activeExamId];
+      const val = (id) => document.getElementById(id).value.trim();
+      const q = val('qText'), eVal = val('qOptE'), a = parseInt(document.getElementById('qCorrect').value);
+      const opts = [val('qOptA'), val('qOptB'), val('qOptC'), val('qOptD')];
+      // Option E is optional: kept only if filled in, or if it is the marked correct answer.
+      if (eVal || a === 4) opts.push(eVal);
+      const exp = val('qExp');
+      const image = val('qImage') || null;
+      const btn = document.getElementById('qSubmitBtn');
+      const editing = editingExamQIdx !== null;
 
       if (!q || opts.some(o => !o)) {
-        window.toast("Please fill all question fields", "error");
+        window.toast("Please fill the question and every option (E is optional)", "error");
+        return;
+      }
+      if (image && !/^https?:\/\//i.test(image)) {
+        window.toast("Image URL must start with http(s)://", "error");
         return;
       }
 
       try {
         btn.disabled = true;
-        btn.innerHTML = '<span class="animate-pulse">Adding...</span>';
-        
-        const exam = exams[activeExamId], ref = doc(db, "exams", exam.id);
-        await updateDoc(ref, { questions: [...(exam.questions || []), { q, opts, a }] });
-        
-        qInput.value = ""; aInput.value = ""; bInput.value = ""; cInput.value = ""; dInput.value = "";
-        window.toast("Question added!", "success");
+        btn.innerHTML = `<span class="animate-pulse">${editing ? 'Saving...' : 'Adding...'}</span>`;
+
+        const qs = [...(exam.questions || [])];
+        if (editing) {
+          // Spread the old question first so its passage / directions membership survives the edit.
+          qs[editingExamQIdx] = { ...qs[editingExamQIdx], q, opts, a, exp, image };
+        } else {
+          qs.push({ q, opts, a, exp, image });
+        }
+        await saveExamContent(qs, exam.groups || []);
+
+        window.toast(editing ? "Question updated" : "Question added!", "success");
+        resetExamQuestionForm();
         renderQuestionsInModal();
       } catch (e) {
-        console.error("Add question error:", e);
-        window.toast("Failed to add question", "error");
+        console.error("Save question error:", e);
+        window.toast("Failed to save question", "error");
       } finally {
         btn.disabled = false;
-        btn.innerHTML = "Add Question";
+        btn.textContent = editingExamQIdx !== null ? "Save Changes" : "Add Question";
       }
     };
     window.removeQuestionFromExam = async (qIdx) => {
-      const exam = exams[activeExamId], ref = doc(db, "exams", exam.id), qs = [...exam.questions]; qs.splice(qIdx, 1);
-      await updateDoc(ref, { questions: qs }); renderQuestionsInModal();
+      const exam = exams[activeExamId];
+      if (!confirm(`Delete question ${qIdx + 1}? This changes the numbering of every question after it, so passage ranges may need checking.`)) return;
+      try {
+        const qs = [...(exam.questions || [])]; qs.splice(qIdx, 1);
+        await saveExamContent(qs, exam.groups || []);
+        if (editingExamQIdx !== null) resetExamQuestionForm();
+        renderQuestionsInModal();
+      } catch (e) {
+        console.error("Delete question error:", e);
+        window.toast("Failed to delete question", "error");
+      }
     };
     function renderQuestionsInModal() {
       const container = document.getElementById('qListInModal'), exam = exams[activeExamId];
-      document.getElementById('qCountInModal').textContent = exam.questions?.length || 0;
-      container.innerHTML = (exam.questions || []).map((q, i) => `
-        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex justify-between items-start mb-4">
-          <p class="text-xs font-bold text-slate-700">${i+1}. ${escapeHTML(q.q)}</p><button onclick="window.removeQuestionFromExam(${i})" class="text-rose-400"><i data-lucide="x" class="w-4 h-4"></i></button>
-        </div>`).reverse().join('');
+      if (!container || !exam) return;
+      const questions = exam.questions || [];
+      const groups = exam.groups || [];
+      document.getElementById('qCountInModal').textContent = questions.length;
+      document.getElementById('qGroupCount').textContent = groups.length;
+
+      // Passages / directions list, with the questions each one covers.
+      document.getElementById('qGroupList').innerHTML = groups.length ? groups.map((g) => {
+        const nums = examGroupNumbers(exam, g.id);
+        const contiguous = nums.every((n, k) => k === 0 || n === nums[k - 1] + 1);
+        return `
+          <div class="p-4 rounded-2xl bg-white border border-slate-200">
+            <div class="flex items-center justify-between gap-3 mb-2">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-1 rounded-full ${EXAM_GROUP_KIND_STYLE[g.kind] || EXAM_GROUP_KIND_STYLE.passage} text-[9px] font-black uppercase">${escapeHTML(g.kind || 'passage')}</span>
+                ${g.title ? `<span class="text-xs font-black text-slate-700">${escapeHTML(g.title)}</span>` : ''}
+                <span class="text-[10px] font-black text-slate-400 uppercase">${escapeHTML(describeExamNumbers(nums))}${contiguous ? '' : ' · gaps'}</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button onclick="window.editExamGroup('${jsAttr(g.id)}')" class="p-2 text-slate-400 hover:text-brand-500"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                <button onclick="window.deleteExamGroup('${jsAttr(g.id)}')" class="p-2 text-slate-400 hover:text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </div>
+            </div>
+            <p class="text-[11px] font-bold text-slate-500 leading-relaxed line-clamp-3">${escapeHTML(g.text)}</p>
+          </div>`;
+      }).join('') : `<p class="text-[11px] font-bold text-slate-300">No passages or directions on this exam yet.</p>`;
+
+      // Questions in their real order (the number shown is the number students see, and the one the ranges use).
+      container.innerHTML = questions.length ? questions.map((q, i) => {
+        const chips = (q.groups || []).map(id => groups.find(g => g.id === id)).filter(Boolean).map(g =>
+          `<span class="px-2 py-1 rounded-full ${EXAM_GROUP_KIND_STYLE[g.kind] || EXAM_GROUP_KIND_STYLE.passage} text-[9px] font-black uppercase">${escapeHTML(g.kind || 'passage')}${g.title ? ' · ' + escapeHTML(g.title) : ''}</span>`).join('');
+        return `
+        <div class="p-5 rounded-2xl ${editingExamQIdx === i ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'} border">
+          <div class="flex justify-between items-start gap-3 mb-3">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="w-8 h-8 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-[10px] font-black shrink-0">${i + 1}</span>
+              ${chips}
+              ${(q.a === null || q.a === undefined) ? '<span class="px-2 py-1 rounded-full bg-rose-50 text-rose-600 text-[9px] font-black uppercase">Answer needed</span>' : ''}
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button onclick="window.editExamQuestion(${i})" class="p-2 text-slate-400 hover:text-brand-500"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+              <button onclick="window.removeQuestionFromExam(${i})" class="p-2 text-slate-400 hover:text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </div>
+          </div>
+          ${q.image ? `<p class="text-[10px] font-bold text-slate-400 mb-2">🖼 ${escapeHTML(q.image)}</p>` : ''}
+          <p class="text-xs font-bold text-slate-700 leading-relaxed mb-3">${renderRichContent(q.q)}</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            ${(q.opts || []).map((o, oi) => `<div class="text-[11px] font-bold px-3 py-1.5 rounded-lg ${oi === q.a ? 'bg-emerald-100 text-emerald-800' : 'bg-white text-slate-500'}">${'ABCDE'[oi]}. ${renderRichContent(o)}</div>`).join('')}
+          </div>
+          ${q.exp ? `<p class="text-[10px] font-bold text-slate-400 mt-3">💡 ${escapeHTML(q.exp)}</p>` : ''}
+        </div>`;
+      }).join('') : `<p class="text-[11px] font-bold text-slate-300">No questions yet.</p>`;
+
       lucide.createIcons();
+      try {
+        if (typeof window.renderMathInElement === 'function') {
+          window.renderMathInElement(container, {
+            delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }],
+            throwOnError: false
+          });
+        }
+      } catch (e) { console.warn('KaTeX render (question manager) failed:', e); }
     }
 
     function renderSellers() {

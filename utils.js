@@ -68,6 +68,52 @@ function tableBlockToHtml(lines) {
   }).join('')}</tbody>`;
   return `<table class="w-full text-sm my-3 border-collapse">${thead}${tbody}</table>`;
 }
+// Inline emphasis for English papers ("the word [u]underlined[/u] ...",
+// stressed syllables, etc). Applied to already-escaped text, so it can't
+// inject HTML. BBCode-style tags are used on purpose: "_____" (a blank to
+// fill in) and LaTeX "_" subscripts must stay untouched, and math between
+// $...$ is skipped entirely.
+function inlineMarkup(escaped) {
+  return escaped.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+\$)/g).map((part, i) => {
+    if (i % 2) return part; // a math segment
+    return part
+      .replace(/\[u\]([\s\S]*?)\[\/u\]/gi, '<u style="text-decoration-thickness:2px;text-underline-offset:3px">$1</u>')
+      .replace(/\[b\]([\s\S]*?)\[\/b\]/gi, '<strong>$1</strong>')
+      .replace(/\[i\]([\s\S]*?)\[\/i\]/gi, '<em>$1</em>');
+  }).join('');
+}
+
+// --- Question groups (passages, shared context, directions) -----------------
+// An exam document stores `groups: [{ id, kind, title, text }]` once, and each
+// question lists the ids it belongs to in `groups: ['g1', ...]`. A question
+// can sit in several groups at once (e.g. a reading passage AND the
+// "select the option nearest in meaning" directions for the same numbers).
+// Everything downstream of the exam (shuffling, the CBT session payload, the
+// exam page) wants questions that carry their group text with them, so this
+// resolves the ids into `grps` and remembers the original position as `ord`.
+// `examKey` keeps group keys unique when questions from several papers are
+// pooled together.
+export const GROUP_KINDS = ['passage', 'shared', 'directions'];
+export function attachExamGroups(questions, groups, examKey = '') {
+  const list = Array.isArray(questions) ? questions : [];
+  const byId = new Map();
+  (Array.isArray(groups) ? groups : []).forEach((g) => {
+    if (g && g.id !== undefined && toText(g.text).trim()) byId.set(String(g.id), g);
+  });
+  return list.map((q, i) => {
+    const ids = Array.isArray(q?.groups) ? q.groups : [];
+    const grps = ids.map((id) => byId.get(String(id)) ? { id: String(id), g: byId.get(String(id)) } : null)
+      .filter(Boolean)
+      .map(({ id, g }) => ({
+        key: `${examKey}:${id}`,
+        kind: GROUP_KINDS.includes(g.kind) ? g.kind : 'passage',
+        title: toText(g.title).trim(),
+        text: toText(g.text)
+      }));
+    return grps.length ? { ...q, grps, ord: i } : { ...q, ord: i };
+  });
+}
+
 export function renderRichContent(rawText) {
   const raw = toText(rawText);
   const lines = raw.split('\n');
@@ -79,7 +125,7 @@ export function renderRichContent(rawText) {
     // Escape line-by-line, keep $...$ / $$...$$ delimiters intact (untouched by
     // escaping since they contain no HTML-special chars in normal LaTeX use),
     // join with <br> so plain line breaks still show.
-    htmlParts.push(textBuf.map((l) => escapeHTML(l)).join('<br>'));
+    htmlParts.push(textBuf.map((l) => inlineMarkup(escapeHTML(l))).join('<br>'));
     textBuf = [];
   };
   while (i < lines.length) {

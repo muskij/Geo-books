@@ -69,6 +69,8 @@
     /* question + options */
     #cbtQuestionContainer .min-h-\[300px\]{ min-height:0 !important; padding:2px 0 8px !important; }
     #cbtQuestionText{ font-size:clamp(18px,5.2vw,22px) !important; line-height:1.45 !important; font-weight:700 !important; letter-spacing:-.01em !important; margin-bottom:16px !important; }
+    #cbtGroupWrap{ margin-bottom:16px !important; }
+    #cbtGroupWrap .cbt-passage-body{ max-height:38vh !important; font-size:15px !important; line-height:1.6 !important; }
     #cbtOptions{ grid-template-columns:1fr !important; gap:10px !important; }
     #cbtOptions > button{ padding:12px 14px !important; gap:12px !important; border-radius:18px !important; transform:none !important; min-height:56px; }
     #cbtOptions > button > div:first-child{ width:36px !important; height:36px !important; border-radius:12px !important; flex:none; }
@@ -167,6 +169,8 @@
           </div>
 
           <div class="min-h-[300px] py-6">
+            <!-- English papers: directions banner + reading passage / shared context, filled by cbt.js -->
+            <div id="cbtGroupWrap" class="hidden mb-8 space-y-4"></div>
             <h2 id="cbtQuestionText" class="text-3xl sm:text-4xl font-black tracking-tight leading-[1.1] mb-6"></h2>
             <div id="cbtQuestionImageWrap" class="hidden mb-8 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800">
               <img src="" alt="Question diagram" class="w-full max-h-[420px] object-contain bg-slate-50 dark:bg-slate-800">

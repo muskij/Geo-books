@@ -47,7 +47,7 @@ import {
   questionPackKey, cacheQuestionPack, getCachedQuestionPack, getAppEntryUrl,
   PROFILE_COLOR_PRESETS, canCustomizeProfileColor, isValidProfileColor,
   hasVerifiedRank, hasMarketplaceDiscount, applyMarketplaceDiscount,
-  hasEarlyAccess, isLegendRank
+  hasEarlyAccess, isLegendRank, attachExamGroups
 } from "./utils.js";
 
 // --- Global AI Handlers ---
@@ -4222,8 +4222,10 @@ window.selectOfficialExam = (id) => {
   studyState.cbt.source = { 
     type: 'official', 
     id: key, 
-    title: exam.title || 'Exam', 
-    questions: exam.questions || [], 
+    title: exam.title || 'Exam',
+    // Passages / shared context / directions are resolved onto each question
+    // so the exam page (cbt.js) never needs the exam document itself.
+    questions: attachExamGroups(exam.questions || [], exam.groups, key),
     duration: exam.duration || 30,
     subject: exam.subject || exam.jambSubject || 'General',
     examType: exam.examType || 'Other'
@@ -4754,6 +4756,8 @@ window.startJambExam = async () => {
       exp: q.exp || '',
       topic: q.topic || '',
       image: q.image || null,
+      // English passages / shared context / directions (see attachExamGroups)
+      ...(q.grps ? { grps: q.grps } : {}),
       jambSubject: subject
     }));
   });
@@ -11742,14 +11746,15 @@ async function fetchJambQuestionsFromExams({ subject, year = null, count = 20 } 
     const pool = [];
     snap.docs.forEach(docSnap => {
       const d = docSnap.data();
-      (Array.isArray(d.questions) ? d.questions : []).forEach(q => {
+      (attachExamGroups(Array.isArray(d.questions) ? d.questions : [], d.groups, docSnap.id)).forEach(q => {
         const opts = Array.isArray(q?.opts) ? q.opts.map(o => toText(o)) : [];
         const a = Number.isInteger(q?.a) ? q.a : -1;
         // Skip rows with no answer key (Physics 1983-87 imports may have gaps)
         if (!toText(q?.q) || opts.length < 2 || opts.some(o => !o) || a < 0 || a >= opts.length) return;
         pool.push({
           q: toText(q.q), opts, correct: a, exp: toText(q.exp), topic: '',
-          year: d.jambYear || null, image: q.image || null
+          year: d.jambYear || null, image: q.image || null,
+          ...(q.grps ? { grps: q.grps } : {}), ord: q.ord
         });
       });
     });
@@ -11817,13 +11822,50 @@ window.refreshQuickTopicOptions = async () => {
   });
 };
 
-function shuffleAndTrim(list, count) {
-  const arr = list.slice();
+function shuffleInPlace(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  return arr.slice(0, Math.min(count, arr.length));
+  return arr;
+}
+
+// Questions that share a reading passage or a stimulus ("use this dialogue to
+// answer 35 and 36") must stay together and in their original order, or the
+// student sees question 12 of a passage with nothing next to it. So those are
+// shuffled and trimmed as whole bundles. Directions-only groups don't need
+// that (the banner travels with each question), and plain pools behave exactly
+// as before.
+const bundleKeyOf = (q) => (q?.grps || []).find(g => g.kind === 'passage' || g.kind === 'shared')?.key || null;
+
+function shuffleAndTrim(list, count) {
+  const want = Math.min(count, list.length);
+  if (!list.some(bundleKeyOf)) return shuffleInPlace(list.slice()).slice(0, want);
+
+  const bundles = [];
+  const byKey = new Map();
+  list.forEach((q) => {
+    const k = bundleKeyOf(q);
+    if (!k) { bundles.push([q]); return; }
+    if (!byKey.has(k)) { const b = []; byKey.set(k, b); bundles.push(b); }
+    byKey.get(k).push(q);
+  });
+  bundles.forEach(b => b.sort((x, y) => (x.ord ?? 0) - (y.ord ?? 0)));
+  shuffleInPlace(bundles);
+
+  const out = [];
+  const skipped = [];
+  for (const b of bundles) {
+    if (out.length + b.length <= want) out.push(...b);
+    else skipped.push(b);
+    if (out.length === want) break;
+  }
+  // A big passage that didn't fit whole: top up with questions from it rather
+  // than coming up short. Each question still carries its own passage text.
+  for (const b of skipped) {
+    for (const q of b) { if (out.length < want) out.push(q); }
+  }
+  return out;
 }
 
 // Lets a user explicitly pre-download a subject's real questions for offline
