@@ -247,7 +247,7 @@ html.dark .ch-act:hover{background:#1e293b}
 
 /* ── Community (v3): chats, reactions, replies, discover ── */
 [class*="cm-"].hidden{display:none!important}
-.cm-root{margin:0;padding:0;height:100%;width:100%;overflow:hidden;background:var(--ux-card);color:var(--ux-tx)}
+.cm-root{margin:0;padding:0;height:100vh;height:100dvh;max-height:100%;width:100%;overflow:hidden;background:var(--ux-card);color:var(--ux-tx)}
 .cm-root *,.cm-root *::before,.cm-root *::after,.cm-msg-menu,.cm-msg-menu *{box-sizing:border-box}
 .cm-root h2,.cm-root h3,.cm-root h4,.cm-root p{margin:0}
 .cm-shell{display:flex;height:100%;width:100%;overflow:hidden}
@@ -456,6 +456,20 @@ html.dark .ch-act:hover{background:#1e293b}
 @media (max-width:640px){
   .cm-side-head{padding:14px 14px 6px}
   .cm-title{font-size:24px}
+}
+
+/* Community owns the whole screen: drop the dock's reserved padding (the phone
+   layout adds 112px to <main> for the bottom nav) and keep the floating AI
+   button off the composer while a chat is open. */
+main:has(#community:not(.hidden)){padding-bottom:0!important}
+body:has(#community.cm-pane-chat:not(.hidden)) #aiAssistant{display:none!important}
+.cm-presence p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:640px){
+  .cm-chat-head{gap:8px;padding:10px}
+  .cm-chat-head .cm-icon-btn{width:38px;height:38px}
+  .cm-chat-head .cm-head-actions{gap:4px}
+  .cm-chat-head .cm-avatar-md{width:40px;height:40px}
+  .cm-composer{padding-left:10px;padding-right:10px}
 }
 
 /* dark */
