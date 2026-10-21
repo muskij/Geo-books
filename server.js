@@ -508,7 +508,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 500 * 1024 * 1024 }, // 500MB cap — covers lecture videos; revisit if longer recordings are common
   fileFilter: (req, file, cb) => {
-    const allowed = /^image\/(jpeg|png|webp|gif)$|^application\/pdf$|^video\/(mp4|webm|quicktime|x-matroska)$/;
+    const allowed = /^image\/(jpeg|png|webp|gif)$|^application\/pdf$|^video\/(mp4|webm|quicktime|x-matroska)$|^audio\/(webm|ogg|mp4|mpeg|aac|x-m4a)$/;
     if (allowed.test(file.mimetype)) return cb(null, true);
     cb(new Error('UNSUPPORTED_FILE_TYPE'));
   }

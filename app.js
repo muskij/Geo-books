@@ -37,7 +37,9 @@ import {
   runTransaction,
   where,
   getCountFromServer,
-  startAfter
+  startAfter,
+  increment,
+  deleteField
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 import { aiIsConfigured, aiHumanizeText, aiSupportReply, aiTutorReply, aiGenerateDailyPathTasks, aiExplainFlashcard, aiGenerateCbtExam, aiGenerateCbtExamFromSource, setAiSettings, setAiUserContext } from "./ai.js";
 import { 
@@ -789,7 +791,17 @@ const snapState = {
   groupModalMode: 'create',
   chatOptionsOpen: false,
   pendingAddPeopleOpen: false,
-  typingUsers: new Set()
+  typingUsers: new Set(),
+  users: {},
+  chatFilter: 'all',
+  communityTab: 'chats',
+  replyTo: null,
+  chatSearch: '',
+  msgLimit: 50,
+  messagesReady: false,
+  uiBound: false,
+  presenceTimer: null,
+  unsubPresence: null
 };
 
 const supportState = {
@@ -6326,30 +6338,50 @@ window.rateFlashcard = async (rating) => {
 function initSnapChat(user) {
   if (!user) return;
   snapState.user = user;
-  
+
   initChatsSync();
   initStoriesSync();
   initPresenceSync();
-  
+
   const input = S('chatMessageInput');
   const sendBtn = S('sendSnapBtn');
   const voiceBtn = S('voiceNoteBtn');
-  
+
   if (input) {
     input.oninput = (e) => {
       const hasText = e.target.value.trim().length > 0;
-      sendBtn.classList.toggle('hidden', !hasText);
-      voiceBtn.classList.toggle('hidden', hasText);
-      updateTypingStatus(hasText);
+      sendBtn?.classList.toggle('hidden', !hasText);
+      voiceBtn?.classList.toggle('hidden', hasText);
+      cmSetTyping(hasText);
     };
-    
-    input.onkeypress = (e) => {
-      if (e.key === 'Enter') window.sendSnapMessage();
+
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        window.sendSnapMessage();
+      } else if (e.key === 'Escape' && snapState.replyTo) {
+        window.cancelReply();
+      }
     };
   }
-  
+
   if (sendBtn) sendBtn.onclick = window.sendSnapMessage;
-  if (voiceBtn) voiceBtn.onclick = () => toast('Voice notes are coming soon to Geo-Books!', 'brand');
+  if (voiceBtn) voiceBtn.onclick = cmToggleVoice;
+
+  // One-time global listeners (initSnapChat can run again on auth changes).
+  if (!snapState.uiBound) {
+    snapState.uiBound = true;
+    document.addEventListener('click', (e) => {
+      const menu = S('cmMsgMenu');
+      if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target)) menu.classList.add('hidden');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') S('cmMsgMenu')?.classList.add('hidden');
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') cmScheduleMarkRead();
+    });
+  }
 }
 
 window.toggleAttachmentMenu = () => {
@@ -6380,27 +6412,9 @@ window.handleChatFiles = async (event) => {
     }
     try {
       toast('Uploading...', 'info');
-      const att = await uploadChatAttachment(file, snapState.activeChat.id, snapState.user.uid);
-      const msgData = {
-        senderId: snapState.user.uid,
-        text: '',
-        attachment: att,
-        createdAt: serverTimestamp()
-      };
-
-      const chatRef = doc(db, "chats", snapState.activeChat.id);
-      await addDoc(collection(chatRef, "messages"), msgData);
-
-      const label = toText(att.contentType).startsWith('image/') ? '📷 Photo' : `📎 ${att.name}`;
-      await updateDoc(chatRef, {
-        lastMessage: {
-          senderId: snapState.user.uid,
-          text: label,
-          createdAt: serverTimestamp(),
-          readBy: [snapState.user.uid]
-        },
-        updatedAt: serverTimestamp()
-      });
+      const chat = snapState.activeChat;
+      const att = await uploadChatAttachment(file, chat.id, snapState.user.uid);
+      await cmSendMessage(chat, { text: '', attachment: att }, cmAttachmentLabel(att));
       toast('Sent', 'success');
     } catch (e) {
       console.error('Error uploading attachment:', e);
@@ -6762,6 +6776,9 @@ window.toggleCreateGroup = (show, mode = 'create') => {
     if (titleEl) titleEl.textContent = isAddMembers ? 'Add Members' : 'Create Group';
     if (confirmBtn) confirmBtn.textContent = isAddMembers ? 'Add' : 'Create';
     if (nameWrap) nameWrap.classList.toggle('hidden', isAddMembers);
+    S('groupPublicWrap')?.classList.toggle('hidden', isAddMembers);
+    if (S('groupPublicToggle')) S('groupPublicToggle').checked = false;
+    if (S('groupCourseInput')) S('groupCourseInput').value = '';
 
     if (nameInput) nameInput.value = '';
     if (searchInput) searchInput.value = '';
@@ -6779,7 +6796,8 @@ window.createGroupChat = async () => {
   if (!currentUser) return;
 
   const selected = Array.from(snapState.groupSelected || []);
-  if (selected.length < 1) {
+  const wantsPublic = snapState.groupModalMode !== 'addMembers' && !!S('groupPublicToggle')?.checked;
+  if (selected.length < 1 && !wantsPublic) {
     toast('Select at least 1 person', 'error');
     return;
   }
@@ -6817,8 +6835,14 @@ window.createGroupChat = async () => {
       participants,
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp(),
-      typing: {}
+      typing: {},
+      createdBy: currentUser.uid
     };
+    if (wantsPublic) {
+      chatData.isPublic = true;
+      chatData.courseTag = toText(S('groupCourseInput')?.value).trim().toUpperCase().replace(/[^A-Z0-9 ]/g, '').slice(0, 30);
+      chatData.university = toText(app.state.userData?.university).trim();
+    }
 
     const docRef = await addDoc(collection(db, "chats"), chatData);
     snapState.chats.unshift({ id: docRef.id, ...chatData });
@@ -6858,6 +6882,14 @@ function renderChatOptionsMenu() {
 
   if (isGroup) {
     inner.innerHTML = `
+      <button class="${itemClass}" onclick="window.toggleChatOptionsMenu(false); window.toggleChatSearch(true)">
+        <i data-lucide="search" class="${iconClass} text-brand-600"></i>
+        <span class="${labelClass}">Search Messages</span>
+      </button>
+      <button class="${itemClass}" onclick="window.toggleChatOptionsMenu(false); window.togglePinChat('${snapState.activeChat.id}')">
+        <i data-lucide="pin" class="${iconClass} text-slate-500"></i>
+        <span class="${labelClass}">${snapState.activeChat.isPinned ? 'Unpin Chat' : 'Pin Chat'}</span>
+      </button>
       <button class="${itemClass}" onclick="window.toggleChatOptionsMenu(false); window.toggleCreateGroup(true, 'addMembers')">
         <i data-lucide="user-plus" class="${iconClass} text-brand-600"></i>
         <span class="${labelClass}">Add Members</span>
@@ -6869,6 +6901,14 @@ function renderChatOptionsMenu() {
     `;
   } else {
     inner.innerHTML = `
+      <button class="${itemClass}" onclick="window.toggleChatOptionsMenu(false); window.toggleChatSearch(true)">
+        <i data-lucide="search" class="${iconClass} text-brand-600"></i>
+        <span class="${labelClass}">Search Messages</span>
+      </button>
+      <button class="${itemClass}" onclick="window.toggleChatOptionsMenu(false); window.togglePinChat('${snapState.activeChat.id}')">
+        <i data-lucide="pin" class="${iconClass} text-slate-500"></i>
+        <span class="${labelClass}">${snapState.activeChat.isPinned ? 'Unpin Chat' : 'Pin Chat'}</span>
+      </button>
       <button class="${itemClass}" onclick="window.toggleChatOptionsMenu(false); window.blockContact()">
         <i data-lucide="ban" class="${iconClass} text-rose-500"></i>
         <span class="${labelClass}">Block Contact</span>
@@ -7006,7 +7046,7 @@ window.startChatWithUser = async (otherUserId) => {
 };
 
 window.togglePinChat = async (chatId, event) => {
-  event.stopPropagation();
+  event?.stopPropagation?.();
   const chat = snapState.chats.find(c => c.id === chatId);
   if (!chat) return;
   
@@ -7015,170 +7055,344 @@ window.togglePinChat = async (chatId, event) => {
   toast(isPinned ? 'Chat Pinned' : 'Chat Unpinned', 'info');
 };
 
+// Presence: status flips to offline when the tab is hidden/closed and a 60s
+// heartbeat keeps lastSeen fresh, so "Online" in Community means online now.
+function cmBeat(status) {
+  const u = snapState.user;
+  if (!u) return;
+  updateDoc(doc(db, "users", u.uid), { status, lastSeen: serverTimestamp() }).catch(() => {});
+}
+
 function initPresenceSync() {
   if (!snapState.user) return;
-  const userRef = doc(db, "users", snapState.user.uid);
-  updateDoc(userRef, { status: 'online', lastSeen: serverTimestamp() });
-  
-  // Basic online/offline simulation for other users
+  cmBeat(document.visibilityState === 'hidden' ? 'offline' : 'online');
+
+  if (!snapState.presenceTimer) {
+    snapState.presenceTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') cmBeat('online');
+    }, 60000);
+    document.addEventListener('visibilitychange', () => {
+      cmBeat(document.visibilityState === 'visible' ? 'online' : 'offline');
+    });
+    window.addEventListener('pagehide', () => cmBeat('offline'));
+  }
+
+  // Seed profiles for the most recent users; merge so profiles fetched for
+  // chat partners are never dropped by a refresh.
+  if (snapState.unsubPresence) snapState.unsubPresence();
   const q = query(collection(db, "users"), limit(20));
-  onSnapshot(q, (snapshot) => {
-    snapState.users = snapshot.docs.reduce((acc, doc) => {
-      acc[doc.id] = doc.data();
-      return acc;
-    }, {});
+  snapState.unsubPresence = onSnapshot(q, (snapshot) => {
+    const fresh = {};
+    snapshot.docs.forEach((d) => { fresh[d.id] = d.data(); });
+    snapState.users = { ...(snapState.users || {}), ...fresh };
     renderSnapFeed();
+    if (snapState.activeChat) cmRenderChatHeader();
   });
+}
+
+// ===== Community (v3) helpers =====
+const CM_REACTIONS = ['👍', '❤️', '😂', '😮', '🙏', '🔥'];
+const cmIsGroup = (chat) => !!chat?.isGroup || (Array.isArray(chat?.participants) && chat.participants.length > 2);
+
+const cmMs = (ts) => {
+  if (!ts) return 0;
+  if (typeof ts.toMillis === 'function') return ts.toMillis();
+  if (typeof ts.seconds === 'number') return ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6);
+  const n = new Date(ts).getTime();
+  return Number.isFinite(n) ? n : 0;
+};
+const cmDate = (ts) => {
+  const ms = cmMs(ts);
+  return ms ? new Date(ms) : null;
+};
+const cmDayKey = (d) => (d ? `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` : '');
+
+function cmHue(seed) {
+  const s = toText(seed);
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+  return h;
+}
+const cmGradient = (h) => `linear-gradient(135deg,hsl(${h} 68% 56%),hsl(${(h + 35) % 360} 68% 44%))`;
+function cmInitials(name) {
+  const parts = toText(name).trim().split(/\s+/).filter(Boolean);
+  return parts.map((p) => Array.from(p)[0]).join('').toUpperCase().slice(0, 2) || 'U';
+}
+function cmAvatar(name, size = 'md', online = false, seed = '') {
+  const h = cmHue(seed || name);
+  return `<span class="cm-avatar cm-avatar-${size}" style="background:${cmGradient(h)}">${escapeHTML(cmInitials(name))}${online ? '<span class="cm-online"></span>' : ''}</span>`;
+}
+
+function cmListTime(d) {
+  if (!d) return '';
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((startToday - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  if (diffDays <= 0) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return d.toLocaleDateString([], { weekday: 'short' });
+  return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+}
+function cmDayLabel(d) {
+  if (!d) return '';
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((startToday - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  if (diffDays <= 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return d.toLocaleDateString([], sameYear
+    ? { weekday: 'long', day: 'numeric', month: 'long' }
+    : { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function cmName(uid) {
+  if (uid && uid === snapState.user?.uid) return 'You';
+  const u = snapState.users?.[uid];
+  return toText(u?.displayName || u?.name || u?.username || 'Scholar').trim() || 'Scholar';
+}
+function cmChatTitle(chat) {
+  if (chat?.name) return toText(chat.name);
+  const uid = snapState.user?.uid;
+  const otherId = (chat?.participants || []).find((id) => id !== uid);
+  return otherId ? cmName(otherId) : 'Scholar';
+}
+function cmUserOnline(u) {
+  if (!u || u.status !== 'online') return false;
+  const ms = cmMs(u.lastSeen);
+  return !!ms && Date.now() - ms < 150000; // heartbeat runs every 60s
+}
+
+// snapState.users is seeded from an arbitrary first-N users query; fetch any
+// participant profile we are missing so names/avatars always resolve. A
+// missing profile is cached as {} so we never re-fetch it in a loop.
+const cmUserFetching = new Set();
+async function cmEnsureUsers(ids) {
+  const missing = Array.from(new Set(ids || []))
+    .filter((id) => id && !snapState.users?.[id] && !cmUserFetching.has(id))
+    .slice(0, 40);
+  if (!missing.length) return;
+  missing.forEach((id) => cmUserFetching.add(id));
+  try {
+    const snaps = await Promise.all(missing.map((id) => getDoc(doc(db, 'users', id)).catch(() => null)));
+    const add = {};
+    snaps.forEach((s, i) => { add[missing[i]] = s && s.exists() ? s.data() : {}; });
+    snapState.users = { ...(snapState.users || {}), ...add };
+    renderSnapFeed();
+    if (snapState.activeChat) {
+      cmRenderChatHeader();
+      renderSnapMessages(snapState.messages || []);
+    }
+  } finally {
+    missing.forEach((id) => cmUserFetching.delete(id));
+  }
+}
+
+function cmAttachmentLabel(att) {
+  const type = toText(att?.contentType);
+  if (type.startsWith('image/')) return '📷 Photo';
+  if (type.startsWith('audio/')) return '🎤 Voice note';
+  return `📎 ${toText(att?.name) || 'File'}`;
+}
+
+function cmUnreadCount(chat) {
+  const uid = snapState.user?.uid;
+  if (!uid) return 0;
+  // Counter-based (new) chats: trust the per-user counter once it exists.
+  if (chat?.unread && typeof chat.unread[uid] === 'number') return Math.max(0, chat.unread[uid]);
+  // Legacy chats: fall back to the lastMessage.readBy flag.
+  const lm = chat?.lastMessage;
+  if (lm && lm.senderId && lm.senderId !== uid && !(Array.isArray(lm.readBy) && lm.readBy.includes(uid))) return 1;
+  return 0;
+}
+
+// Writes the message document, then updates the chat summary (preview, unread
+// counters for everyone else, "my" read marker). Used by text, file and voice sends.
+async function cmSendMessage(chat, fields, preview) {
+  const uid = snapState.user.uid;
+  const chatRef = doc(db, 'chats', chat.id);
+  await addDoc(collection(chatRef, 'messages'), {
+    senderId: uid,
+    text: '',
+    ...fields,
+    createdAt: serverTimestamp()
+  });
+  const upd = {
+    lastMessage: { senderId: uid, text: toText(preview).slice(0, 140), createdAt: serverTimestamp(), readBy: [uid] },
+    updatedAt: serverTimestamp(),
+    [`typing.${uid}`]: false,
+    [`unread.${uid}`]: 0,
+    [`lastRead.${uid}`]: serverTimestamp()
+  };
+  (chat.participants || []).forEach((p) => {
+    if (p === uid) return;
+    upd[`unread.${p}`] = increment(1);
+    upd[`deletedFor.${p}`] = deleteField(); // a new message brings a removed chat back for them
+  });
+  await updateDoc(chatRef, upd);
 }
 
 function initChatsSync() {
   if (!snapState.user) return;
-  
+
   const q = query(
-    collection(db, "chats"), 
+    collection(db, "chats"),
     where("participants", "array-contains", snapState.user.uid),
     limit(100)
   );
-  
+
   if (snapState.unsubChats) snapState.unsubChats();
-  
+
   snapState.unsubChats = onSnapshot(q, (snapshot) => {
     const uid = snapState.user.uid;
     const blocked = Array.isArray(app.state.userData?.blocked) ? app.state.userData.blocked : [];
     snapState.chats = snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .map(d => ({ id: d.id, ...d.data() }))
       .filter(c => !(c.deletedFor && c.deletedFor[uid]))
       .filter(c => {
-        const isGroup = !!c.isGroup || (Array.isArray(c.participants) && c.participants.length > 2);
-        if (isGroup) return true;
+        if (cmIsGroup(c)) return true;
         const otherId = c.participants?.find(id => id !== uid);
         return otherId ? !blocked.includes(otherId) : true;
       });
     renderSnapFeed();
+    cmEnsureUsers(snapState.chats.flatMap((c) => c.participants || []));
+  }, (err) => {
+    console.error('Chats listener error:', err);
   });
 }
 
-function renderSnapFeed(filterQuery = '') {
+window.setChatFilter = (filter) => {
+  snapState.chatFilter = ['all', 'unread', 'groups', 'direct'].includes(filter) ? filter : 'all';
+  document.querySelectorAll('#cmFilters .cm-chip').forEach((el) => {
+    el.classList.toggle('is-on', el.dataset.filter === snapState.chatFilter);
+  });
+  renderSnapFeed();
+};
+
+window.setCommunityTab = (tab) => {
+  const discover = tab === 'discover';
+  snapState.communityTab = discover ? 'discover' : 'chats';
+  S('cmTabChats')?.classList.toggle('is-on', !discover);
+  S('cmTabDiscover')?.classList.toggle('is-on', discover);
+  S('cmTabChats')?.setAttribute('aria-selected', String(!discover));
+  S('cmTabDiscover')?.setAttribute('aria-selected', String(discover));
+  S('snapFeedList')?.classList.toggle('hidden', discover);
+  S('cmFilters')?.classList.toggle('hidden', discover);
+  S('chatSearchInput')?.parentElement?.classList.toggle('hidden', discover);
+  S('cmDiscover')?.classList.toggle('hidden', !discover);
+  if (discover) cmLoadDiscover();
+};
+
+function renderSnapFeed(filterQuery) {
   const list = S('snapFeedList');
   if (!list) return;
-  
-  const uid = snapState.user?.uid || null;
-  const blocked = Array.isArray(app.state.userData?.blocked) ? app.state.userData.blocked : [];
-  let filteredChats = (snapState.chats || []).filter(c => {
-    if (!uid) return true;
-    if (c.deletedFor && c.deletedFor[uid]) return false;
-    const isGroup = !!c.isGroup || (Array.isArray(c.participants) && c.participants.length > 2);
-    if (isGroup) return true;
-    const otherId = c.participants?.find(id => id !== uid);
-    return otherId ? !blocked.includes(otherId) : true;
-  });
-  if (filterQuery) {
-    filteredChats = filteredChats.filter(c => {
-      const otherParticipantId = c.participants.find(uid => uid !== snapState.user.uid);
-      const otherUser = snapState.users?.[otherParticipantId] || {};
-      const chatName = c.name || otherUser.displayName || 'Scholar';
-      return chatName.toLowerCase().includes(filterQuery);
-    });
+
+  const me = snapState.user;
+  const uid = me?.uid || null;
+  const q = toText(filterQuery !== undefined ? filterQuery : (S('chatSearchInput')?.value || '')).trim().toLowerCase();
+  const filter = snapState.chatFilter || 'all';
+
+  const all = (snapState.chats || []).filter((c) => !(uid && c.deletedFor && c.deletedFor[uid]));
+  const totalUnread = all.reduce((n, c) => n + (cmUnreadCount(c) > 0 ? 1 : 0), 0);
+  const badge = S('cmUnreadTotal');
+  if (badge) {
+    badge.textContent = totalUnread > 99 ? '99+' : String(totalUnread);
+    badge.classList.toggle('hidden', totalUnread === 0);
   }
 
-  // Sort: Pinned first, then by updatedAt
-  filteredChats.sort((a, b) => {
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
-    return (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0);
+  let chats = all.filter((c) => {
+    if (filter === 'unread' && cmUnreadCount(c) === 0) return false;
+    if (filter === 'groups' && !cmIsGroup(c)) return false;
+    if (filter === 'direct' && cmIsGroup(c)) return false;
+    if (q && !cmChatTitle(c).toLowerCase().includes(q)) return false;
+    return true;
   });
 
-  if (filteredChats.length === 0) {
-    if (filterQuery) {
-      list.innerHTML = `<div class="cm-empty"><h3>No chats match</h3><p>Try a different name.</p></div>`;
-    } else {
+  chats.sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return (cmMs(b.updatedAt) || Date.now()) - (cmMs(a.updatedAt) || Date.now());
+  });
+
+  if (chats.length === 0) {
+    if (all.length === 0) {
       list.innerHTML = `
         <div class="cm-empty">
           <div class="cm-empty-ico"><i data-lucide="messages-square"></i></div>
           <h3>No chats yet</h3>
-          <p>Message a coursemate, or start a study group for your course.</p>
+          <p>Message a coursemate, or join a study group for your course.</p>
           <div class="cm-empty-actions">
             <button type="button" class="cm-btn cm-btn-main" onclick="window.toggleAddPeople(true)"><i data-lucide="user-plus"></i>Find people</button>
-            <button type="button" class="cm-btn" onclick="window.toggleCreateGroup(true)"><i data-lucide="users"></i>New group</button>
+            <button type="button" class="cm-btn" onclick="window.setCommunityTab('discover')"><i data-lucide="compass"></i>Discover</button>
           </div>
         </div>`;
-      if (window.lucide) window.lucide.createIcons();
+    } else {
+      list.innerHTML = `<div class="cm-empty"><h3>${q ? 'No chats match' : 'Nothing here'}</h3><p>${q ? 'Try a different name.' : 'No chats in this filter.'}</p></div>`;
     }
+    if (window.lucide) window.lucide.createIcons();
     return;
   }
-  
-  list.innerHTML = filteredChats.map(chat => {
-    let statusIcon = '';
-    let statusColor = 'text-slate-400';
-    const lastMsg = chat.lastMessage || {};
-    const isNew = lastMsg.senderId !== snapState.user.uid && !lastMsg.readBy?.includes(snapState.user.uid);
-    const isActive = snapState.activeChat?.id === chat.id;
-    
-    // Find the other participant's name if it's a 1-on-1 chat
-    const otherParticipantId = chat.participants.find(uid => uid !== snapState.user.uid);
-    const otherUser = snapState.users?.[otherParticipantId] || {};
-    const chatName = chat.name || otherUser.displayName || 'Scholar';
-    const isOnline = otherUser.status === 'online';
 
-    if (isNew) {
-      statusIcon = '<div class="w-3 h-3 rounded-sm bg-rose-500 mr-2"></div>';
-      statusColor = 'text-rose-500';
-    } else if (lastMsg.senderId === snapState.user.uid) {
-      const isRead = lastMsg.readBy?.length > 1;
-      statusIcon = `<i data-lucide="check-check" class="w-3 h-3 mr-2 ${isRead ? 'text-brand-500' : 'text-slate-300'}"></i>`;
+  list.innerHTML = chats.map((chat) => {
+    const group = cmIsGroup(chat);
+    const title = cmChatTitle(chat);
+    const lm = chat.lastMessage || {};
+    const unread = cmUnreadCount(chat);
+    const active = snapState.activeChat?.id === chat.id;
+    const otherId = group ? null : (chat.participants || []).find((id) => id !== uid);
+    const online = !group && cmUserOnline(snapState.users?.[otherId]);
+    const mine = lm.senderId === uid;
+
+    let prefix = '';
+    if (lm.text) {
+      if (mine) prefix = 'You: ';
+      else if (group) prefix = `${cmName(lm.senderId).split(' ')[0]}: `;
     }
-
-    const timeStr = lastMsg.createdAt ? new Date(lastMsg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-    const safeChatName = escapeHTML(chatName);
-    const safeLastText = escapeHTML(lastMsg.text || 'Opened');
-    const rowClass = isActive
-      ? 'bg-brand-50/70 dark:bg-brand-900/20 shadow-lg shadow-brand-500/10 rounded-3xl mx-3 my-2 border border-brand-200/60 dark:border-brand-800/40'
-      : `border-b border-slate-50 dark:border-slate-800/30 ${chat.isPinned ? 'bg-brand-50/30 dark:bg-brand-900/10' : ''}`;
+    const preview = lm.text ? `${prefix}${toText(lm.text)}` : 'Say hi 👋';
+    const seen = mine && !group && Array.isArray(lm.readBy) && lm.readBy.length > 1;
+    const tick = mine && !group && lm.text
+      ? `<i data-lucide="${seen ? 'check-check' : 'check'}" class="${seen ? 'cm-seen' : ''}"></i>`
+      : '';
+    const time = cmListTime(cmDate(lm.createdAt || chat.updatedAt));
+    const id = escapeHTML(chat.id);
 
     return `
-      <div onclick="window.openSnapChat('${chat.id}')" class="flex items-center gap-4 p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-all group ${rowClass}">
-        <div class="relative">
-          <div class="w-16 h-16 rounded-full border-2 border-white dark:border-slate-800 shadow-lg overflow-hidden group-active:scale-95 transition-transform bg-brand-50 flex items-center justify-center font-black text-brand-600">
-            ${chatName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+      <div class="cm-row${active ? ' is-active' : ''}${unread ? ' is-unread' : ''}" role="button" tabindex="0"
+           onclick="window.openSnapChat('${id}')" onkeydown="if(event.key==='Enter'){window.openSnapChat('${id}')}">
+        ${cmAvatar(title, 'lg', online, group ? chat.id : (otherId || title))}
+        <div class="cm-row-main">
+          <div class="cm-row-top">
+            <span class="cm-row-name">${escapeHTML(title)}${chat.isPublic ? '<span class="cm-grp-tag">Public</span>' : ''}</span>
+            <span class="cm-row-time">${escapeHTML(time)}</span>
           </div>
-          ${isOnline ? '<div class="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900"></div>' : ''}
-          ${isNew ? '<div class="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></div>' : ''}
-        </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center justify-between">
-            <h4 class="font-black text-base tracking-tight truncate">${safeChatName}</h4>
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${timeStr}</span>
-          </div>
-          <div class="flex items-center justify-between mt-1">
-            <div class="flex items-center flex-1 min-w-0">
-              ${statusIcon}
-              <p class="text-[10px] font-black uppercase tracking-widest ${statusColor} truncate">${isNew ? 'New Message' : safeLastText}</p>
-            </div>
-            <div class="flex items-center gap-2">
-              ${chat.isPinned ? '<i data-lucide="pin" class="w-3 h-3 text-brand-500"></i>' : ''}
-              <button onclick="window.togglePinChat('${chat.id}', event)" class="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-all">
-                <i data-lucide="more-vertical" class="w-3 h-3 text-slate-400"></i>
-              </button>
-            </div>
+          <div class="cm-row-bot">
+            <span class="cm-row-text">${tick}<span>${escapeHTML(preview)}</span></span>
+            <span class="cm-row-flags">
+              ${chat.isPinned ? '<i data-lucide="pin" class="cm-pin"></i>' : ''}
+              ${unread ? `<span class="cm-badge">${unread > 99 ? '99+' : unread}</span>` : ''}
+            </span>
           </div>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
   if (window.lucide) window.lucide.createIcons();
 }
 
+// Typing indicator: write only on change, and auto-clear after 4s of silence.
+let cmTypingOn = false;
+let cmTypingTimer = null;
+function cmSetTyping(on) {
+  clearTimeout(cmTypingTimer);
+  if (on) cmTypingTimer = setTimeout(() => cmSetTyping(false), 4000);
+  if (on === cmTypingOn) return;
+  const chat = snapState.activeChat;
+  const me = snapState.user;
+  if (!chat || !me) { cmTypingOn = false; return; }
+  cmTypingOn = on;
+  updateDoc(doc(db, 'chats', chat.id), { [`typing.${me.uid}`]: on }).catch(() => {});
+}
 async function updateTypingStatus(isTyping) {
-  if (!snapState.activeChat || !snapState.user) return;
-  
-  const chatDoc = doc(db, "chats", snapState.activeChat.id);
-  try {
-    await updateDoc(chatDoc, {
-      [`typing.${snapState.user.uid}`]: isTyping
-    });
-  } catch (e) {
-    console.error('Error updating typing status:', e);
-  }
+  cmSetTyping(!!isTyping);
 }
 
 function initStoriesSync() {
@@ -7210,27 +7424,17 @@ window.viewStory = (storyId) => {
   // Full-screen story viewer logic could be added here
 };
 
-// On mobile (<lg breakpoint) the chat list (#chatFeed) and the open chat
-// (#snapChatWindow) used to render stacked on top of each other in the
-// same flex-col column instead of one replacing the other — so opening a
-// chat just added a second full-height pane below the list instead of
-// navigating to it. This makes Community a real single-pane, WhatsApp-
-// style view on phones: only one pane shows at a time. Desktop (lg+) is
-// untouched — chatFeed's 'lg:flex' class always wins there regardless of
-// what this toggles.
+// On phones/tablets (<1024px) Community is a single-pane, WhatsApp-style view:
+// the chat list OR the open chat, never both. ux.css keys off .cm-pane-chat on
+// the section; on desktop both panes always show side by side.
 function setCommunityMobilePane(view) {
-  const feed = S('chatFeed');
-  if (!feed) return;
-  if (view === 'chat') {
-    feed.classList.remove('flex');
-    feed.classList.add('hidden');
-  } else {
-    feed.classList.remove('hidden');
-    feed.classList.add('flex');
-  }
+  S('community')?.classList.toggle('cm-pane-chat', view === 'chat');
 }
 
 window.openSnapChat = async (chatId) => {
+  cmStopVoice(false);
+  cmSetTyping(false);
+
   let chat = snapState.chats.find(c => c.id === chatId);
   if (!chat) {
     try {
@@ -7238,7 +7442,6 @@ window.openSnapChat = async (chatId) => {
       if (snap.exists()) {
         chat = { id: chatId, ...snap.data() };
         snapState.chats.unshift(chat);
-        renderSnapFeed();
       } else {
         toast('Chat not found', 'error');
         return;
@@ -7249,152 +7452,458 @@ window.openSnapChat = async (chatId) => {
       return;
     }
   }
-  
+
   snapState.activeChat = chat;
-  renderSnapFeed(S('chatSearchInput')?.value.toLowerCase() || '');
-  
-  // UI Switch
+  snapState.replyTo = null;
+  snapState.chatSearch = '';
+  snapState.msgLimit = 50;
+  snapState.messages = [];
+  snapState.messagesReady = false;
+  cmClearReplyUI();
+  window.toggleChatSearch(false);
+  window.setCommunityTab('chats');
+
   S('snapEmptyState')?.classList.add('hidden');
   S('snapChatWindow')?.classList.remove('hidden');
-  setCommunityMobilePane('chat'); // mobile: swap out the list for the open chat
-  
-  // Header Update
-  const otherParticipantId = chat.participants.find(uid => uid !== snapState.user.uid);
-  // snapState.users is only seeded from an arbitrary first-20 users query
-  // (see initPresenceSync), so a chat partner outside that batch — e.g. a
-  // marketplace seller you've never crossed paths with before — would
-  // otherwise show up as a nameless "Scholar". Fetch them directly on a
-  // cache miss and merge them in so the header (and the feed row) always
-  // resolves a real name/avatar.
-  if (otherParticipantId && !snapState.users?.[otherParticipantId]) {
-    try {
-      const otherSnap = await getDoc(doc(db, "users", otherParticipantId));
-      if (otherSnap.exists()) {
-        snapState.users = { ...(snapState.users || {}), [otherParticipantId]: otherSnap.data() };
-      }
-    } catch (e) {
-      console.warn('Unable to fetch chat participant profile:', e);
-    }
-  }
-  const otherUser = snapState.users?.[otherParticipantId] || {};
-  const chatName = chat.name || otherUser.displayName || 'Scholar';
-  const isOnline = otherUser.status === 'online';
-  const lastSeen = otherUser.lastSeen ? new Date(otherUser.lastSeen.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'recently';
+  setCommunityMobilePane('chat');
 
-  if (S('snapHeaderName')) S('snapHeaderName').textContent = chatName;
-  if (S('snapHeaderAvatar')) {
-    const initials = chatName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    S('snapHeaderAvatar').innerHTML = `<div class="w-full h-full bg-brand-600 text-white flex items-center justify-center font-black text-xl">${initials}</div>`;
-  }
-  
-  const presenceText = isOnline ? 'Online' : `Last seen at ${lastSeen}`;
-  const presenceEl = S('snapHeaderPresence');
-  if (presenceEl) {
-    presenceEl.innerHTML = `
-      <span class="w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}"></span>
-      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${presenceText}</p>
-    `;
-  }
-
+  cmRenderChatHeader();
+  const box = S('snapMessages');
+  if (box) box.innerHTML = '';
+  renderSnapFeed();
   renderChatItemContext(chat.contextItem || null);
 
-  // Messages Sync
   initMessagesSync(chatId);
-  
-  // Mark as Read
-  try {
-    const chatRef = doc(db, "chats", chatId);
-    const existing = Array.isArray(chat.lastMessage?.readBy) ? chat.lastMessage.readBy : [];
-    const readBy = Array.from(new Set([...existing, snapState.user.uid]));
-    await updateDoc(chatRef, { [`lastMessage.readBy`]: readBy });
-  } catch (e) {
-    console.error('Error marking chat as read:', e);
-  }
+  cmEnsureUsers(chat.participants || []);
+  cmScheduleMarkRead();
+
+  if (window.matchMedia('(min-width: 1024px)').matches) setTimeout(() => S('chatMessageInput')?.focus(), 0);
 };
 
+function cmRenderChatHeader() {
+  const chat = snapState.activeChat;
+  const me = snapState.user;
+  if (!chat || !me) return;
+
+  const group = cmIsGroup(chat);
+  const title = cmChatTitle(chat);
+  const otherId = group ? null : (chat.participants || []).find((id) => id !== me.uid);
+  const other = otherId ? snapState.users?.[otherId] : null;
+  const online = !group && cmUserOnline(other);
+
+  const nameEl = S('snapHeaderName');
+  if (nameEl) nameEl.textContent = title;
+
+  const av = S('snapHeaderAvatar');
+  if (av) {
+    av.style.background = cmGradient(cmHue(group ? chat.id : (otherId || title)));
+    av.innerHTML = `${escapeHTML(cmInitials(title))}${online ? '<span class="cm-online"></span>' : ''}`;
+  }
+
+  let text;
+  if (group) {
+    const n = (chat.participants || []).length;
+    text = `${n} member${n === 1 ? '' : 's'}${chat.isPublic ? ' · Public group' : ''}${chat.courseTag ? ` · ${chat.courseTag}` : ''}`;
+  } else if (online) {
+    text = 'Online';
+  } else {
+    const seen = cmDate(other?.lastSeen);
+    text = seen ? `Last seen ${cmListTime(seen)}` : 'Offline';
+  }
+  const pe = S('snapHeaderPresence');
+  if (pe) pe.innerHTML = `${group ? '' : `<span class="cm-dot${online ? ' is-on' : ''}"></span>`}<p>${escapeHTML(text)}</p>`;
+}
+
 function initMessagesSync(chatId) {
+  if (snapState.unsubMessages) snapState.unsubMessages();
   const q = query(
     collection(db, "chats", chatId, "messages"),
     orderBy("createdAt", "desc"),
-    limit(50)
+    limit(snapState.msgLimit || 50)
   );
-  
-  if (snapState.unsubMessages) snapState.unsubMessages();
-  
+
   snapState.unsubMessages = onSnapshot(q, (snapshot) => {
-    const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderSnapMessages(messages);
+    if (snapState.activeChat?.id !== chatId) return;
+    snapState.messages = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    snapState.messagesReady = true;
+    renderSnapMessages(snapState.messages);
+    const newest = snapState.messages[0];
+    if (newest && newest.senderId !== snapState.user?.uid) cmScheduleMarkRead();
+  }, (err) => {
+    console.error('Messages listener error:', err);
+    toast('Unable to load messages', 'error');
   });
-  
-  // Typing Indicator Sync
-  const chatRef = doc(db, "chats", chatId);
+
+  // Chat document: typing indicator, read receipts (lastRead), members, name.
   if (snapState.unsubTyping) snapState.unsubTyping();
-  snapState.unsubTyping = onSnapshot(chatRef, (doc) => {
-    const data = doc.data();
-    const typing = data?.typing || {};
-    const othersTyping = Object.keys(typing).some(uid => uid !== snapState.user.uid && typing[uid]);
+  snapState.unsubTyping = onSnapshot(doc(db, "chats", chatId), (snap) => {
+    if (!snap.exists() || snapState.activeChat?.id !== chatId) return;
+    const data = snap.data();
+    const prevRead = JSON.stringify(snapState.activeChat?.lastRead || {});
+    snapState.activeChat = { id: chatId, ...data };
+
+    const typing = data.typing || {};
+    const othersTyping = Object.keys(typing).some(id => id !== snapState.user?.uid && typing[id]);
     S('snapTyping')?.classList.toggle('hidden', !othersTyping);
+
+    cmRenderChatHeader();
+    if (JSON.stringify(data.lastRead || {}) !== prevRead) renderSnapMessages(snapState.messages || []);
   });
+}
+
+window.cmLoadMore = () => {
+  const chat = snapState.activeChat;
+  if (!chat) return;
+  snapState.msgLimit = (snapState.msgLimit || 50) + 50;
+  initMessagesSync(chat.id);
+};
+
+// Plain text -> safe HTML: links become anchors, search matches get <mark>.
+function cmRichText(raw, q) {
+  const text = toText(raw);
+  const highlight = (s) => {
+    if (!q) return escapeHTML(s);
+    const lower = s.toLowerCase();
+    let i = 0;
+    let res = '';
+    for (;;) {
+      const at = lower.indexOf(q, i);
+      if (at === -1) { res += escapeHTML(s.slice(i)); break; }
+      res += `${escapeHTML(s.slice(i, at))}<mark>${escapeHTML(s.slice(at, at + q.length))}</mark>`;
+      i = at + q.length;
+    }
+    return res;
+  };
+  const re = /(https?:\/\/[^\s<]+)/g;
+  let out = '';
+  let last = 0;
+  let m;
+  while ((m = re.exec(text))) {
+    out += highlight(text.slice(last, m.index));
+    const url = m[0].replace(/[).,!?;:]+$/, '');
+    const trail = m[0].slice(url.length);
+    out += `<a href="${escapeHTML(safeUrl(url, '#'))}" target="_blank" rel="noopener noreferrer">${escapeHTML(url)}</a>${escapeHTML(trail)}`;
+    last = m.index + m[0].length;
+  }
+  out += highlight(text.slice(last));
+  return out;
+}
+
+function cmMsgPreview(m) {
+  if (!m) return '';
+  if (m.deleted) return 'Message deleted';
+  if (m.text) return toText(m.text).slice(0, 120);
+  if (m.attachment) return cmAttachmentLabel(m.attachment);
+  if (m.asset?.name) return `📚 ${toText(m.asset.name)}`;
+  return '';
 }
 
 function renderSnapMessages(messages) {
   const container = S('snapMessages');
   if (!container) return;
-  
-  container.innerHTML = messages.map(m => {
-    const isMe = m.senderId === snapState.user.uid;
-    const time = m.createdAt ? new Date(m.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-    const safeText = escapeHTML(m.text);
-    const safeAssetName = escapeHTML(m.asset?.name || '');
-    const att = m.attachment || null;
-    const attUrl = att?.url ? safeUrl(att.url) : '';
-    const attName = escapeHTML(att?.name || 'Attachment');
-    const isImage = !!att?.contentType && toText(att.contentType).startsWith('image/');
-    
-    return `
-      <div class="flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-${isMe ? 'right' : 'left'}-2">
-        <div class="max-w-[75%] group">
-          <div class="px-5 py-3 rounded-[24px] ${isMe ? 'bg-brand-600 text-white rounded-tr-none shadow-lg shadow-brand-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-tl-none border border-slate-200/50 dark:border-slate-700/50'}">
-            ${m.text ? `<p class="text-sm font-medium leading-relaxed">${safeText}</p>` : ''}
-            ${att && attUrl ? `
-              <div class="${m.text ? 'mt-3' : ''} p-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20">
-                ${isImage ? `
-                  <img src="${escapeHTML(attUrl)}" alt="${attName}" class="w-full max-h-64 object-cover rounded-2xl">
-                  <a href="${escapeHTML(attUrl)}" target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest opacity-90 hover:opacity-100 transition-opacity">
-                    <i data-lucide="download" class="w-4 h-4"></i> ${attName}
-                  </a>
-                ` : `
-                  <a href="${escapeHTML(attUrl)}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 hover:opacity-100 transition-opacity">
-                    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><i data-lucide="paperclip" class="w-5 h-5"></i></div>
-                    <div class="flex-1 min-w-0">
-                      <p class="text-[10px] font-black uppercase tracking-widest opacity-60">Attachment</p>
-                      <p class="text-xs font-bold truncate">${attName}</p>
-                    </div>
-                    <i data-lucide="download" class="w-4 h-4 opacity-80"></i>
-                  </a>
-                `}
-              </div>
-            ` : ''}
-            ${m.asset ? `
-              <div class="mt-3 p-3 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><i data-lucide="book-open" class="w-5 h-5"></i></div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-[10px] font-black uppercase tracking-widest opacity-60">Study Asset</p>
-                  <p class="text-xs font-bold truncate">${safeAssetName}</p>
-                </div>
-                <button class="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"><i data-lucide="download" class="w-4 h-4"></i></button>
-              </div>
-            ` : ''}
-          </div>
-          <div class="flex items-center gap-2 mt-1 px-2 ${isMe ? 'justify-end' : 'justify-start'} opacity-0 group-hover:opacity-100 transition-opacity">
-            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">${time}</span>
-            ${isMe ? '<i data-lucide="check-check" class="w-3 h-3 text-brand-500"></i>' : ''}
-          </div>
+  const uid = snapState.user?.uid;
+  const chat = snapState.activeChat;
+  if (!uid || !chat) return;
+
+  const group = cmIsGroup(chat);
+  const q = toText(snapState.chatSearch).trim().toLowerCase();
+  const others = (chat.participants || []).filter((id) => id !== uid);
+  const readMs = others.map((id) => cmMs(chat.lastRead?.[id]));
+
+  const prevTop = container.scrollTop;
+  const wasAtBottom = Math.abs(prevTop) < 40;
+
+  const sameRun = (a, b) => {
+    if (!a || !b || a.senderId !== b.senderId) return false;
+    const da = cmDate(a.createdAt) || new Date();
+    const db_ = cmDate(b.createdAt) || new Date();
+    return cmDayKey(da) === cmDayKey(db_) && Math.abs(da - db_) < 5 * 60 * 1000;
+  };
+
+  const out = [];
+  let hits = 0;
+
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i];
+    const older = messages[i + 1]; // newest-first order
+    const newer = messages[i - 1];
+    const isMe = m.senderId === uid;
+    const date = cmDate(m.createdAt);
+    const isFirst = !sameRun(m, older);
+    const isLast = !sameRun(newer, m);
+    const id = escapeHTML(m.id);
+
+    const textHit = !!q && !m.deleted && toText(m.text).toLowerCase().includes(q);
+    if (textHit) hits++;
+
+    // --- bubble body ---
+    let body = '';
+    if (m.deleted) {
+      body = '<div class="cm-bubble is-deleted">This message was deleted</div>';
+    } else {
+      let inner = '';
+      if (m.replyTo) {
+        const rName = m.replyTo.senderId === uid ? 'You' : (m.replyTo.senderId ? cmName(m.replyTo.senderId) : toText(m.replyTo.name || 'Scholar'));
+        inner += `<button type="button" class="cm-quote" onclick="window.cmJumpTo('${escapeHTML(toText(m.replyTo.id))}')"><b>${escapeHTML(rName)}</b><span>${escapeHTML(toText(m.replyTo.text))}</span></button>`;
+      }
+      const att = m.attachment || null;
+      const attUrl = att?.url ? safeUrl(att.url) : '';
+      if (att && attUrl) {
+        const type = toText(att.contentType);
+        const name = escapeHTML(toText(att.name) || 'Attachment');
+        if (type.startsWith('image/')) {
+          inner += `<a href="${escapeHTML(attUrl)}" target="_blank" rel="noopener noreferrer"><img class="cm-attach-img" src="${escapeHTML(attUrl)}" alt="${name}" loading="lazy"></a>`;
+        } else if (type.startsWith('audio/')) {
+          inner += `<audio class="cm-audio" controls preload="none" src="${escapeHTML(attUrl)}"></audio>`;
+        } else {
+          inner += `<a class="cm-attach-file" href="${escapeHTML(attUrl)}" target="_blank" rel="noopener noreferrer"><i data-lucide="paperclip"></i><span>${name}</span><i data-lucide="download"></i></a>`;
+        }
+      }
+      if (m.asset) {
+        inner += `<div class="cm-attach-file"><i data-lucide="book-open"></i><span>${escapeHTML(toText(m.asset.name))}</span></div>`;
+      }
+      if (m.text) inner += `<div>${cmRichText(m.text, q)}</div>`;
+      body = `<div class="cm-bubble">${inner}</div>`;
+    }
+
+    // --- reactions ---
+    let reactions = '';
+    const rx = m.reactions && typeof m.reactions === 'object' ? Object.entries(m.reactions) : [];
+    if (rx.length && !m.deleted) {
+      const counts = new Map();
+      rx.forEach(([rid, emoji]) => {
+        const e = counts.get(emoji) || { n: 0, mine: false };
+        e.n += 1;
+        if (rid === uid) e.mine = true;
+        counts.set(emoji, e);
+      });
+      reactions = `<div class="cm-reactions">${Array.from(counts.entries()).map(([emoji, e]) =>
+        `<button type="button" class="cm-reaction${e.mine ? ' is-mine' : ''}" onclick="window.cmReact('${id}','${escapeHTML(emoji)}')">${escapeHTML(emoji)}${e.n > 1 ? `<span>${e.n}</span>` : ''}</button>`
+      ).join('')}</div>`;
+    }
+
+    // --- time + delivery state (last bubble of a run only) ---
+    let meta = '';
+    if (isLast) {
+      const time = date ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      let tick = '';
+      if (isMe) {
+        const ms = cmMs(m.createdAt);
+        if (!ms) tick = '<i data-lucide="clock"></i>';
+        else if (others.length && readMs.every((r) => r && r >= ms)) tick = '<i data-lucide="check-check" class="cm-seen"></i>';
+        else tick = '<i data-lucide="check"></i>';
+      }
+      meta = `<div class="cm-meta"><span>${escapeHTML(time)}</span>${tick}</div>`;
+    }
+
+    const senderName = group && !isMe && isFirst
+      ? `<span class="cm-msg-sender" style="color:hsl(${cmHue(m.senderId)} 55% 45%)">${escapeHTML(cmName(m.senderId))}</span>`
+      : '';
+    const moreBtn = m.deleted ? '' : `<button type="button" class="cm-msg-more" aria-label="Message options" onclick="window.cmOpenMsgMenu('${id}', event)"><i data-lucide="more-horizontal"></i></button>`;
+
+    out.push(`
+      <div class="cm-msg ${isMe ? 'is-me' : 'is-them'}${isFirst ? ' is-first' : ''}${isFirst ? '' : ' is-cont'}${textHit ? ' is-hit' : ''}" id="cm-msg-${id}">
+        <div class="cm-msg-col">
+          ${senderName}
+          <div class="cm-bubble-wrap">${body}${moreBtn}</div>
+          ${reactions}
+          ${meta}
         </div>
-      </div>
-    `;
-  }).join('');
+      </div>`);
+
+    // Day separator renders above the first message of each day.
+    if (!older || cmDayKey(date) !== cmDayKey(cmDate(older.createdAt))) {
+      if (date) out.push(`<div class="cm-day">${escapeHTML(cmDayLabel(date))}</div>`);
+    }
+  }
+
+  if (messages.length >= (snapState.msgLimit || 50)) {
+    out.push('<button type="button" class="cm-more-btn" onclick="window.cmLoadMore()">Load earlier messages</button>');
+  }
+  if (!messages.length && snapState.messagesReady) {
+    out.push('<div class="cm-no-msgs">No messages yet.<br>Say hi 👋</div>');
+  }
+
+  container.innerHTML = out.join('');
+  if (!wasAtBottom) container.scrollTop = prevTop;
+
+  const countEl = S('cmChatSearchCount');
+  if (countEl) {
+    countEl.textContent = q ? (hits ? `${hits} match${hits === 1 ? '' : 'es'}` : 'No matches') : '';
+  }
   if (window.lucide) window.lucide.createIcons();
+}
+
+// ----- search inside a chat -----
+window.toggleChatSearch = (show) => {
+  const bar = S('cmChatSearch');
+  if (!bar) return;
+  const open = typeof show === 'boolean' ? show : bar.classList.contains('hidden');
+  bar.classList.toggle('hidden', !open);
+  if (open) {
+    if (window.lucide) window.lucide.createIcons();
+    setTimeout(() => S('cmChatSearchInput')?.focus(), 0);
+  } else {
+    const input = S('cmChatSearchInput');
+    if (input) input.value = '';
+    if (snapState.chatSearch) {
+      snapState.chatSearch = '';
+      if (snapState.activeChat) renderSnapMessages(snapState.messages || []);
+    }
+  }
+};
+
+window.runChatSearch = () => {
+  snapState.chatSearch = toText(S('cmChatSearchInput')?.value).trim().toLowerCase();
+  renderSnapMessages(snapState.messages || []);
+  if (snapState.chatSearch) {
+    S('snapMessages')?.querySelector('.is-hit')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+};
+
+// ----- message menu: react / reply / copy / unsend -----
+window.cmOpenMsgMenu = (msgId, event) => {
+  if (event) event.stopPropagation();
+  const menu = S('cmMsgMenu');
+  const me = snapState.user;
+  const m = (snapState.messages || []).find((x) => x.id === msgId);
+  if (!menu || !me || !m || m.deleted) return;
+
+  const mine = m.senderId === me.uid;
+  const myReaction = m.reactions?.[me.uid] || null;
+  const id = escapeHTML(msgId);
+
+  S('cmMsgReactRow').innerHTML = CM_REACTIONS.map((e) =>
+    `<button type="button" class="cm-react-btn${myReaction === e ? ' is-mine' : ''}" onclick="window.cmReact('${id}','${e}')">${e}</button>`
+  ).join('');
+
+  const acts = [`<button type="button" class="cm-act" onclick="window.cmReply('${id}')"><i data-lucide="reply"></i>Reply</button>`];
+  if (m.text) acts.push(`<button type="button" class="cm-act" onclick="window.cmCopy('${id}')"><i data-lucide="copy"></i>Copy text</button>`);
+  if (mine) acts.push(`<button type="button" class="cm-act is-danger" onclick="window.cmUnsend('${id}')"><i data-lucide="trash-2"></i>Unsend</button>`);
+  S('cmMsgActions').innerHTML = acts.join('');
+  if (window.lucide) window.lucide.createIcons();
+
+  menu.classList.remove('hidden');
+  const rect = event?.currentTarget?.getBoundingClientRect?.();
+  const w = menu.offsetWidth;
+  const h = menu.offsetHeight;
+  let top = rect ? rect.bottom + 6 : 120;
+  if (top + h > window.innerHeight - 12) top = Math.max(12, (rect ? rect.top : window.innerHeight / 2) - h - 6);
+  let left = rect ? rect.left + rect.width / 2 - w / 2 : 16;
+  left = Math.max(12, Math.min(window.innerWidth - w - 12, left));
+  menu.style.top = `${top}px`;
+  menu.style.left = `${left}px`;
+};
+
+const cmCloseMsgMenu = () => S('cmMsgMenu')?.classList.add('hidden');
+
+window.cmReact = async (msgId, emoji) => {
+  cmCloseMsgMenu();
+  const chat = snapState.activeChat;
+  const me = snapState.user;
+  const m = (snapState.messages || []).find((x) => x.id === msgId);
+  if (!chat || !me || !m || !CM_REACTIONS.includes(emoji)) return;
+  const same = m.reactions?.[me.uid] === emoji;
+  try {
+    await updateDoc(doc(db, 'chats', chat.id, 'messages', msgId), {
+      [`reactions.${me.uid}`]: same ? deleteField() : emoji
+    });
+  } catch (e) {
+    console.error('Reaction failed:', e);
+    toast('Could not add reaction', 'error');
+  }
+};
+
+function cmClearReplyUI() {
+  S('cmReplyBar')?.classList.add('hidden');
+}
+
+window.cmReply = (msgId) => {
+  cmCloseMsgMenu();
+  const me = snapState.user;
+  const m = (snapState.messages || []).find((x) => x.id === msgId);
+  if (!me || !m || m.deleted) return;
+  snapState.replyTo = { id: m.id, senderId: m.senderId, text: cmMsgPreview(m) };
+  const name = S('cmReplyBarName');
+  const text = S('cmReplyBarText');
+  if (name) name.textContent = `Replying to ${m.senderId === me.uid ? 'yourself' : cmName(m.senderId)}`;
+  if (text) text.textContent = snapState.replyTo.text;
+  S('cmReplyBar')?.classList.remove('hidden');
+  if (window.lucide) window.lucide.createIcons();
+  S('chatMessageInput')?.focus();
+};
+
+window.cancelReply = () => {
+  snapState.replyTo = null;
+  cmClearReplyUI();
+};
+
+window.cmCopy = async (msgId) => {
+  cmCloseMsgMenu();
+  const m = (snapState.messages || []).find((x) => x.id === msgId);
+  if (m?.text) await copyToClipboard(toText(m.text), toast);
+};
+
+window.cmUnsend = async (msgId) => {
+  cmCloseMsgMenu();
+  const chat = snapState.activeChat;
+  const me = snapState.user;
+  const msgs = snapState.messages || [];
+  const m = msgs.find((x) => x.id === msgId);
+  if (!chat || !me || !m || m.senderId !== me.uid) return;
+  if (!confirm('Unsend this message for everyone?')) return;
+  try {
+    await updateDoc(doc(db, 'chats', chat.id, 'messages', msgId), {
+      deleted: true, text: '', attachment: null, asset: null
+    });
+    if (msgs[0]?.id === msgId) {
+      await updateDoc(doc(db, 'chats', chat.id), { 'lastMessage.text': 'Message deleted' });
+    }
+  } catch (e) {
+    console.error('Unsend failed:', e);
+    toast('Could not unsend message', 'error');
+  }
+};
+
+window.cmJumpTo = (msgId) => {
+  const el = S(`cm-msg-${msgId}`);
+  if (!el) {
+    toast('That message is further back — load earlier messages', 'info');
+    return;
+  }
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  el.classList.add('is-flash');
+  setTimeout(() => el.classList.remove('is-flash'), 1300);
+};
+
+// ----- read receipts / unread counters -----
+let cmMarkTimer = null;
+let cmLastMarkAt = 0;
+function cmScheduleMarkRead() {
+  clearTimeout(cmMarkTimer);
+  cmMarkTimer = setTimeout(cmMarkRead, 350);
+}
+async function cmMarkRead() {
+  const chat = snapState.activeChat;
+  const me = snapState.user;
+  if (!chat || !me || document.visibilityState !== 'visible') return;
+  const uid = me.uid;
+
+  const newest = (snapState.messages || [])[0];
+  const incomingMs = newest && newest.senderId !== uid ? cmMs(newest.createdAt) : 0;
+  const myReadMs = cmMs(chat.lastRead?.[uid]);
+  if (!cmUnreadCount(chat) && !(incomingMs && incomingMs > myReadMs)) return;
+
+  if (Date.now() - cmLastMarkAt < 2000) { cmScheduleMarkRead(); return; }
+  cmLastMarkAt = Date.now();
+
+  const upd = { [`unread.${uid}`]: 0, [`lastRead.${uid}`]: serverTimestamp() };
+  if (chat.lastMessage && chat.lastMessage.senderId !== uid) upd['lastMessage.readBy'] = arrayUnion(uid);
+  try {
+    await updateDoc(doc(db, 'chats', chat.id), upd);
+  } catch (e) {
+    console.warn('Error marking chat as read:', e);
+  }
 }
 
 // --- SUPPORT CHAT ---
@@ -7491,47 +8000,43 @@ window.sendSupportMessage = async () => {
 
 window.sendSnapMessage = async () => {
   const input = S('chatMessageInput');
-  if (!input || !input.value.trim() || !snapState.activeChat) return;
-  
-  {
-    const uid = snapState.user?.uid || null;
-    const chat = snapState.activeChat;
-    const isGroup = !!chat?.isGroup || (Array.isArray(chat?.participants) && chat.participants.length > 2);
-    if (uid && !isGroup) {
-      const otherId = chat.participants?.find(id => id !== uid);
-      const blocked = Array.isArray(app.state.userData?.blocked) ? app.state.userData.blocked : [];
-      if (otherId && blocked.includes(otherId)) {
-        toast('You blocked this contact', 'error');
-        return;
-      }
+  const chat = snapState.activeChat;
+  const me = snapState.user;
+  if (!input || !input.value.trim() || !chat || !me) return;
+
+  if (!cmIsGroup(chat)) {
+    const otherId = chat.participants?.find(id => id !== me.uid);
+    const blocked = Array.isArray(app.state.userData?.blocked) ? app.state.userData.blocked : [];
+    if (otherId && blocked.includes(otherId)) {
+      toast('You blocked this contact', 'error');
+      return;
     }
   }
 
-  const text = input.value.trim();
+  const text = input.value.trim().slice(0, 2000);
+  const replyTo = snapState.replyTo;
   input.value = '';
   S('sendSnapBtn')?.classList.add('hidden');
-  updateTypingStatus(false);
-  
-  const msgData = {
-    senderId: snapState.user.uid,
-    text,
-    createdAt: serverTimestamp()
-  };
-  
+  S('voiceNoteBtn')?.classList.remove('hidden');
+  cmSetTyping(false);
+  window.cancelReply();
+
+  const fields = { text };
+  if (replyTo) {
+    fields.replyTo = {
+      id: replyTo.id,
+      senderId: replyTo.senderId,
+      text: toText(replyTo.text).slice(0, 120)
+    };
+  }
+
   try {
-    const chatRef = doc(db, "chats", snapState.activeChat.id);
-    await addDoc(collection(chatRef, "messages"), msgData);
-    await updateDoc(chatRef, {
-      lastMessage: {
-        senderId: snapState.user.uid,
-        text,
-        createdAt: serverTimestamp(),
-        readBy: [snapState.user.uid]
-      },
-      updatedAt: serverTimestamp()
-    });
+    await cmSendMessage(chat, fields, text);
   } catch (e) {
     console.error('Error sending message:', e);
+    input.value = text; // give the text back so nothing is lost
+    S('sendSnapBtn')?.classList.remove('hidden');
+    S('voiceNoteBtn')?.classList.add('hidden');
     toast('Error sending message', 'error');
   }
 };
@@ -7540,37 +8045,242 @@ window.toggleSnapMap = (show) => {
   S('snapMapOverlay')?.classList.toggle('hidden', !show);
 };
 
-window.startNewChat = async () => {
-  if (!snapState.user) return;
-  
-  const name = prompt("Enter scholar's name to chat with:");
-  if (!name) return;
-  
-  try {
-    const chatData = {
-      name,
-      participants: [snapState.user.uid, 'dummy_scholar_' + Date.now()],
-      updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-      typing: {}
-    };
-    
-    const docRef = await addDoc(collection(db, "chats"), chatData);
-    toast(`Started new chat with ${name}!`, 'success');
-    window.openSnapChat(docRef.id);
-  } catch (e) {
-    console.error('Error starting chat:', e);
-    toast('Error starting chat', 'error');
-  }
+// "New chat" used to create a fake placeholder scholar via prompt(); real chats
+// are started by picking a real person.
+window.startNewChat = () => {
+  window.toggleAddPeople(true);
 };
 
 window.hideSnapChat = () => {
+  cmStopVoice(false);
+  cmSetTyping(false);
   window.toggleChatOptionsMenu(false);
+  cmCloseMsgMenu();
+  window.toggleChatSearch(false);
   S('snapChatWindow')?.classList.add('hidden');
   S('snapEmptyState')?.classList.remove('hidden');
-  setCommunityMobilePane('list'); // mobile: back to the chat list
+  setCommunityMobilePane('list');
+  if (snapState.unsubMessages) { snapState.unsubMessages(); snapState.unsubMessages = null; }
+  if (snapState.unsubTyping) { snapState.unsubTyping(); snapState.unsubTyping = null; }
   snapState.activeChat = null;
-  renderSnapFeed(S('chatSearchInput')?.value.toLowerCase() || '');
+  snapState.messages = [];
+  snapState.replyTo = null;
+  cmClearReplyUI();
+  renderSnapFeed();
+};
+
+// ===== Voice notes =====
+const cmVoice = { rec: null, stream: null, chunks: [], startedAt: 0, send: false, chatId: null, tick: null, auto: null };
+
+function cmVoiceUI(recording) {
+  const btn = S('voiceNoteBtn');
+  const input = S('chatMessageInput');
+  if (btn) {
+    btn.classList.toggle('is-rec', recording);
+    btn.innerHTML = `<i data-lucide="${recording ? 'square' : 'mic'}"></i>`;
+    btn.setAttribute('aria-label', recording ? 'Stop and send voice note' : 'Voice note');
+  }
+  if (input) {
+    input.disabled = recording;
+    input.placeholder = recording ? 'Recording… tap to send' : 'Message…';
+  }
+  if (window.lucide) window.lucide.createIcons();
+}
+
+async function cmToggleVoice() {
+  if (cmVoice.rec) { cmStopVoice(true); return; }
+  const chat = snapState.activeChat;
+  if (!chat || !snapState.user) { toast('Open a chat to send a voice note', 'error'); return; }
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+    toast('Voice notes are not supported on this browser', 'error');
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']
+      .find((t) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+    const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    cmVoice.chunks = [];
+    cmVoice.stream = stream;
+    cmVoice.rec = rec;
+    cmVoice.send = false;
+    cmVoice.startedAt = Date.now();
+    cmVoice.chatId = chat.id;
+
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) cmVoice.chunks.push(e.data); };
+    rec.onstop = async () => {
+      const { chunks, send, chatId, startedAt } = cmVoice;
+      const type = (rec.mimeType || mime || 'audio/webm').split(';')[0];
+      cmVoice.stream?.getTracks().forEach((t) => t.stop());
+      clearTimeout(cmVoice.auto);
+      cmVoice.rec = null; cmVoice.stream = null; cmVoice.chunks = [];
+      cmVoiceUI(false);
+      if (!send) return;
+
+      const seconds = Math.round((Date.now() - startedAt) / 1000);
+      if (seconds < 1 || !chunks.length) { toast('Voice note too short', 'info'); return; }
+      const target = snapState.chats.find((c) => c.id === chatId) || (snapState.activeChat?.id === chatId ? snapState.activeChat : null);
+      if (!target) return;
+      const ext = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
+      const file = new File([new Blob(chunks, { type })], `voice-note-${Date.now()}.${ext}`, { type });
+      try {
+        toast('Sending voice note…', 'info');
+        const att = await uploadChatAttachment(file, chatId, snapState.user.uid);
+        att.duration = seconds;
+        await cmSendMessage(target, { text: '', attachment: att }, '🎤 Voice note');
+      } catch (err) {
+        console.error('Voice note failed:', err);
+        toast(err?.message || 'Could not send voice note', 'error');
+      }
+    };
+
+    rec.start();
+    cmVoiceUI(true);
+    cmVoice.auto = setTimeout(() => cmStopVoice(true), 3 * 60 * 1000); // 3 minute cap
+  } catch (e) {
+    console.warn('Microphone unavailable:', e);
+    toast('Microphone permission is needed for voice notes', 'error');
+  }
+}
+
+function cmStopVoice(send) {
+  if (!cmVoice.rec) return;
+  cmVoice.send = !!send;
+  try {
+    if (cmVoice.rec.state !== 'inactive') cmVoice.rec.stop();
+  } catch (_) {
+    cmVoice.stream?.getTracks().forEach((t) => t.stop());
+    cmVoice.rec = null;
+    cmVoiceUI(false);
+  }
+}
+
+// ===== Discover: public study groups + people you may know =====
+snapState.discover = { loading: false, groups: [], people: [], loadedAt: 0, error: null };
+
+async function cmLoadDiscover(force = false) {
+  const me = snapState.user || app.state.user;
+  const d = snapState.discover;
+  if (!me) { cmRenderDiscover(); return; }
+  if (d.loading) return;
+  if (!force && Date.now() - d.loadedAt < 30000) { cmRenderDiscover(); return; }
+
+  d.loading = true;
+  d.error = null;
+  cmRenderDiscover();
+  try {
+    const [gSnap, uSnap] = await Promise.all([
+      getDocs(query(collection(db, 'chats'), where('isPublic', '==', true), limit(40))),
+      getDocs(query(collection(db, 'users'), limit(80)))
+    ]);
+    d.groups = gSnap.docs.map((x) => ({ id: x.id, ...x.data() }));
+    d.people = uSnap.docs.map((x) => ({ id: x.id, ...x.data() }));
+  } catch (e) {
+    console.error('Discover load failed:', e);
+    d.error = e;
+  } finally {
+    d.loading = false;
+    d.loadedAt = Date.now();
+    cmRenderDiscover();
+  }
+}
+
+function cmRenderDiscover() {
+  const gEl = S('cmPublicGroups');
+  const pEl = S('cmSuggestedPeople');
+  if (!gEl || !pEl) return;
+  const me = snapState.user || app.state.user;
+  const d = snapState.discover;
+  const myUni = toText(app.state.userData?.university).trim().toLowerCase();
+
+  if (!me) {
+    gEl.innerHTML = pEl.innerHTML = '<div class="cm-soft-empty">Sign in to discover groups and people.</div>';
+    return;
+  }
+  if (d.loading && !d.groups.length && !d.people.length) {
+    gEl.innerHTML = pEl.innerHTML = '<div class="cm-soft-empty">Loading…</div>';
+    return;
+  }
+  if (d.error) {
+    gEl.innerHTML = pEl.innerHTML = `<div class="cm-soft-empty">Couldn’t load right now.<br><button type="button" class="cm-link" onclick="window.cmRefreshDiscover()">Try again</button></div>`;
+    return;
+  }
+
+  // Groups: my university first, then biggest.
+  const groups = d.groups.slice().sort((a, b) => {
+    const au = toText(a.university).trim().toLowerCase() === myUni && myUni ? 1 : 0;
+    const bu = toText(b.university).trim().toLowerCase() === myUni && myUni ? 1 : 0;
+    if (au !== bu) return bu - au;
+    return (b.participants?.length || 0) - (a.participants?.length || 0);
+  }).slice(0, 12);
+
+  gEl.innerHTML = groups.length ? groups.map((g) => {
+    const member = (g.participants || []).includes(me.uid);
+    const n = (g.participants || []).length;
+    const sub = [`${n} member${n === 1 ? '' : 's'}`, g.courseTag, g.university].filter(Boolean).join(' · ');
+    const id = escapeHTML(g.id);
+    return `
+      <div class="cm-card">
+        ${cmAvatar(g.name || 'Group', 'md', false, g.id)}
+        <div class="cm-card-main">
+          <div class="cm-card-title">${escapeHTML(toText(g.name) || 'Study group')}</div>
+          <div class="cm-card-sub">${escapeHTML(sub)}</div>
+        </div>
+        ${member
+          ? `<button type="button" class="cm-card-btn is-ghost" onclick="window.openSnapChat('${id}')">Open</button>`
+          : `<button type="button" class="cm-card-btn" onclick="window.cmJoinGroup('${id}', this)">Join</button>`}
+      </div>`;
+  }).join('') : '<div class="cm-soft-empty">No public groups yet. Start the first one for your course.</div>';
+
+  // People: same university / department first; skip me, blocked and people I already chat with.
+  const blocked = Array.isArray(app.state.userData?.blocked) ? app.state.userData.blocked : [];
+  const dmPartners = new Set((snapState.chats || []).filter((c) => !cmIsGroup(c)).flatMap((c) => c.participants || []));
+  const myDept = toText(app.state.userData?.department).trim().toLowerCase();
+  const now = Date.now();
+  const people = d.people
+    .filter((u) => u.id !== me.uid && !blocked.includes(u.id) && !dmPartners.has(u.id))
+    .map((u) => {
+      let score = 0;
+      if (myUni && toText(u.university).trim().toLowerCase() === myUni) score += 3;
+      if (myDept && toText(u.department).trim().toLowerCase() === myDept) score += 2;
+      if (now - cmMs(u.lastSeen) < 7 * 86400000) score += 1;
+      return { u, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
+
+  pEl.innerHTML = people.length ? people.map(({ u }) => {
+    const name = toText(u.displayName || u.name || u.username || 'Scholar');
+    const sub = [u.username ? `@${u.username}` : '', u.university].filter(Boolean).join(' · ');
+    return `
+      <div class="cm-card">
+        ${cmAvatar(name, 'md', cmUserOnline(u), u.id)}
+        <div class="cm-card-main">
+          <div class="cm-card-title">${escapeHTML(name)}</div>
+          <div class="cm-card-sub">${escapeHTML(sub || 'Scholar')}</div>
+        </div>
+        <button type="button" class="cm-card-btn" onclick="window.startChatWithUser('${escapeHTML(u.id)}')">Message</button>
+      </div>`;
+  }).join('') : '<div class="cm-soft-empty">No suggestions yet. Check back as more students join.</div>';
+}
+
+window.cmRefreshDiscover = () => cmLoadDiscover(true);
+
+window.cmJoinGroup = async (chatId, btn) => {
+  const me = snapState.user || app.state.user;
+  if (!me || !chatId) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Joining…'; }
+  try {
+    await updateDoc(doc(db, 'chats', chatId), { participants: arrayUnion(me.uid) });
+    const g = snapState.discover.groups.find((x) => x.id === chatId);
+    if (g) g.participants = Array.from(new Set([...(g.participants || []), me.uid]));
+    toast('Joined group', 'success');
+    await window.openSnapChat(chatId);
+  } catch (e) {
+    console.error('Join group failed:', e);
+    toast(e?.code === 'permission-denied' ? 'This group is no longer open to join' : 'Could not join group', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Join'; }
+  }
 };
 
 // --- Seller Module Logic ---

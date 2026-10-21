@@ -247,10 +247,29 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read: if isAuthenticated() && (request.auth.uid in resource.data.participants || isAdmin());
+      // Public study groups (isPublic == true) are listed in Community ->
+      // Discover so students can find and join them; everything else stays
+      // participants-only.
+      allow read: if isAuthenticated() && (
+        request.auth.uid in resource.data.participants ||
+        resource.data.get('isPublic', false) == true ||
+        isAdmin()
+      );
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (request.auth.uid in resource.data.participants || isAdmin());
+      allow update: if isAuthenticated() && (
+        request.auth.uid in resource.data.participants ||
+        isAdmin() ||
+        isJoiningPublicGroup()
+      );
       allow delete: if isAdmin();
+
+      // A non-member may only add THEMSELVES to a public group, and change
+      // nothing else on the chat document.
+      function isJoiningPublicGroup() {
+        return resource.data.get('isPublic', false) == true &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['participants']) &&
+          request.resource.data.participants == resource.data.participants.concat([request.auth.uid]);
+      }
 
       match /messages/{messageId} {
         allow read: if isAuthenticated() && (
@@ -261,7 +280,25 @@ service cloud.firestore {
           request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants ||
           isAdmin()
         );
-        allow update, delete: if isAdmin();
+        // Participants can react to a message (touching only their own
+        // reactions.<uid> entry) and the sender can unsend their own message.
+        allow update: if isAuthenticated() && (
+          isAdmin() || (
+            request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants &&
+            (isReactionOnlyUpdate() || isSenderUnsend())
+          )
+        );
+        allow delete: if isAdmin();
+
+        function isReactionOnlyUpdate() {
+          return request.resource.data.diff(resource.data).changedKeys().hasOnly(['reactions']) &&
+            request.resource.data.get('reactions', {}).diff(resource.data.get('reactions', {})).affectedKeys().hasOnly([request.auth.uid]);
+        }
+
+        function isSenderUnsend() {
+          return resource.data.senderId == request.auth.uid &&
+            request.resource.data.diff(resource.data).changedKeys().hasOnly(['deleted', 'text', 'attachment', 'asset']);
+        }
       }
     }
 
