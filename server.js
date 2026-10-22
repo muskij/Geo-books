@@ -19,6 +19,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { chatBudgetForTier, sanitizeChatMessages, clampChatParams } from './backend/ai-chat-guard.js';
 import { generateSubjectQuestions, AI_QUESTION_DAILY_BUDGET, DEFAULT_AI_QUESTION_BUDGET } from './backend/ai-questions.js';
 import { mountClaudeAdminMcp } from './claude-admin-mcp.js';
 import { getAuth } from 'firebase-admin/auth';
@@ -409,6 +410,12 @@ const aiQuestionsLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 min
   max: 12,
   message: 'Too many AI question requests. Please wait a few minutes and try again.'
+});
+
+const aiChatLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 12,
+  message: 'You are sending messages too quickly. Please slow down.'
 });
 
 const questionImportLimiter = rateLimit({
@@ -1092,14 +1099,49 @@ app.post('/api/questions/bulk-import', requireAuth, requireAdmin, questionImport
 // ============================================================
 
 // --- AI: chat completion (was aiChatCompletion) ---
-app.post('/api/ai/chat', requireAuth, async (req, res) => {
+app.post('/api/ai/chat', requireAuth, aiChatLimiter, async (req, res) => {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(503).json({ error: 'AI service not configured on server' });
+  if (!db) return res.status(503).json({ error: 'Server not configured' });
 
-  const { messages, temperature, maxTokens } = req.body || {};
-  if (!Array.isArray(messages) || !messages.length) {
-    return res.status(400).json({ error: 'messages array is required' });
+  const checked = sanitizeChatMessages(req.body?.messages);
+  if (!checked.ok) return res.status(400).json({ error: checked.error });
+  const messages = checked.messages;
+  const { temperature, maxTokens } = clampChatParams(req.body || {});
+
+  // Server-enforced daily request budget (was unlimited: any signed-in user
+  // could run up the OpenAI bill). Refunded below if the provider fails.
+  const day = new Date().toISOString().slice(0, 10);
+  let reserved = false;
+  if (req.user.admin !== true) {
+    try {
+      const userSnap = await db.collection('users').doc(req.user.uid).get();
+      const sub = userSnap.exists ? userSnap.data()?.subscription : null;
+      const tier = sub && sub.verified && sub.status === 'active' ? sub.tier : 'FREE';
+      const cap = chatBudgetForTier(tier);
+      const ref = db.collection('aiChatUsage').doc(`${req.user.uid}_${day}`);
+      const ok = await db.runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        const used = snap.exists ? Number(snap.data().used) || 0 : 0;
+        if (used >= cap) return false;
+        tx.set(ref, { uid: req.user.uid, day, used: used + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        return true;
+      });
+      if (!ok) {
+        return res.status(429).json({ error: 'Daily AI chat limit reached. Try again tomorrow, or upgrade for a higher limit.' });
+      }
+      reserved = true;
+    } catch (e) {
+      console.error('AI chat quota check failed:', e);
+      return res.status(500).json({ error: 'Could not verify AI chat quota' });
+    }
   }
+  const refund = async () => {
+    if (!reserved) return;
+    try {
+      await db.collection('aiChatUsage').doc(`${req.user.uid}_${day}`).set({ used: FieldValue.increment(-1) }, { merge: true });
+    } catch (e) { console.error('AI chat refund failed:', e); }
+  };
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -1108,14 +1150,16 @@ app.post('/api/ai/chat', requireAuth, async (req, res) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages,
-        temperature: Number(temperature) || 0.7,
-        max_tokens: Number(maxTokens) || 2000
-      })
+        temperature,
+        max_tokens: maxTokens
+      }),
+      signal: AbortSignal.timeout(60000)
     });
 
     if (!response.ok) {
       const errBody = await response.text();
       console.error('aiChatCompletion OpenAI error:', response.status, errBody);
+      await refund();
       return res.status(502).json({ error: 'AI provider error' });
     }
 
@@ -1124,6 +1168,7 @@ app.post('/api/ai/chat', requireAuth, async (req, res) => {
     res.json({ content });
   } catch (error) {
     console.error('AI Chat Error:', error);
+    await refund();
     res.status(500).json({ error: 'AI chat failed' });
   }
 });
