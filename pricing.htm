@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pricing · Geo-Books</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d1e;--card:#13162e;--card2:#1a1e3d;--line:#2a2f5a;--text:#eef0ff;--muted:#9aa0cf;--brand:#6366f1;--brand2:#818cf8;--ok:#34d399}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:130px}
+h1,h3{font-family:'Space Grotesk',sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+header{padding:20px 0}
+header a{color:var(--muted);text-decoration:none;font-size:14px}
+.hero{text-align:center;padding:16px 0 28px}
+.hero h1{font-size:clamp(28px,5vw,44px);line-height:1.1}
+.hero p{color:var(--muted);margin:12px auto 0;max-width:600px;font-size:15px;line-height:1.5}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.plan{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:22px;position:relative;display:flex;flex-direction:column;transition:.15s}
+.plan.sel{border-color:var(--brand);background:var(--card2)}
+.plan.owned{border-color:var(--ok)}
+.plan.incl{opacity:.6}
+.tag{position:absolute;top:14px;right:14px;font-size:11px;padding:3px 9px;border-radius:999px;background:var(--brand);color:#fff}
+.plan.owned .tag,.plan.incl .tag{background:var(--ok);color:#052}
+.plan h3{font-size:20px}
+.sub{color:var(--muted);font-size:13px;margin-top:4px;min-height:34px}
+.opts{display:flex;gap:6px;margin-top:14px;min-height:34px}
+.opts button{flex:1;background:none;border:1.5px solid var(--line);color:var(--muted);border-radius:9px;padding:7px 4px;font:500 12px Inter;cursor:pointer}
+.opts button.on{border-color:var(--brand2);color:var(--text);background:rgba(99,102,241,.15)}
+.price{font:500 28px 'JetBrains Mono',monospace;margin:14px 0 2px}
+.price span{font-size:12px;color:var(--muted);font-family:Inter}
+.per{font-size:12px;color:var(--muted);min-height:16px}
+ul{list-style:none;margin:14px 0;font-size:13.5px;flex:1}
+li{padding:5px 0 5px 22px;position:relative;color:#cfd3f5}
+li:before{content:"✓";position:absolute;left:0;color:var(--ok)}
+.pick{border:1.5px solid var(--brand);color:var(--brand2);background:none;border-radius:10px;padding:11px;font:600 14px Inter;width:100%;cursor:pointer}
+.plan.sel .pick{background:var(--brand);color:#fff}
+.plan.owned .pick,.plan.incl .pick{border-color:var(--ok);color:var(--ok);cursor:default}
+.note{margin:26px auto 0;max-width:680px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6}
+.note b{color:var(--text)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(19,22,46,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:14px 16px;z-index:10}
+.bar .in{max-width:1100px;margin:auto;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.sum{font-size:13px;color:var(--muted)}
+.sum strong{display:block;font:500 22px 'JetBrains Mono',monospace;color:var(--text)}
+.buy{background:var(--brand);color:#fff;border:0;border-radius:12px;padding:14px 28px;font:600 15px Inter;cursor:pointer}
+.buy:disabled{opacity:.4;cursor:not-allowed}
+#msg{margin-top:10px;font-size:13px;text-align:center;color:var(--muted)}
+.err{color:#f87171!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a href="geo-books.htm">← Back to app</a></header>
+  <div class="hero">
+    <h1>Four plans.<br>Hold as many as you need.</h1>
+    <p>Your account can have several plans at once. Where one plan already includes another, you are never charged twice.</p>
+  </div>
+  <div class="grid" id="plans"></div>
+  <p class="note">
+    <b>University</b> includes every Tutor Hub course, and <b>Pro</b> includes Exam access.
+    Pick both and the included one is dropped from your total. Each plan renews on its own, so you can add or cancel one without touching the others.
+  </p>
+  <p id="msg"></p>
+</div>
+
+<div class="bar"><div class="in">
+  <div class="sum" id="sum">Select at least one plan</div>
+  <button class="buy" id="buy" disabled>Continue to payment</button>
+</div></div>
+
+<script>
+/* ===== CONFIG: tiers keep the existing tier strings from app.js PLAN_PRICES ===== */
+const PLANS = [
+  { id:'exam', name:'Exam', sub:'JAMB & WAEC prep',
+    options:[{ tier:'EXAM_PASS_BASIC', label:'Basic', price:2000, unit:'/month' },
+             { tier:'EXAM_PASS_PLUS', label:'Plus', price:5000, unit:'/month' }],
+    features:['Unlimited real past questions','Full JAMB UTME simulator','Bookmarks, analytics & World Ranking','Cancel anytime'] },
+  { id:'tutor', name:'Tutor Hub', sub:'Independent tutor courses',
+    options:[{ tier:'TUTOR_PASS', label:'Monthly', price:3000, unit:'/month' }],
+    features:['Every Tutor Hub course','Lessons, worked answers & quizzes','Cancel anytime'] },
+  { id:'uni', name:'University', sub:'For admitted students', tag:'Includes Tutor Hub', includes:['tutor'],
+    options:[{ tier:'UNIVERSITY_PASS_30', label:'30 views', price:5000, unit:'/month' },
+             { tier:'UNIVERSITY_PASS_70', label:'70 views', price:10000, unit:'/month' }],
+    features:['Hostel Finder, verified listings','Lecture views each month (30 or 70)','Every Tutor Hub course included','Cancel anytime'] },
+  { id:'pro', name:'Pro', sub:'The full platform', tag:'Includes Exam', includes:['exam'],
+    options:[{ tier:'PREMIUM', label:'Monthly', price:3500, unit:'/month' },
+             { tier:'PREMIUM_ANNUAL', label:'Yearly', price:35000, unit:'/year' }],
+    features:['Unlimited AI-generated exams','AI Scan Vault & War Room','Marketplace, Gigs Board & Skills Academy','Verified Student badge & priority job placement','Exam access included'] }
+];
+const API = { me:'/api/subscriptions/me', create:'/api/subscriptions' };
+async function getToken(){
+  try{ return window.firebase?.auth?.().currentUser ? await firebase.auth().currentUser.getIdToken() : null; }catch(e){ return null; }
+}
+/* ================================================================================ */
+
+const naira = n => '₦' + Math.round(n).toLocaleString('en-NG');
+const optOf = {};            // plan id -> chosen option index
+PLANS.forEach(p => optOf[p.id] = 0);
+let owned = new Set();       // plan ids already held
+const selected = new Set();
+
+const tierToPlan = {};
+PLANS.forEach(p => p.options.forEach(o => tierToPlan[o.tier] = p.id));
+// STANDARD is a retired tier; its holders keep Exam access until expiry
+tierToPlan.STANDARD = 'exam'; tierToPlan.STANDARD_ANNUAL = 'exam';
+// legacy one-time passes still grant Exam until they expire
+tierToPlan.EXAM_PASS_SEASON = 'exam'; tierToPlan.EXAM_PASS_ANNUAL = 'exam';
+
+/* ids already covered by something owned or selected */
+function covered(){
+  const s = new Set();
+  PLANS.forEach(p => { if(owned.has(p.id) || selected.has(p.id)) (p.includes||[]).forEach(i => s.add(i)); });
+  return s;
+}
+
+function render(){
+  const cov = covered(), g = document.getElementById('plans');
+  g.innerHTML = '';
+  PLANS.forEach(p=>{
+    const isOwned = owned.has(p.id), isIncl = !isOwned && cov.has(p.id);
+    const o = p.options[optOf[p.id]];
+    const d = document.createElement('div');
+    d.className = 'plan' + (selected.has(p.id)&&!isIncl?' sel':'') + (isOwned?' owned':'') + (isIncl?' incl':'');
+    const tag = isOwned ? 'Active' : isIncl ? 'Included' : (p.tag || '');
+    d.innerHTML = `
+      ${tag?`<span class="tag">${tag}</span>`:''}
+      <h3>${p.name}</h3><div class="sub">${p.sub}</div>
+      <div class="opts">${p.options.length>1 ? p.options.map((x,i)=>`<button data-i="${i}" class="${i===optOf[p.id]?'on':''}">${x.label}</button>`).join('') : ''}</div>
+      <div class="price">${naira(o.price)}<span> ${o.unit}</span></div>
+      <div class="per">${o.tier==='PREMIUM_ANNUAL' ? '≈ ' + naira(o.price/12) + ' / month' : ''}</div>
+      <ul>${p.features.map(f=>`<li>${f}</li>`).join('')}</ul>
+      <button class="pick">${isOwned ? 'You have this plan' : isIncl ? 'Already included' : selected.has(p.id) ? '✓ Added' : 'Add plan'}</button>`;
+    d.querySelectorAll('.opts button').forEach(b => b.onclick = e => { e.stopPropagation(); optOf[p.id] = +b.dataset.i; render(); });
+    if(!isOwned && !isIncl) d.querySelector('.pick').onclick = () => { selected.has(p.id) ? selected.delete(p.id) : selected.add(p.id); render(); };
+    g.appendChild(d);
+  });
+  renderBar();
+}
+
+function cart(){
+  const cov = covered();
+  const items = PLANS.filter(p => selected.has(p.id) && !owned.has(p.id) && !cov.has(p.id))
+                     .map(p => ({ plan:p, opt:p.options[optOf[p.id]] }));
+  return { items, total: items.reduce((s,i)=>s+i.opt.price, 0) };
+}
+
+function renderBar(){
+  const c = cart(), s = document.getElementById('sum'), b = document.getElementById('buy');
+  if(!c.items.length){ s.innerHTML = 'Select at least one plan'; b.disabled = true; return; }
+  s.innerHTML = c.items.map(i=>`${i.plan.name} (${i.opt.label})`).join(' + ') + `<strong>${naira(c.total)}</strong>`;
+  b.disabled = false;
+}
+
+document.getElementById('buy').onclick = async ()=>{
+  const c = cart(), msg = document.getElementById('msg'), btn = document.getElementById('buy');
+  msg.className=''; msg.textContent='Processing…'; btn.disabled=true;
+  try{
+    const token = await getToken();
+    const r = await fetch(API.create, {
+      method:'POST',
+      headers:{'Content-Type':'application/json', ...(token?{Authorization:'Bearer '+token}:{})},
+      body: JSON.stringify({ tiers: c.items.map(i=>i.opt.tier) })
+    });
+    const data = await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(data.error || 'Could not start subscription');
+    msg.textContent = 'Submitted. Your plans activate once payment is verified.';
+  }catch(e){ msg.className='err'; msg.textContent=e.message; btn.disabled=false; }
+};
+
+(async function init(){
+  render();
+  try{
+    const token = await getToken(); if(!token) return;
+    const r = await fetch(API.me, { headers:{Authorization:'Bearer '+token} });
+    if(!r.ok) return;
+    const data = await r.json();
+    (data.subscriptions||[]).forEach(s=>{
+      const id = tierToPlan[s.tier];
+      if(id && s.verified !== false && (!s.expiresAt || new Date(s.expiresAt) > new Date())) owned.add(id);
+    });
+    render();
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
