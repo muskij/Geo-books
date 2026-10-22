@@ -26,8 +26,11 @@
         .then(reg => console.log('Service Worker registered:', reg.scope))
         .catch(err => console.log('Service Worker registration failed:', err));
     });
+    // Only reload when an existing worker is replaced — not on first install,
+    // which previously forced a pointless second load for every new visitor.
+    const hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (window.__swReloaded) return;
+      if (!hadController || window.__swReloaded) return;
       window.__swReloaded = true;
       window.location.reload();
     });
@@ -342,7 +345,7 @@
   /* Scene Overlay refinement */
   #sceneOverlay {
     background: #0F172A;
-    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.2s ease, transform 0.2s ease;
     pointer-events: none;
     z-index: 9999;
   }

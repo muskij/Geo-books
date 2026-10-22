@@ -969,7 +969,7 @@ const showPageLoader = (msg = 'Entering Geo-Books...') => {
   
   const loader = document.createElement('div');
   loader.id = 'pageLoader';
-  loader.className = 'fixed inset-0 z-[1000] bg-slate-950 flex flex-col items-center justify-center animate-in fade-in duration-500';
+  loader.className = 'fixed inset-0 z-[1000] bg-slate-950 flex flex-col items-center justify-center animate-in fade-in duration-150';
   loader.innerHTML = `
     <div class="relative scale-75 sm:scale-100">
       <div class="w-24 h-24 rounded-[2rem] bg-brand-600 animate-pulse shadow-[0_0_50px_rgba(91, 76, 240,0.5)]"></div>
@@ -2034,7 +2034,7 @@ async function showSection(id, state) {
   if (overlay && state.currentSection && state.currentSection !== id) {
     overlay.classList.remove('hidden', 'opacity-0');
     overlay.classList.add('active', 'opacity-100');
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 120));
   }
 
   // Subscription Access Control
@@ -2056,7 +2056,7 @@ async function showSection(id, state) {
       if (overlay) {
         overlay.classList.remove('active', 'opacity-100');
         overlay.classList.add('opacity-0');
-        setTimeout(() => overlay.classList.add('hidden'), 500);
+        setTimeout(() => overlay.classList.add('hidden'), 250);
       }
       toast(`${name} is a ${minTier.charAt(0) + minTier.slice(1).toLowerCase()} feature. Upgrade now!`, 'brand');
       window.showPricingModal(true);
@@ -2067,7 +2067,7 @@ async function showSection(id, state) {
       if (overlay) {
         overlay.classList.remove('active', 'opacity-100');
         overlay.classList.add('opacity-0');
-        setTimeout(() => overlay.classList.add('hidden'), 500);
+        setTimeout(() => overlay.classList.add('hidden'), 250);
       }
       toast(`Your ${userTier} upgrade is pending admin verification.`, 'info');
       return;
@@ -2179,7 +2179,7 @@ async function showSection(id, state) {
   if (overlay) {
     overlay.classList.remove('active', 'opacity-100');
     overlay.classList.add('opacity-0');
-    setTimeout(() => overlay.classList.add('hidden'), 500);
+    setTimeout(() => overlay.classList.add('hidden'), 250);
   }
 }
 

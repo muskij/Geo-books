@@ -1,3 +1,4 @@
+import compression from 'compression';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -30,6 +31,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
+app.use(compression()); // gzip text assets (app.js is ~577KB)
 const PORT = process.env.PORT || 3007; // Railway assigns PORT at runtime; 3007 stays as local fallback
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
@@ -437,7 +439,15 @@ app.use((req, res, next) => {
   if (NON_PUBLIC.some((re) => re.test(p)) || p.split('/').some((seg) => seg.startsWith('.') && seg !== '.well-known')) return res.status(404).end();
   next();
 });
-app.use(express.static(__dirname, { index: 'index.htm' })); // Serve static files from project root; landing page is index.htm, not the express.static default of index.html
+app.use(express.static(__dirname, {
+  index: 'index.htm',
+  etag: true,
+  setHeaders(res, filePath) {
+    // Code/markup must revalidate (ETag -> 304) so deploys show up; media is safe to cache.
+    if (/\.(png|jpe?g|webp|gif|svg|ico|woff2?|mp3|mp4)$/i.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=604800');
+    else res.setHeader('Cache-Control', 'no-cache');
+  }
+})); // Serve static files from project root; landing page is index.htm, not the express.static default of index.html
 
 // ---------------------------------------------------------------------------
 // Auth middleware
