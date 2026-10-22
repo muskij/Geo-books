@@ -226,19 +226,32 @@ function renderQuestion() {
     } else {
       S('cbtQuestionBadge').textContent = `Question ${String(cbt.i + 1).padStart(2, '0')} / ${cbt.questions.length}`;
     }
+    // Be upfront that these are not real past questions.
+    if (q.ai) S('cbtQuestionBadge').textContent += ' · AI-generated';
   }
 
   // Past-paper questions can carry a diagram/table/chart the AI extraction
   // couldn't turn into text (see aiParsePastPaperFromImages in ai.js) — it's
   // attached as a full source-page screenshot via q.image, same field the
   // manual question builder already uses for uploaded images.
+  // AI-generated questions can carry an SVG `diagram` (already sanitized on the
+  // server). It is shown through <img src="data:image/svg+xml…">: an SVG loaded
+  // that way can never run script or fetch anything, so even a sanitizer miss
+  // could not execute code.
   const imgWrap = S('cbtQuestionImageWrap');
   if (imgWrap) {
-    const hasImg = q.image && toText(q.image).trim();
-    imgWrap.classList.toggle('hidden', !hasImg);
-    if (hasImg) {
-      const imgEl = imgWrap.querySelector('img');
-      if (imgEl) imgEl.src = q.image;
+    const diagram = typeof q.diagram === 'string' && q.diagram.startsWith('<svg') ? q.diagram : '';
+    const hasImg = !diagram && q.image && toText(q.image).trim();
+    imgWrap.classList.toggle('hidden', !diagram && !hasImg);
+    const imgEl = imgWrap.querySelector('img');
+    if (imgEl && diagram) {
+      imgEl.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(diagram);
+      imgEl.alt = 'Diagram for this question';
+      imgEl.style.background = '#ffffff';
+    } else if (imgEl && hasImg) {
+      imgEl.src = q.image;
+      imgEl.alt = 'Question diagram';
+      imgEl.style.background = '';
     }
   }
   if (S('cbtSubject')) S('cbtSubject').textContent = activeSubject;
@@ -592,6 +605,7 @@ function finishAndReturn() {
     params.set('cbtAgg', String(result.aggregate400));
     params.set('cbtPer', JSON.stringify(result.perSubject));
     params.set('cbtTopics', JSON.stringify(result.wrongTopics || []));
+    if (cbt.questions.some((x) => x && x.ai)) params.set('cbtAi', '1');
   }
   window.location.href = `${getAppEntryUrl()}?${params.toString()}`;
 }

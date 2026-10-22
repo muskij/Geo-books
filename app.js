@@ -41,7 +41,7 @@ import {
   increment,
   deleteField
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-import { aiIsConfigured, aiHumanizeText, aiSupportReply, aiTutorReply, aiGenerateDailyPathTasks, aiExplainFlashcard, aiGenerateCbtExam, aiGenerateCbtExamFromSource, setAiSettings, setAiUserContext } from "./ai.js";
+import { aiIsConfigured, aiHumanizeText, aiSupportReply, aiTutorReply, aiGenerateDailyPathTasks, aiExplainFlashcard, aiGenerateCbtExam, aiGenerateCbtExamFromSource, aiGenerateSubjectQuestions, setAiSettings, setAiUserContext } from "./ai.js";
 import { 
   $, $$, S, toText, toMillis, escapeHTML, isValidEmail, isValidHttpUrl, 
   store, formatCurrency, normalizeUsername, calculateRank, RANK_TIERS, 
@@ -4736,8 +4736,8 @@ window.startJambExam = async () => {
   try {
     fetched = await Promise.all(jambState.selectedSubjects.map(async (subject) => {
       const count = JAMB_SUBJECT_QUESTION_COUNTS[subject] || JAMB_DEFAULT_SUBJECT_COUNT;
-      const questions = await fetchRealQuestionBank({ examType: 'JAMB', subject, count });
-      return { subject, questions: questions || [] };
+      const bank = await fetchQuestionsWithAiFallback({ examType: 'JAMB', subject, count });
+      return { subject, questions: bank.questions || [], ai: !!bank.ai && !!bank.questions };
     }));
   } catch (e) {
     console.error('JAMB question fetch failed:', e);
@@ -4751,8 +4751,13 @@ window.startJambExam = async () => {
   // placeholder questions for a real UTME simulation.
   const empty = fetched.filter(f => f.questions.length === 0).map(f => f.subject);
   if (empty.length > 0) {
-    toast(`No past questions loaded yet for ${empty.join(', ')}. Pick different subjects or check back after the next import.`, 'error');
+    // (AI-written questions were already tried for these; the reason was toasted.)
+    toast(`Couldn't load questions for ${empty.join(', ')}. Pick different subjects or try again.`, 'error');
     return;
+  }
+  const aiSubjects = fetched.filter(f => f.ai).map(f => f.subject);
+  if (aiSubjects.length) {
+    toast(`AI-written questions are being used for ${aiSubjects.join(', ')}. This simulation won't count toward the leaderboard.`, 'info', 7000);
   }
 
   // The simulation itself now runs on cbt.htm like every other exam. We
@@ -4768,6 +4773,8 @@ window.startJambExam = async () => {
       exp: q.exp || '',
       topic: q.topic || '',
       image: q.image || null,
+      ...(q.diagram ? { diagram: q.diagram } : {}),
+      ...(q.ai ? { ai: true } : {}),
       // English passages / shared context / directions (see attachExamGroups)
       ...(q.grps ? { grps: q.grps } : {}),
       jambSubject: subject
@@ -10445,7 +10452,8 @@ function handleJambReturn(params, sid) {
       await saveCbtAttempt({
         mode: 'jamb', examType: 'JAMB', subjects, perSubject,
         totalCorrect, totalQuestions, pct: overallPct, jambAggregate: aggregate400,
-        durationSec, usedSec, wrongTopics
+        durationSec, usedSec, wrongTopics,
+        aiGenerated: params.get('cbtAi') === '1'
       });
     } catch (e) {
       console.error('Failed to save JAMB attempt:', e);
@@ -12486,6 +12494,51 @@ async function fetchRealQuestionBank(opts = {}) {
   return primary;
 }
 
+// Past questions first. If the subject (or topic) has none imported yet, ask
+// the server for AI-written practice questions instead — some with diagrams
+// for science/maths-type subjects, all independently verified server-side
+// (see backend/ai-questions.js). Used only where a student actually starts a
+// session; the offline-download paths keep using fetchRealQuestionBank so they
+// never spend AI budget. Never returns placeholder questions: on failure the
+// caller gets { questions: null } and the reason has already been shown.
+async function fetchQuestionsWithAiFallback(opts = {}) {
+  const real = await fetchRealQuestionBank(opts);
+  if (real && real.length) return { questions: real, ai: false };
+
+  const subject = toText(opts.subject).trim();
+  const topic = toText(opts.topic).trim();
+  const label = topic ? `${subject} — ${topic}` : subject;
+  if (!subject) return { questions: null, ai: false };
+  if (!navigator.onLine) {
+    toast(`No downloaded questions for ${label}. Connect to the internet to practise with AI-written questions.`, 'error');
+    return { questions: null, ai: false, offline: true };
+  }
+  if (!app.state.user) {
+    toast('Sign in to practise with AI-written questions.', 'error');
+    return { questions: null, ai: false };
+  }
+
+  toast(`No past questions for ${label} yet — writing practice questions with AI (some with diagrams)…`, 'info', 6000);
+  try {
+    const res = await aiGenerateSubjectQuestions({
+      examType: opts.examType, subject, topic,
+      count: opts.count, difficulty: opts.difficulty
+    });
+    if (res.capped) toast(`Daily AI limit reached — you get ${res.questions.length} questions this time.`, 'info');
+    if (res.verified === false) toast('These AI questions could not be double-checked. Treat answers with care.', 'warning');
+    return { questions: res.questions, ai: true, diagramCount: res.diagramCount || 0, verified: res.verified !== false };
+  } catch (e) {
+    console.warn('AI question fallback failed:', e);
+    if (e?.status === 429) {
+      toast(e.message || 'Daily AI practice limit reached.', 'error');
+      if (typeof window.showPricingModal === 'function') window.showPricingModal(true);
+    } else {
+      toast(e?.message && e.message !== 'AI_NO_QUESTIONS' ? e.message : `Couldn't create questions for ${label} right now. Please try again.`, 'error');
+    }
+    return { questions: null, ai: true, error: e };
+  }
+}
+
 // Topic-by-topic practice (a feature myschool.ng's app has that Geo-Books
 // didn't). Pulls a sample of real questions for the subject and derives the
 // distinct, non-empty `topic` values from them — cheap enough for a
@@ -12618,6 +12671,7 @@ async function saveCbtAttempt(data) {
     durationSec: Math.max(0, Math.floor(Number(data.durationSec) || 0)),
     usedSec: Math.max(0, Math.floor(Number(data.usedSec) || 0)),
     wrongTopics: Array.isArray(data.wrongTopics) ? data.wrongTopics.slice(0, 10) : [],
+    aiGenerated: data.aiGenerated === true,
     createdAt: serverTimestamp()
   };
 
@@ -12627,7 +12681,9 @@ async function saveCbtAttempt(data) {
   // World/Campus Ranking leaderboard is a cheap orderBy query. Only ever
   // moves upward, decided in a transaction against the user's own doc so
   // two rapid submissions can't race each other into an inconsistent state.
-  if (payload.mode === 'jamb' && payload.jambAggregate !== null) {
+  // AI-written questions are not real past papers, so a simulation that used
+  // any of them is saved to history but never counts toward the leaderboard.
+  if (payload.mode === 'jamb' && payload.jambAggregate !== null && !payload.aiGenerated) {
     try {
       await runTransaction(db, async (tx) => {
         const userRef = doc(db, 'users', uid);
@@ -13605,16 +13661,14 @@ window.startAiGeneration = () => {
             const quickExamType = toText(studyState.cbt.settings?.examType || 'GENERAL');
             const quickSubject = toText(studyState.cbt.settings?.subject || 'General') || 'General';
             const quickTopic = toText(studyState.cbt.settings?.topic || '').trim();
-            const real = await fetchRealQuestionBank({ examType: quickExamType, subject: quickSubject, topic: quickTopic || undefined, count });
-            if (real && real.length) {
-              subject = quickTopic ? `${quickSubject} — ${quickTopic}` : quickSubject;
-              questions = real;
-            } else {
-              if (quickTopic) toast(`No imported questions for "${quickTopic}" yet — using general practice questions.`, 'info');
-              const res = generateCbtExam('General', count);
-              subject = res.subject;
-              questions = res.questions;
+            const bank = await fetchQuestionsWithAiFallback({ examType: quickExamType, subject: quickSubject, topic: quickTopic || undefined, count, difficulty: intensity });
+            if (!bank.questions || !bank.questions.length) {
+              // Real questions and the AI fallback both came up empty (reason already shown).
+              // Don't start an exam on made-up placeholder questions.
+              return;
             }
+            subject = quickTopic ? `${quickSubject} — ${quickTopic}` : quickSubject;
+            questions = bank.questions;
             scanned = true;
           } else {
             try {

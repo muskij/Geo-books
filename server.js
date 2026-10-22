@@ -18,6 +18,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { generateSubjectQuestions, AI_QUESTION_DAILY_BUDGET, DEFAULT_AI_QUESTION_BUDGET } from './backend/ai-questions.js';
 import { mountClaudeAdminMcp } from './claude-admin-mcp.js';
 import { getAuth } from 'firebase-admin/auth';
 import { mountLectureNotes } from './lecture-notes.js';
@@ -400,6 +401,12 @@ const reportLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10,
   message: 'Too many reports submitted. Please wait before submitting another.'
+});
+
+const aiQuestionsLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 min
+  max: 12,
+  message: 'Too many AI question requests. Please wait a few minutes and try again.'
 });
 
 const questionImportLimiter = rateLimit({
@@ -1223,6 +1230,128 @@ app.post('/api/ai/generate-quiz', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('AI Generation Error:', error);
     res.status(500).json({ error: 'Failed to generate quiz content' });
+  }
+});
+
+// --- AI: practice questions for subjects with no past questions yet --------
+// Called by the CBT suite (app.js fetchQuestionsWithAiFallback) when a subject
+// or topic has no imported past questions. Generates questions (some with SVG
+// diagrams for science/maths-type subjects), then runs an independent
+// verification pass so wrong answer keys are dropped. The logic lives in
+// backend/ai-questions.js (unit-tested); this route only adds auth, a
+// per-user daily question budget, and the OpenAI call.
+async function reserveAiQuestionBudget(uid, isAdmin, wanted) {
+  const day = new Date().toISOString().slice(0, 10);
+  if (isAdmin) return { granted: wanted, day, unlimited: true };
+
+  const userSnap = await db.collection('users').doc(uid).get();
+  const sub = userSnap.exists ? userSnap.data()?.subscription : null;
+  const tier = sub && sub.verified && sub.status === 'active' ? String(sub.tier || '').toUpperCase() : 'FREE';
+  const budget = AI_QUESTION_DAILY_BUDGET[tier] ?? DEFAULT_AI_QUESTION_BUDGET;
+  const ref = db.collection('aiQuestionUsage').doc(`${uid}_${day}`);
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const used = snap.exists ? Number(snap.data().used) || 0 : 0;
+    const granted = Math.min(wanted, Math.max(0, budget - used));
+    // Not worth a session with fewer than 5 questions.
+    if (granted < Math.min(5, wanted)) return { granted: 0, day, budget, used };
+    tx.set(ref, { uid, day, used: used + granted, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    return { granted, day, budget, used: used + granted };
+  });
+}
+
+async function refundAiQuestionBudget(uid, day, amount) {
+  if (!amount || amount <= 0) return;
+  try {
+    await db.collection('aiQuestionUsage').doc(`${uid}_${day}`).set({
+      used: FieldValue.increment(-amount),
+      updatedAt: FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (e) {
+    console.error('AI question budget refund failed:', e);
+  }
+}
+
+async function callOpenAiJson(messages, { temperature = 0.5, maxTokens = 2000 } = {}) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+    signal: AbortSignal.timeout(90000),
+    body: JSON.stringify({
+      // A stronger model (e.g. gpt-4o) draws noticeably better diagrams.
+      model: process.env.OPENAI_QUESTION_MODEL || 'gpt-4o-mini',
+      messages,
+      temperature,
+      max_tokens: Math.min(16000, Math.max(300, Math.floor(maxTokens))),
+      response_format: { type: 'json_object' }
+    })
+  });
+  if (!response.ok) {
+    console.error('subject-questions OpenAI error:', response.status, (await response.text()).slice(0, 300));
+    throw new Error('AI provider error');
+  }
+  const result = await response.json();
+  const content = result.choices?.[0]?.message?.content;
+  if (!content) throw new Error('Empty response from AI');
+  return JSON.parse(content);
+}
+
+app.post('/api/ai/subject-questions', requireAuth, aiQuestionsLimiter, async (req, res) => {
+  if (process.env.AI_QUESTIONS_DISABLED === 'true') return res.status(503).json({ error: 'AI practice questions are temporarily unavailable.' });
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI service not configured on server' });
+  if (!db) return res.status(503).json({ error: 'Server not configured' });
+
+  const body = req.body || {};
+  const subject = String(body.subject || '').trim();
+  const topic = String(body.topic || '').trim();
+  const examType = (String(body.examType || 'GENERAL').trim().toUpperCase().replace(/[^A-Z0-9 _-]/g, '') || 'GENERAL').slice(0, 20);
+  const difficulty = ['easy', 'hard'].includes(body.difficulty) ? body.difficulty : 'standard';
+  const count = Math.max(5, Math.min(60, Math.floor(Number(body.count) || 20)));
+
+  // Subject/topic go into a prompt, so keep them to plain subject-name text.
+  const NAME_OK = /^[\p{L}\p{N} .,&()'’\/-]+$/u;
+  if (subject.length < 2 || subject.length > 60 || !NAME_OK.test(subject) || topic.length > 80 || (topic && !NAME_OK.test(topic))) {
+    return res.status(400).json({ error: 'Invalid subject or topic' });
+  }
+
+  let reservation;
+  try {
+    reservation = await reserveAiQuestionBudget(req.user.uid, req.user.admin === true, count);
+  } catch (e) {
+    console.error('AI question budget check failed:', e);
+    return res.status(500).json({ error: 'Could not verify your daily AI question limit' });
+  }
+  if (!reservation.granted) {
+    return res.status(429).json({
+      error: `You've used today's AI practice questions (${reservation.budget}/day on your plan). Try again tomorrow, or upgrade for a higher limit.`
+    });
+  }
+
+  try {
+    const out = await generateSubjectQuestions({
+      examType, subject, topic, difficulty,
+      count: reservation.granted,
+      callModel: callOpenAiJson,
+      log: (...a) => console.log('[subject-questions]', ...a)
+    });
+    await refundAiQuestionBudget(req.user.uid, reservation.day, reservation.granted - out.questions.length);
+    res.json({
+      subject: topic ? `${subject} — ${topic}` : subject,
+      questions: out.questions,
+      requested: count,
+      granted: reservation.granted,
+      capped: reservation.granted < count,
+      diagramTarget: out.diagramTarget,
+      diagramCount: out.diagramCount,
+      verified: out.verified
+    });
+  } catch (error) {
+    await refundAiQuestionBudget(req.user.uid, reservation.day, reservation.granted);
+    console.error('subject-questions failed:', error);
+    const msg = String(error?.message || '');
+    if (msg.startsWith('AI_NO_')) return res.status(502).json({ error: 'The AI could not produce valid questions right now. Please try again.' });
+    res.status(500).json({ error: 'Failed to generate practice questions' });
   }
 });
 

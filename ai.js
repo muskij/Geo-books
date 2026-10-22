@@ -30,7 +30,9 @@ async function callServerApi(path, body) {
   }
 
   if (!response.ok) {
-    throw new Error((data && data.error) || `Server error (${response.status})`);
+    const err = new Error((data && data.error) || `Server error (${response.status})`);
+    err.status = response.status; // lets callers tell "daily limit reached" (429) from real failures
+    throw err;
   }
   return data;
 }
@@ -1338,6 +1340,19 @@ export async function aiGenerateFlashcards({ seed, source, count = 10 } = {}) {
   })) : [];
 
   return { category, cards };
+}
+
+// Practice questions for a subject/topic that has no imported past questions.
+// Deliberately NOT behind assertAiAccess(): this is the fallback for an empty
+// subject, so free students must be able to reach it. Cost is bounded
+// server-side instead (per-user daily question budget + rate limit in
+// server.js /api/ai/subject-questions). Some questions come back with an SVG
+// `diagram` for science/maths-type subjects, and every question is marked ai:true.
+export async function aiGenerateSubjectQuestions({ examType = 'GENERAL', subject, topic = '', count = 20, difficulty = 'standard' } = {}) {
+  const data = await callServerApi('/api/ai/subject-questions', { examType, subject, topic, count, difficulty });
+  const questions = Array.isArray(data?.questions) ? data.questions : [];
+  if (!questions.length) throw new Error('AI_NO_QUESTIONS');
+  return { ...data, questions };
 }
 
 export async function aiGenerateCbtExam({ seed, count = 20, intensity = 'standard' } = {}) {
