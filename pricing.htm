@@ -88,9 +88,8 @@ input:focus{border-color:var(--brand)}
   </div>
   <div class="grid" id="plans"></div>
   <p class="note">
-    <b>Exam + Tutor Hub together is ₦5,000 a month.</b>
-    <b>University</b> already includes every Tutor Hub course, and <b>Pro</b> already includes Exam.
-    Pick an overlapping pair and the included plan is dropped from your total.
+    <b>Study</b> is one plan: Exam prep and every Tutor Hub course for ₦5,000 a month.
+    You can hold it alongside University or Pro, since each plan is billed separately.
   </p>
   <p id="msg" class="note"></p>
 </div>
@@ -148,17 +147,14 @@ const db = getFirestore(fbApp);
 
 /* ===== CONFIG: tier strings match app.js PLAN_PRICES / the access gates ===== */
 const PLANS = [
-  { id:'exam', name:'Exam', sub:'JAMB & WAEC prep',
-    options:[{ tier:'EXAM_PASS_MONTHLY', label:'Monthly', price:2000, unit:'/month', days:30 }],
-    features:['Unlimited real past questions','Full JAMB UTME simulator','Bookmarks, analytics & World Ranking','Cancel anytime'] },
-  { id:'tutor', name:'Tutor Hub', sub:'Independent tutor courses',
-    options:[{ tier:'TUTOR_PASS', label:'Monthly', price:3000, unit:'/month', days:30 }],
-    features:['Every Tutor Hub course','Lessons, worked answers & quizzes','Cancel anytime'] },
+  { id:'study', name:'Study', sub:'Exam prep + Tutor Hub courses', tag:'Exam + Tutor Hub',
+    options:[{ tier:'STUDY_PASS', label:'Monthly', price:5000, unit:'/month', days:30 }],
+    features:['Unlimited real past questions','Full JAMB UTME simulator','Bookmarks, analytics & World Ranking','Every Tutor Hub course','Lessons, worked answers & quizzes','Cancel anytime'] },
   { id:'uni', name:'University', sub:'For admitted students', tag:'Includes Tutor Hub', includes:['tutor'],
     options:[{ tier:'UNIVERSITY_PASS_30', label:'30 views', price:5000, unit:'/month', days:30 },
              { tier:'UNIVERSITY_PASS_70', label:'70 views', price:10000, unit:'/month', days:30 }],
     features:['Hostel Finder, verified listings','Lecture views each month (30 or 70)','Every Tutor Hub course included','Cancel anytime'] },
-  { id:'pro', name:'Pro', sub:'The full platform', tag:'Includes Exam', includes:['exam'],
+  { id:'pro', name:'Pro', sub:'The full platform', tag:'Includes Exam',
     options:[{ tier:'PREMIUM', label:'Monthly', price:3500, unit:'/month', days:30 },
              { tier:'PREMIUM_ANNUAL', label:'Yearly', price:35000, unit:'/year', days:365 }],
     features:['Unlimited AI-generated exams','AI Scan Vault & War Room','Marketplace, Gigs Board & Skills Academy','Verified Student badge & priority job placement','Exam access included'] }
@@ -178,7 +174,7 @@ let promo = null;           // { code, discountPercent, docId }
 const tierToPlan = {};
 PLANS.forEach(p => p.options.forEach(o => tierToPlan[o.tier] = p.id));
 // retired tiers: holders keep access until they expire
-Object.assign(tierToPlan, { STANDARD:'exam', STANDARD_ANNUAL:'exam', EXAM_PASS_SEASON:'exam', EXAM_PASS_ANNUAL:'exam' });
+Object.assign(tierToPlan, { TUTOR_PASS:'study', STANDARD:'study', STANDARD_ANNUAL:'study', EXAM_PASS_SEASON:'study', EXAM_PASS_ANNUAL:'study', EXAM_PASS_MONTHLY:'study' });
 
 function covered(){
   const s = new Set();
