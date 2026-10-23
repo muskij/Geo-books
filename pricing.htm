@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pricing · Geo-Books</title>
+<title>Subscription · Geo-Books</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0d1e;--card:#13162e;--card2:#1a1e3d;--line:#2a2f5a;--text:#eef0ff;--muted:#9aa0cf;--brand:#6366f1;--brand2:#818cf8;--ok:#34d399}
+:root{--bg:#0b0d1e;--card:#13162e;--card2:#1a1e3d;--line:#2a2f5a;--text:#eef0ff;--muted:#9aa0cf;--brand:#6366f1;--brand2:#818cf8;--ok:#34d399;--bad:#f87171}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Inter,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:130px}
 h1,h3{font-family:'Space Grotesk',sans-serif}
 .wrap{max-width:1100px;margin:0 auto;padding:0 16px}
-header{padding:20px 0}
+header{padding:20px 0;display:flex;justify-content:space-between;align-items:center}
 header a{color:var(--muted);text-decoration:none;font-size:14px}
 .hero{text-align:center;padding:16px 0 28px}
 .hero h1{font-size:clamp(28px,5vw,44px);line-height:1.1}
@@ -46,23 +46,53 @@ li:before{content:"✓";position:absolute;left:0;color:var(--ok)}
 .sum strong{display:block;font:500 22px 'JetBrains Mono',monospace;color:var(--text)}
 .buy{background:var(--brand);color:#fff;border:0;border-radius:12px;padding:14px 28px;font:600 15px Inter;cursor:pointer}
 .buy:disabled{opacity:.4;cursor:not-allowed}
-#msg{margin-top:10px;font-size:13px;text-align:center;color:var(--muted)}
-.err{color:#f87171!important}
+
+/* payment modal */
+.ov{position:fixed;inset:0;background:rgba(5,6,18,.88);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.ov.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;max-width:500px;width:100%;max-height:92vh;overflow-y:auto;position:relative}
+.modal h3{font-size:24px;margin-bottom:4px}
+.modal .lead{color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:18px}
+.x{position:absolute;top:16px;right:18px;background:none;border:0;color:var(--muted);font-size:22px;cursor:pointer}
+.acct{background:rgba(99,102,241,.1);border:1.5px solid rgba(99,102,241,.3);border-radius:16px;padding:14px;margin-bottom:18px}
+.acct .t{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--brand2);font-weight:600;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:8px}
+.row small{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.row b{font-size:14px;word-break:break-all}
+.row button{background:rgba(99,102,241,.2);border:0;color:var(--brand2);border-radius:8px;padding:7px 10px;font:600 11px Inter;cursor:pointer;flex-shrink:0}
+.acct p.n{font-size:11px;color:var(--muted);margin-top:4px}
+label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:12px 0 6px}
+input{width:100%;background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--text);font:500 14px Inter;outline:none}
+input:focus{border-color:var(--brand)}
+.promo{display:flex;gap:8px}
+.promo button{background:var(--text);color:var(--bg);border:0;border-radius:12px;padding:0 18px;font:600 12px Inter;cursor:pointer}
+.fb{font-size:11px;margin-top:6px;min-height:14px}
+.fb.ok{color:var(--ok)}.fb.err{color:var(--bad)}
+.tot{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:16px;font-size:13px;color:var(--muted)}
+.tot div{display:flex;justify-content:space-between;padding:3px 0}
+.tot .f{border-top:1px solid var(--line);margin-top:6px;padding-top:9px;color:var(--text);font:600 16px Inter}
+.tot .d{color:var(--ok)}
+#submit{width:100%;margin-top:16px;background:var(--brand);color:#fff;border:0;border-radius:12px;padding:14px;font:600 15px Inter;cursor:pointer}
+#submit:disabled{opacity:.5;cursor:not-allowed}
+.mmsg{font-size:13px;text-align:center;margin-top:10px;min-height:16px}
+.mmsg.err{color:var(--bad)}.mmsg.ok{color:var(--ok)}
+.err{color:var(--bad)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header><a href="geo-books.htm">← Back to app</a></header>
+  <header><a href="geo-books.htm">← Back to app</a><span id="who" style="font-size:13px;color:var(--muted)"></span></header>
   <div class="hero">
-    <h1>Four plans.<br>Hold as many as you need.</h1>
-    <p>Your account can have several plans at once. Where one plan already includes another, you are never charged twice.</p>
+    <h1>Pick what you need.<br>Hold as many plans as you want.</h1>
+    <p>Pay by direct bank transfer. Where one plan already includes another, you are never charged twice.</p>
   </div>
   <div class="grid" id="plans"></div>
   <p class="note">
-    <b>University</b> includes every Tutor Hub course, and <b>Pro</b> includes Exam access.
-    Pick both and the included one is dropped from your total. Each plan renews on its own, so you can add or cancel one without touching the others.
+    <b>Exam + Tutor Hub together is ₦5,000 a month.</b>
+    <b>University</b> already includes every Tutor Hub course, and <b>Pro</b> already includes Exam.
+    Pick an overlapping pair and the included plan is dropped from your total.
   </p>
-  <p id="msg"></p>
+  <p id="msg" class="note"></p>
 </div>
 
 <div class="bar"><div class="in">
@@ -70,45 +100,86 @@ li:before{content:"✓";position:absolute;left:0;color:var(--ok)}
   <button class="buy" id="buy" disabled>Continue to payment</button>
 </div></div>
 
-<script>
-/* ===== CONFIG: tiers keep the existing tier strings from app.js PLAN_PRICES ===== */
+<!-- Direct-transfer payment modal (same flow as the old in-app modal) -->
+<div class="ov" id="ov">
+  <div class="modal">
+    <button class="x" id="closeM" aria-label="Close">×</button>
+    <h3>Payment details</h3>
+    <p class="lead">Send the exact total to the account below, then tell us who paid so we can confirm it quickly.</p>
+
+    <div class="acct">
+      <div class="t">Send payment to</div>
+      <div id="acctBody"><p class="n">Loading receiving account…</p></div>
+    </div>
+
+    <label for="accName">Account name used</label>
+    <input id="accName" placeholder="e.g. Ngozi Adeyemi" autocomplete="off">
+    <label for="bank">Bank name</label>
+    <input id="bank" placeholder="e.g. GTBank" autocomplete="off">
+    <label for="accNo">Account number</label>
+    <input id="accNo" inputmode="numeric" maxlength="10" placeholder="10-digit NUBAN" autocomplete="off">
+    <label for="promo">Promo code <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+    <div class="promo"><input id="promo" placeholder="e.g. WELCOME20" style="text-transform:uppercase"><button id="applyPromo" type="button">Apply</button></div>
+    <div class="fb" id="promoFb"></div>
+
+    <div class="tot" id="tot"></div>
+    <button id="submit">Submit for verification</button>
+    <div class="mmsg" id="mmsg"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, addDoc, collection, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA1nVLSPFs30wG-PLaEyFqm_PEVhZdzISU",
+  authDomain: "geo-books-8411e.firebaseapp.com",
+  projectId: "geo-books-8411e",
+  storageBucket: "geo-books-8411e.firebasestorage.app",
+  messagingSenderId: "972887107793",
+  appId: "1:972887107793:web:7e0374bf81e6713fd0fdf0",
+  measurementId: "G-RY84V5DXPN"
+};
+const fbApp = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+
+/* ===== CONFIG: tier strings match app.js PLAN_PRICES / the access gates ===== */
 const PLANS = [
   { id:'exam', name:'Exam', sub:'JAMB & WAEC prep',
-    options:[{ tier:'EXAM_PASS_BASIC', label:'Basic', price:2000, unit:'/month' },
-             { tier:'EXAM_PASS_PLUS', label:'Plus', price:5000, unit:'/month' }],
+    options:[{ tier:'EXAM_PASS_MONTHLY', label:'Monthly', price:2000, unit:'/month', days:30 }],
     features:['Unlimited real past questions','Full JAMB UTME simulator','Bookmarks, analytics & World Ranking','Cancel anytime'] },
   { id:'tutor', name:'Tutor Hub', sub:'Independent tutor courses',
-    options:[{ tier:'TUTOR_PASS', label:'Monthly', price:3000, unit:'/month' }],
+    options:[{ tier:'TUTOR_PASS', label:'Monthly', price:3000, unit:'/month', days:30 }],
     features:['Every Tutor Hub course','Lessons, worked answers & quizzes','Cancel anytime'] },
   { id:'uni', name:'University', sub:'For admitted students', tag:'Includes Tutor Hub', includes:['tutor'],
-    options:[{ tier:'UNIVERSITY_PASS_30', label:'30 views', price:5000, unit:'/month' },
-             { tier:'UNIVERSITY_PASS_70', label:'70 views', price:10000, unit:'/month' }],
+    options:[{ tier:'UNIVERSITY_PASS_30', label:'30 views', price:5000, unit:'/month', days:30 },
+             { tier:'UNIVERSITY_PASS_70', label:'70 views', price:10000, unit:'/month', days:30 }],
     features:['Hostel Finder, verified listings','Lecture views each month (30 or 70)','Every Tutor Hub course included','Cancel anytime'] },
   { id:'pro', name:'Pro', sub:'The full platform', tag:'Includes Exam', includes:['exam'],
-    options:[{ tier:'PREMIUM', label:'Monthly', price:3500, unit:'/month' },
-             { tier:'PREMIUM_ANNUAL', label:'Yearly', price:35000, unit:'/year' }],
+    options:[{ tier:'PREMIUM', label:'Monthly', price:3500, unit:'/month', days:30 },
+             { tier:'PREMIUM_ANNUAL', label:'Yearly', price:35000, unit:'/year', days:365 }],
     features:['Unlimited AI-generated exams','AI Scan Vault & War Room','Marketplace, Gigs Board & Skills Academy','Verified Student badge & priority job placement','Exam access included'] }
 ];
-const API = { me:'/api/subscriptions/me', create:'/api/subscriptions' };
-async function getToken(){
-  try{ return window.firebase?.auth?.().currentUser ? await firebase.auth().currentUser.getIdToken() : null; }catch(e){ return null; }
-}
-/* ================================================================================ */
+/* ===================================================================== */
 
+const $ = id => document.getElementById(id);
 const naira = n => '₦' + Math.round(n).toLocaleString('en-NG');
-const optOf = {};            // plan id -> chosen option index
-PLANS.forEach(p => optOf[p.id] = 0);
-let owned = new Set();       // plan ids already held
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const optOf = {}; PLANS.forEach(p => optOf[p.id] = 0);
 const selected = new Set();
+let owned = new Set();
+let user = null;
+let promo = null;           // { code, discountPercent, docId }
 
 const tierToPlan = {};
 PLANS.forEach(p => p.options.forEach(o => tierToPlan[o.tier] = p.id));
-// STANDARD is a retired tier; its holders keep Exam access until expiry
-tierToPlan.STANDARD = 'exam'; tierToPlan.STANDARD_ANNUAL = 'exam';
-// legacy one-time passes still grant Exam until they expire
-tierToPlan.EXAM_PASS_SEASON = 'exam'; tierToPlan.EXAM_PASS_ANNUAL = 'exam';
+// retired tiers: holders keep access until they expire
+Object.assign(tierToPlan, { STANDARD:'exam', STANDARD_ANNUAL:'exam', EXAM_PASS_SEASON:'exam', EXAM_PASS_ANNUAL:'exam' });
 
-/* ids already covered by something owned or selected */
 function covered(){
   const s = new Set();
   PLANS.forEach(p => { if(owned.has(p.id) || selected.has(p.id)) (p.includes||[]).forEach(i => s.add(i)); });
@@ -116,23 +187,23 @@ function covered(){
 }
 
 function render(){
-  const cov = covered(), g = document.getElementById('plans');
+  const cov = covered(), g = $('plans');
   g.innerHTML = '';
-  PLANS.forEach(p=>{
+  PLANS.forEach(p => {
     const isOwned = owned.has(p.id), isIncl = !isOwned && cov.has(p.id);
     const o = p.options[optOf[p.id]];
     const d = document.createElement('div');
-    d.className = 'plan' + (selected.has(p.id)&&!isIncl?' sel':'') + (isOwned?' owned':'') + (isIncl?' incl':'');
+    d.className = 'plan' + (selected.has(p.id) && !isIncl ? ' sel' : '') + (isOwned ? ' owned' : '') + (isIncl ? ' incl' : '');
     const tag = isOwned ? 'Active' : isIncl ? 'Included' : (p.tag || '');
     d.innerHTML = `
-      ${tag?`<span class="tag">${tag}</span>`:''}
+      ${tag ? `<span class="tag">${tag}</span>` : ''}
       <h3>${p.name}</h3><div class="sub">${p.sub}</div>
-      <div class="opts">${p.options.length>1 ? p.options.map((x,i)=>`<button data-i="${i}" class="${i===optOf[p.id]?'on':''}">${x.label}</button>`).join('') : ''}</div>
+      <div class="opts">${p.options.length > 1 ? p.options.map((x,i) => `<button data-i="${i}" class="${i===optOf[p.id]?'on':''}">${x.label}</button>`).join('') : ''}</div>
       <div class="price">${naira(o.price)}<span> ${o.unit}</span></div>
-      <div class="per">${o.tier==='PREMIUM_ANNUAL' ? '≈ ' + naira(o.price/12) + ' / month' : ''}</div>
-      <ul>${p.features.map(f=>`<li>${f}</li>`).join('')}</ul>
+      <div class="per">${o.tier === 'PREMIUM_ANNUAL' ? '≈ ' + naira(o.price/12) + ' / month' : ''}</div>
+      <ul>${p.features.map(f => `<li>${f}</li>`).join('')}</ul>
       <button class="pick">${isOwned ? 'You have this plan' : isIncl ? 'Already included' : selected.has(p.id) ? '✓ Added' : 'Add plan'}</button>`;
-    d.querySelectorAll('.opts button').forEach(b => b.onclick = e => { e.stopPropagation(); optOf[p.id] = +b.dataset.i; render(); });
+    d.querySelectorAll('.opts button').forEach(b => b.onclick = () => { optOf[p.id] = +b.dataset.i; render(); });
     if(!isOwned && !isIncl) d.querySelector('.pick').onclick = () => { selected.has(p.id) ? selected.delete(p.id) : selected.add(p.id); render(); };
     g.appendChild(d);
   });
@@ -143,46 +214,195 @@ function cart(){
   const cov = covered();
   const items = PLANS.filter(p => selected.has(p.id) && !owned.has(p.id) && !cov.has(p.id))
                      .map(p => ({ plan:p, opt:p.options[optOf[p.id]] }));
-  return { items, total: items.reduce((s,i)=>s+i.opt.price, 0) };
+  return { items, total: items.reduce((s,i) => s + i.opt.price, 0) };
 }
 
 function renderBar(){
-  const c = cart(), s = document.getElementById('sum'), b = document.getElementById('buy');
-  if(!c.items.length){ s.innerHTML = 'Select at least one plan'; b.disabled = true; return; }
-  s.innerHTML = c.items.map(i=>`${i.plan.name} (${i.opt.label})`).join(' + ') + `<strong>${naira(c.total)}</strong>`;
+  const c = cart(), b = $('buy');
+  if(!c.items.length){ $('sum').textContent = 'Select at least one plan'; b.disabled = true; return; }
+  $('sum').innerHTML = esc(c.items.map(i => `${i.plan.name} (${i.opt.label})`).join(' + ')) + `<strong>${naira(c.total)}</strong>`;
   b.disabled = false;
 }
 
-document.getElementById('buy').onclick = async ()=>{
-  const c = cart(), msg = document.getElementById('msg'), btn = document.getElementById('buy');
-  msg.className=''; msg.textContent='Processing…'; btn.disabled=true;
-  try{
-    const token = await getToken();
-    const r = await fetch(API.create, {
-      method:'POST',
-      headers:{'Content-Type':'application/json', ...(token?{Authorization:'Bearer '+token}:{})},
-      body: JSON.stringify({ tiers: c.items.map(i=>i.opt.tier) })
+/* ---------- payment modal ---------- */
+let cachedAcct = null;
+async function loadAcct(){
+  const body = $('acctBody');
+  const draw = cfg => {
+    const row = (l, v) => v ? `<div class="row"><div><small>${esc(l)}</small><b>${esc(v)}</b></div><button type="button" data-copy="${esc(v)}">Copy</button></div>` : '';
+    const rows = [
+      row('Bank transfer · account name', cfg.accountName), row('Bank transfer · bank name', cfg.bankName),
+      row('Bank transfer · account number', cfg.accountNumber),
+      row('PalmPay name', cfg.palmpayName), row('PalmPay number', cfg.palmpayNumber)
+    ].join('');
+    body.innerHTML = (rows || '<p class="n err">Receiving account not configured yet. Please reach us in Support Chat before paying.</p>')
+      + (cfg.notes ? `<p class="n">${esc(cfg.notes)}</p>` : '');
+    body.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
+      try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy', 1200); } catch(e){}
     });
-    const data = await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(data.error || 'Could not start subscription');
-    msg.textContent = 'Submitted. Your plans activate once payment is verified.';
-  }catch(e){ msg.className='err'; msg.textContent=e.message; btn.disabled=false; }
+  };
+  if(cachedAcct) return draw(cachedAcct);
+  body.innerHTML = '<p class="n">Loading receiving account…</p>';
+  try{
+    const snap = await getDoc(doc(db, 'settings', 'payment'));
+    if(!snap.exists()){ body.innerHTML = '<p class="n err">Receiving account not configured yet. Please reach us in Support Chat before paying.</p>'; return; }
+    cachedAcct = snap.data(); draw(cachedAcct);
+  }catch(e){
+    console.error(e);
+    body.innerHTML = '<p class="n err">Couldn\'t load the receiving account. Please reach us in Support Chat before paying.</p>';
+  }
+}
+
+function money(){
+  const c = cart();
+  const discount = promo ? Math.round(c.total * promo.discountPercent / 100) : 0;
+  return { c, price: c.total, discount, final: Math.max(0, c.total - discount) };
+}
+function renderTotals(){
+  const m = money();
+  $('tot').innerHTML =
+    m.c.items.map(i => `<div><span>${esc(i.plan.name)} (${esc(i.opt.label)})</span><span>${naira(i.opt.price)}</span></div>`).join('') +
+    (promo ? `<div class="d"><span>Discount · ${esc(promo.code)} (${promo.discountPercent}%)</span><span>-${naira(m.discount)}</span></div>` : '') +
+    `<div class="f"><span>Total due</span><span>${naira(m.final)}</span></div>`;
+}
+
+function openModal(){
+  if(!user){ $('msg').className = 'note err'; $('msg').innerHTML = 'Please sign in first. <a style="color:var(--brand2)" href="geo-books.htm">Open the app</a>, log in, then come back here.'; return; }
+  promo = null; $('promo').value = ''; $('promoFb').textContent = ''; $('promoFb').className = 'fb'; $('mmsg').textContent = '';
+  renderTotals(); loadAcct();
+  $('ov').classList.add('show');
+}
+const closeModal = () => $('ov').classList.remove('show');
+$('buy').onclick = openModal;
+$('closeM').onclick = closeModal;
+$('ov').onclick = e => { if(e.target === $('ov')) closeModal(); };
+
+/* ---------- promo codes (same validation as app.js) ---------- */
+async function validatePromo(raw, tiers){
+  const code = String(raw || '').trim().toUpperCase();
+  if(!code) return { ok:false, reason:'Enter a promo code' };
+  try{
+    const snap = await getDoc(doc(db, 'promoCodes', code));
+    if(!snap.exists()) return { ok:false, reason:'Invalid promo code' };
+    const p = snap.data();
+    if(p.active === false) return { ok:false, reason:'This code is no longer active' };
+    const exp = p.expiresAt?.toMillis ? p.expiresAt.toMillis() : (p.expiresAt ? new Date(p.expiresAt).getTime() : 0);
+    if(exp && exp < Date.now()) return { ok:false, reason:'This code has expired' };
+    const maxUses = Number(p.maxUses) || 0, used = Number(p.usedCount) || 0;
+    if(maxUses > 0 && used >= maxUses) return { ok:false, reason:'This code has reached its usage limit' };
+    const applies = Array.isArray(p.appliesTo) && p.appliesTo.length ? p.appliesTo : ['ALL'];
+    if(!applies.includes('ALL')){
+      const bad = tiers.find(t => !applies.includes(t));
+      if(bad) return { ok:false, reason:`This code isn't valid for ${bad}` };
+    }
+    return { ok:true, code, docId:snap.id, discountPercent: Math.min(100, Math.max(0, Number(p.discountPercent) || 0)) };
+  }catch(e){ console.error(e); return { ok:false, reason:'Unable to verify code right now' }; }
+}
+
+$('applyPromo').onclick = async () => {
+  const btn = $('applyPromo'), fb = $('promoFb');
+  btn.disabled = true; btn.textContent = '...';
+  const r = await validatePromo($('promo').value, cart().items.map(i => i.opt.tier));
+  btn.disabled = false; btn.textContent = 'Apply';
+  if(!r.ok){ promo = null; fb.textContent = r.reason; fb.className = 'fb err'; }
+  else { promo = { code:r.code, discountPercent:r.discountPercent, docId:r.docId }; fb.textContent = `Applied! ${r.discountPercent}% off.`; fb.className = 'fb ok'; }
+  renderTotals();
 };
 
-(async function init(){
-  render();
+/* ---------- submit for verification ---------- */
+$('submit').onclick = async () => {
+  const mm = $('mmsg'), btn = $('submit');
+  const fail = t => { mm.className = 'mmsg err'; mm.textContent = t; };
+  if(!user) return fail('Please sign in first.');
+  const accountName = $('accName').value.trim(), bankName = $('bank').value.trim(), accountNumber = $('accNo').value.trim();
+  if(!accountName) return fail('Enter the account name used for payment');
+  if(!bankName) return fail('Enter the bank name');
+  if(!/^\d{10}$/.test(accountNumber)) return fail('Enter a valid 10-digit account number');
+
+  const items = cart().items;
+  if(!items.length) return fail('Select at least one plan');
+  const tiers = items.map(i => i.opt.tier);
+
+  // drop a stale promo if the field was edited, then re-validate right before submit
+  if(promo && $('promo').value.trim() && $('promo').value.trim().toUpperCase() !== promo.code) promo = null;
+  if(promo){
+    const re = await validatePromo(promo.code, tiers);
+    if(!re.ok){ promo = null; renderTotals(); return fail('Promo code issue: ' + re.reason); }
+    promo = { code:re.code, discountPercent:re.discountPercent, docId:re.docId };
+  }
+  const m = money();
+  btn.disabled = true; btn.textContent = 'Submitting...'; mm.textContent = ''; mm.className = 'mmsg';
+
   try{
-    const token = await getToken(); if(!token) return;
-    const r = await fetch(API.me, { headers:{Authorization:'Bearer '+token} });
-    if(!r.ok) return;
-    const data = await r.json();
-    (data.subscriptions||[]).forEach(s=>{
-      const id = tierToPlan[s.tier];
-      if(id && s.verified !== false && (!s.expiresAt || new Date(s.expiresAt) > new Date())) owned.add(id);
+    if(promo){
+      await runTransaction(db, async tx => {
+        const ref = doc(db, 'promoCodes', promo.docId);
+        const s = await tx.get(ref);
+        if(!s.exists()) throw new Error('PROMO_GONE');
+        const p = s.data();
+        if(p.active === false) throw new Error('PROMO_INACTIVE');
+        const mx = Number(p.maxUses) || 0, us = Number(p.usedCount) || 0;
+        if(mx > 0 && us >= mx) throw new Error('PROMO_LIMIT');
+        tx.update(ref, { usedCount: us + 1 });
+      });
+    }
+
+    await addDoc(collection(db, 'subscriptionRequests'), {
+      userId: user.uid,
+      email: user.email || '',
+      tier: tiers[0],                       // primary tier, kept for older admin views
+      tiers,                                // every plan being bought
+      items: items.map(i => ({ tier:i.opt.tier, plan:i.plan.id, amount:i.opt.price, durationDays:i.opt.days })),
+      accountName, bankName, accountNumber,
+      promoCode: promo?.code || null,
+      discountPercent: promo?.discountPercent || 0,
+      originalPrice: m.price,
+      finalPrice: m.final,
+      status: 'pending',
+      source: 'pricing.htm',
+      createdAt: serverTimestamp()
     });
-    render();
-  }catch(e){}
-})();
+
+    const promoLine = promo ? ` (Promo **${promo.code}** applied, ${promo.discountPercent}% off)` : '';
+    await addDoc(collection(db, 'support_messages'), {
+      userId: user.uid,
+      senderId: 'system',
+      text: `Hello! I've initiated a subscription for ${tiers.join(' + ')}${promoLine}. Payment was made as **${accountName}** from **${bankName}** (Acct: ${accountNumber}). Total due: ₦${m.final.toLocaleString()}. Please verify and activate my subscription.`,
+      createdAt: serverTimestamp(),
+      isSystem: true
+    });
+
+    mm.className = 'mmsg ok';
+    mm.innerHTML = 'Submitted! We\'ll verify your payment and activate your plans. <a style="color:var(--brand2)" href="geo-books.htm">Back to app</a>';
+    btn.textContent = 'Submitted';
+    selected.clear(); render();
+  }catch(e){
+    console.error(e);
+    const map = { PROMO_GONE:'That promo code no longer exists.', PROMO_INACTIVE:'That promo code is no longer active.', PROMO_LIMIT:'That promo code just reached its usage limit.' };
+    fail(map[e.message] || 'Unable to submit payment details. Please try again.');
+    btn.disabled = false; btn.textContent = 'Submit for verification';
+  }
+};
+
+/* ---------- who is signed in / which plans are already held ---------- */
+onAuthStateChanged(auth, async u => {
+  user = u;
+  $('who').textContent = u ? (u.email || '') : 'Not signed in';
+  owned = new Set();
+  if(u){
+    try{
+      const s = await getDoc(doc(db, 'users', u.uid));
+      const sub = s.exists() ? s.data().subscription : null;
+      const exp = sub?.expiryDate?.toMillis ? sub.expiryDate.toMillis() : (sub?.expiryDate ? new Date(sub.expiryDate).getTime() : 0);
+      if(sub && sub.verified === true && sub.status === 'active' && (!exp || exp > Date.now())){
+        const id = tierToPlan[String(sub.tier || '').toUpperCase()];
+        if(id) owned.add(id);
+      }
+    }catch(e){ console.error(e); }
+  }
+  render();
+});
+render();
 </script>
 </body>
 </html>
