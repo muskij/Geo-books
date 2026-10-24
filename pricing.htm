@@ -129,7 +129,8 @@ input:focus{border-color:var(--brand)}
 
 <script type="module">
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getAuth, initializeAuth, browserLocalPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getAppEntryUrl } from "./utils.js";
 import { getFirestore, doc, getDoc, addDoc, updateDoc, collection, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -142,8 +143,16 @@ const firebaseConfig = {
   measurementId: "G-RY84V5DXPN"
 };
 const fbApp = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-const auth = getAuth(fbApp);
+/* Use the SAME session storage as app.js/index.htm (localStorage). Plain
+   getAuth() defaults to IndexedDB-first, so visiting this page could move the
+   saved login to a different store than the app reads from. */
+let auth;
+try { auth = initializeAuth(fbApp, { persistence: browserLocalPersistence }); }
+catch(e){ auth = getAuth(fbApp); } // already initialised on this page
 const db = getFirestore(fbApp);
+const appUrl = getAppEntryUrl(); // geo-books-phone.htm on phones/tablets, geo-books.htm on desktop
+const backLink = document.querySelector('header a[href="geo-books.htm"]');
+if(backLink) backLink.href = appUrl;
 
 /* ===== CONFIG: tier strings match app.js PLAN_PRICES / the access gates ===== */
 const PLANS = [
@@ -262,8 +271,11 @@ function renderTotals(){
     `<div class="f"><span>Total due</span><span>${naira(m.final)}</span></div>`;
 }
 
-function openModal(){
-  if(!user){ $('msg').className = 'note err'; $('msg').innerHTML = 'Please sign in first. <a style="color:var(--brand2)" href="geo-books.htm">Open the app</a>, log in, then come back here.'; return; }
+async function openModal(){
+  // Wait for Firebase to finish restoring the saved login before deciding
+  // the user is signed out (otherwise a fast tap says "sign in" wrongly).
+  try{ await auth.authStateReady(); user = auth.currentUser; }catch(e){}
+  if(!user){ $('msg').className = 'note err'; $('msg').innerHTML = `Please sign in first. <a style="color:var(--brand2)" href="${appUrl}">Open the app</a>, log in, then come back here.`; return; }
   promo = null; $('promo').value = ''; $('promoFb').textContent = ''; $('promoFb').className = 'fb'; $('mmsg').textContent = '';
   renderTotals(); loadAcct();
   $('ov').classList.add('show');
@@ -401,7 +413,7 @@ $('submit').onclick = async () => {
     });
 
     mm.className = 'mmsg ok';
-    mm.innerHTML = 'Submitted! We\'ll verify your payment and activate your plans. <a style="color:var(--brand2)" href="geo-books.htm">Back to app</a>';
+    mm.innerHTML = `Submitted! We'll verify your payment and activate your plans. <a style="color:var(--brand2)" href="${appUrl}">Back to app</a>`;
     btn.textContent = 'Submitted';
     selected.clear(); render();
   }catch(e){

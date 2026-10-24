@@ -1028,7 +1028,7 @@ const updateAuthUI = (user, userData, claims = {}) => {
 
     if (isLandingPage) {
       showPageLoader('Resuming Excellence...');
-      setTimeout(() => window.location.href = 'geo-books.htm', 50);
+      setTimeout(() => window.location.href = getAppEntryUrl(), 50);
       return; 
     }
     
@@ -1207,7 +1207,7 @@ const initAuth = (appState, onDataSync) => {
       const path = window.location.pathname;
       if (path.endsWith('index.htm') || path === '/' || path.endsWith('/') || path === '') {
         showPageLoader();
-        window.location.href = 'geo-books.htm';
+        window.location.href = getAppEntryUrl();
         return;
       }
 
