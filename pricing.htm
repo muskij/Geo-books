@@ -130,7 +130,7 @@ input:focus{border-color:var(--brand)}
 <script type="module">
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, addDoc, collection, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, addDoc, updateDoc, collection, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA1nVLSPFs30wG-PLaEyFqm_PEVhZdzISU",
@@ -342,6 +342,38 @@ $('submit').onclick = async () => {
         tx.update(ref, { usedCount: us + 1 });
       });
     }
+
+    /* main_admin.htm's Subscriptions tab lists users/{uid}.subscription, NOT
+       subscriptionRequests, so mirror what app.js does: put a pending,
+       unverified subscription on the user doc. Firestore rules only allow
+       self-writes of {verified:false,status:'pending'}. Skip if the user
+       already holds a verified active plan so we never downgrade paid access
+       (that request is still recorded in subscriptionRequests below). */
+    try{
+      const us = await getDoc(doc(db, 'users', user.uid));
+      const cur = us.exists() ? us.data().subscription : null;
+      const hasActive = cur && cur.verified === true && cur.status === 'active' && cur.tier && cur.tier !== 'FREE';
+      if(!hasActive){
+        const first = items[0];
+        await updateDoc(doc(db, 'users', user.uid), {
+          subscription: {
+            tier: tiers[0],
+            tiers,
+            updatedAt: serverTimestamp(),
+            status: 'pending',
+            verified: false,
+            expiryDate: new Date(Date.now() + (first.opt.days || 30) * 86400000),
+            payment: {
+              accountName, bankName, accountNumber,
+              originalPrice: m.price,
+              discountPercent: promo?.discountPercent || 0,
+              promoCode: promo?.code || null,
+              finalPrice: m.final
+            }
+          }
+        });
+      }
+    }catch(e){ console.error('users.subscription sync failed', e); }
 
     await addDoc(collection(db, 'subscriptionRequests'), {
       userId: user.uid,
