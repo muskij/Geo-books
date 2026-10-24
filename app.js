@@ -1017,7 +1017,10 @@ const updateAuthUI = (user, userData, claims = {}) => {
 
   const path = window.location.pathname;
   const isLandingPage = path.endsWith('index.htm') || path === '/' || path.endsWith('/') || path === '';
-  const isClassPage = path.endsWith('geo-books.htm');
+  // Both app shells (desktop + phone/tablet) must bounce to the landing page
+  // when signed out — previously only geo-books.htm did, so signing out on
+  // geo-books-phone.htm left the "Signing out..." loader stuck on screen.
+  const isClassPage = path.endsWith('geo-books.htm') || path.endsWith('geo-books-phone.htm');
 
   if (user) {
     // If we have userData, use it. Otherwise use user object.
@@ -1085,9 +1088,11 @@ const updateAuthUI = (user, userData, claims = {}) => {
     if (S('campusHubTitle')) S('campusHubTitle').textContent = `${university} Hub`;
   } else {
     if (isClassPage) { 
-      showPageLoader('Returning to Campus...');
-      setTimeout(() => window.location.href = 'index.htm', 50);
-      return; 
+      showPageLoader(window.__loggingOut ? 'Signing out...' : 'Returning to Campus...');
+      // Deliberate sign-out takes a fixed 0.5s; a session that simply expired
+      // redirects almost immediately.
+      setTimeout(() => window.location.replace('index.htm'), window.__loggingOut ? 500 : 50);
+      return;
     }
 
     if (S('authButtons')) {
@@ -1188,11 +1193,14 @@ const handleLogin = async (email, password) => {
 
 const handleLogout = async () => {
   try {
+    window.__loggingOut = true;
     showPageLoader('Signing out...');
     await signOut(auth);
     document.documentElement.setAttribute('data-elite', 'false');
     toast('Safe travels, Scholar!', 'info');
   } catch (error) {
+    window.__loggingOut = false;
+    S('pageLoader')?.remove();
     console.error('Logout error:', error);
     toast('Error logging out', 'error');
   }
