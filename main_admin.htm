@@ -1091,6 +1091,21 @@
             </div>
           </div>
 
+          <!-- Pending payment requests submitted from pricing.htm / the in-app
+               payment modal. Reads the subscriptionRequests collection
+               directly, so a request shows up here even if the student
+               already holds an active plan (their users doc is untouched
+               until an admin approves). -->
+          <div class="bg-white rounded-[3rem] border border-amber-200 overflow-hidden shadow-soft mb-12">
+            <div class="p-10 border-b border-slate-100 flex justify-between items-center">
+              <h3 class="text-2xl font-black">Pending Payment Requests</h3>
+              <span id="pendingRequestsCount" class="px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-black uppercase">0 pending</span>
+            </div>
+            <div id="pendingRequestsList" class="divide-y divide-slate-100">
+              <p class="p-10 text-center text-slate-400 font-bold">No pending requests.</p>
+            </div>
+          </div>
+
           <div class="bg-white rounded-[3rem] border border-slate-200 overflow-hidden shadow-soft">
             <div class="p-10 border-b border-slate-100 flex justify-between items-center">
               <h3 class="text-2xl font-black">User Plan Upgrades</h3>
@@ -3150,7 +3165,127 @@
       }
     };
 
+    let pendingRequests = [];
+    let pendingRequestsListening = false;
+
+    function initPendingRequestsListener() {
+      if (pendingRequestsListening) return;
+      pendingRequestsListening = true;
+      onSnapshot(query(collection(db, 'subscriptionRequests'), where('status', '==', 'pending')), (snap) => {
+        pendingRequests = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+        renderPendingRequests();
+      }, (err) => {
+        pendingRequestsListening = false;
+        console.error('subscriptionRequests listener failed:', err);
+      });
+    }
+
+    function renderPendingRequests() {
+      const list = document.getElementById('pendingRequestsList');
+      const count = document.getElementById('pendingRequestsCount');
+      if (!list) return;
+      if (count) count.textContent = `${pendingRequests.length} pending`;
+      if (!pendingRequests.length) {
+        list.innerHTML = `<p class="p-10 text-center text-slate-400 font-bold">No pending requests.</p>`;
+        return;
+      }
+      list.innerHTML = pendingRequests.map(r => {
+        const tiers = (r.tiers && r.tiers.length) ? r.tiers : [r.tier];
+        const when = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString() : 'N/A';
+        return `
+        <div class="px-10 py-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="min-w-0">
+            <p class="font-black text-sm truncate">${escapeHTML(r.email || r.userId)}</p>
+            <div class="flex flex-wrap gap-2 mt-2">
+              ${tiers.map(t => `<span class="px-3 py-1 rounded-full bg-brand-50 text-brand-600 text-[9px] font-black uppercase">${escapeHTML(String(t))}</span>`).join('')}
+              ${r.promoCode ? `<span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase">${escapeHTML(r.promoCode)} • -${escapeHTML(String(r.discountPercent || 0))}%</span>` : ''}
+            </div>
+            <p class="text-[11px] font-black mt-2">${escapeHTML(r.accountName || '—')} <span class="text-slate-400 font-bold">• ${escapeHTML(r.bankName || '')} • ${escapeHTML(r.accountNumber || '')}</span></p>
+            <p class="text-[10px] text-slate-400 font-bold mt-1">Due ₦${Number(r.finalPrice || 0).toLocaleString()} • ${escapeHTML(when)}</p>
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <button onclick="window.approveRequest('${r.id}')" class="px-4 py-2 rounded-xl bg-emerald-500 text-white text-[9px] font-black uppercase hover:scale-105 transition-all shadow-lg shadow-emerald-500/20">Approve</button>
+            <button onclick="window.rejectRequest('${r.id}')" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-400 text-[9px] font-black uppercase hover:bg-rose-50 hover:text-rose-500 transition-all">Reject</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    window.approveRequest = async (reqId) => {
+      const r = pendingRequests.find(x => x.id === reqId);
+      if (!r) return;
+      try {
+        const userRef = doc(db, 'users', r.userId);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) { alert('User account not found for this request.'); return; }
+        const cur = userSnap.data().subscription;
+
+        const items = (r.items && r.items.length) ? r.items : [{ tier: r.tier, durationDays: 30 }];
+        const tiers = (r.tiers && r.tiers.length) ? r.tiers : [r.tier];
+        const primary = items[0];
+        const days = Number(primary.durationDays) || 30;
+
+        // Renewing the same plan extends from its current expiry instead of
+        // wasting days they already paid for.
+        let base = Date.now();
+        const curExp = cur?.expiryDate?.toMillis ? cur.expiryDate.toMillis() : (cur?.expiryDate ? new Date(cur.expiryDate).getTime() : 0);
+        if (cur && cur.tier === primary.tier && cur.verified === true && curExp > base) base = curExp;
+
+        let msg = `Approve ${tiers.join(' + ')} for ${r.email || r.userId}?`;
+        if (cur && cur.verified === true && cur.tier && cur.tier !== 'FREE' && cur.tier !== primary.tier) {
+          msg += `\n\nThey currently have ${cur.tier}. This will replace it with ${primary.tier}.`;
+        }
+        if (tiers.length > 1) {
+          msg += `\n\nNote: this request has ${tiers.length} plans, but an account holds one active tier, so ${primary.tier} will be activated.`;
+        }
+        if (!confirm(msg)) return;
+
+        await updateDoc(userRef, {
+          subscription: {
+            tier: primary.tier,
+            tiers,
+            verified: true,
+            status: 'active',
+            expiryDate: new Date(base + days * 24 * 60 * 60 * 1000),
+            updatedAt: serverTimestamp(),
+            payment: {
+              accountName: r.accountName || '',
+              bankName: r.bankName || '',
+              accountNumber: r.accountNumber || '',
+              originalPrice: r.originalPrice || 0,
+              discountPercent: r.discountPercent || 0,
+              promoCode: r.promoCode || null,
+              finalPrice: r.finalPrice || 0
+            }
+          }
+        });
+        await updateDoc(doc(db, 'subscriptionRequests', reqId), { status: 'approved', reviewedAt: serverTimestamp() });
+
+        try {
+          await addDoc(collection(db, 'activity_logs'), { title: `Plan Verified: ${primary.tier}`, user: r.email || '', tag: 'PAYMENT', timestamp: serverTimestamp() });
+          await addDoc(collection(db, 'notifications'), { uid: r.userId, text: `Your ${primary.tier} subscription has been verified! Your new features are live.`, icon: 'check-circle', type: 'payment_verified', read: false, createdAt: serverTimestamp() });
+        } catch (e) { console.warn('Approval log/notification failed (plan still activated):', e); }
+        alert('Subscription approved.');
+      } catch (e) {
+        console.error('Approve error:', e);
+        alert('Failed to approve this request.');
+      }
+    };
+
+    window.rejectRequest = async (reqId) => {
+      if (!confirm('Reject this payment request? The student\'s current plan is not changed.')) return;
+      try {
+        await updateDoc(doc(db, 'subscriptionRequests', reqId), { status: 'rejected', reviewedAt: serverTimestamp() });
+      } catch (e) {
+        console.error('Reject error:', e);
+        alert('Failed to reject this request.');
+      }
+    };
+
     function initSubscriptionListener() {
+      initPendingRequestsListener();
       onSnapshot(collection(db, "users"), (snap) => {
         subscriptions = snap.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
