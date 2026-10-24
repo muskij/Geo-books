@@ -11521,16 +11521,22 @@ async function loadTutorHubPreview() {
       }
       return `<span class="text-sm font-black">₦${Number(c.price).toLocaleString()}</span>`;
     };
-    grid.innerHTML = courses.map((c) => `
-      <a href="tutor-courses.htm?course=${encodeURIComponent(c.id)}" class="block bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden hover:border-brand-300 transition-colors">
-        <div class="h-28 bg-gradient-to-br from-brand-100 to-brand-50 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
-          ${c.coverUrl ? `<img src="${escapeHTML(c.coverUrl)}" class="w-full h-full object-cover" alt="">` : `<i data-lucide="graduation-cap" class="w-7 h-7 text-brand-400"></i>`}
+    // Same tile shape as the University Lectures course picker
+    // (university.js renderCoursePicker): square gradient tile, name + meta
+    // centred underneath.
+    const TILE_GRADIENTS = [
+      'linear-gradient(135deg,#10b981,#0d9488)', 'linear-gradient(135deg,#f43f5e,#db2777)', 'linear-gradient(135deg,#3b82f6,#4f46e5)',
+      'linear-gradient(135deg,#a855f7,#7c3aed)', 'linear-gradient(135deg,#f59e0b,#ea580c)', 'linear-gradient(135deg,#06b6d4,#2563eb)'
+    ];
+    grid.innerHTML = courses.map((c, i) => `
+      <a href="tutor-courses.htm?course=${encodeURIComponent(c.id)}" class="group flex flex-col items-center gap-3">
+        <div class="w-full aspect-square rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-all overflow-hidden" style="background:${TILE_GRADIENTS[i % TILE_GRADIENTS.length]}">
+          ${c.coverUrl ? `<img src="${escapeHTML(c.coverUrl)}" class="w-full h-full object-cover" alt="">` : `<i data-lucide="graduation-cap" class="w-10 h-10"></i>`}
         </div>
-        <div class="p-5">
-          ${c.subject ? `<p class="text-[9px] font-black uppercase tracking-widest text-brand-600 mb-1">${escapeHTML(c.subject)}</p>` : ''}
-          <h3 class="font-black text-sm mb-1 truncate">${escapeHTML(c.title || 'Untitled course')}</h3>
-          <p class="text-[10px] text-slate-400 font-bold mb-3 truncate">By ${escapeHTML(c.tutorName || 'Tutor')}</p>
-          ${priceLabel(c)}
+        <div class="text-center w-full">
+          <p class="font-black text-sm truncate mx-auto" style="max-width:140px">${escapeHTML(c.title || 'Untitled course')}</p>
+          <p class="text-[10px] text-slate-400 font-bold truncate mx-auto" style="max-width:140px">${c.subject ? `${escapeHTML(c.subject)} • ` : ''}By ${escapeHTML(c.tutorName || 'Tutor')}</p>
+          <div class="mt-1">${priceLabel(c)}</div>
         </div>
       </a>`).join('');
     if (window.lucide) window.lucide.createIcons();

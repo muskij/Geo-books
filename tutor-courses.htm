@@ -39,7 +39,7 @@
     <p class="text-slate-400 font-bold text-sm mt-1">Paid courses from independent tutors — not tied to a specific university.</p>
   </div>
 
-  <div id="coursesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+  <div id="coursesGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-6">
     <p class="col-span-full text-center py-24 text-slate-300 font-bold">Loading courses...</p>
   </div>
 </main>
@@ -144,21 +144,23 @@
       grid.innerHTML = `<p class="col-span-full text-center py-24 text-slate-300 font-bold">No tutor courses published yet — check back soon.</p>`;
       return;
     }
-    grid.innerHTML = allCourses.map((c) => {
+    // Same tile shape as the University Lectures course picker: square
+    // gradient tile, name + meta centred underneath.
+    const TILE_GRADIENTS = [
+      'linear-gradient(135deg,#10b981,#0d9488)', 'linear-gradient(135deg,#f43f5e,#db2777)', 'linear-gradient(135deg,#3b82f6,#4f46e5)',
+      'linear-gradient(135deg,#a855f7,#7c3aed)', 'linear-gradient(135deg,#f59e0b,#ea580c)', 'linear-gradient(135deg,#06b6d4,#2563eb)'
+    ];
+    grid.innerHTML = allCourses.map((c, i) => {
       const badge = ownershipBadge(c.id);
       return `
-      <button data-course-id="${c.id}" class="course-card text-left bg-white rounded-3xl border border-slate-100 overflow-hidden hover:border-brand-300 transition-colors">
-        <div class="h-32 bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center">
-          ${c.coverUrl ? `<img src="${escapeHTML(c.coverUrl)}" class="w-full h-full object-cover" alt="">` : `<i data-lucide="graduation-cap" class="w-8 h-8 text-brand-400"></i>`}
+      <button data-course-id="${c.id}" class="course-card group flex flex-col items-center gap-3 text-center">
+        <div class="relative w-full aspect-square rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-all overflow-hidden" style="background:${TILE_GRADIENTS[i % TILE_GRADIENTS.length]}">
+          ${c.coverUrl ? `<img src="${escapeHTML(c.coverUrl)}" class="w-full h-full object-cover" alt="">` : `<i data-lucide="graduation-cap" class="w-10 h-10"></i>`}
+          ${badge ? `<span class="absolute text-[9px] font-black uppercase px-2.5 py-1 rounded-full text-white" style="top:8px;right:8px;background:#10b981">Open</span>` : `<span class="absolute text-[9px] font-black uppercase px-2.5 py-1 rounded-full text-white" style="top:8px;right:8px;background:rgba(0,0,0,.4)">Locked</span>`}
         </div>
-        <div class="p-5">
-          ${c.subject ? `<p class="text-[9px] font-black uppercase tracking-widest text-brand-600 mb-1">${escapeHTML(c.subject)}</p>` : ''}
-          <h3 class="font-black text-sm mb-1 truncate">${escapeHTML(c.title || 'Untitled course')}</h3>
-          <p class="text-[10px] text-slate-400 font-bold mb-3 truncate">By ${escapeHTML(c.tutorName || 'Tutor')}</p>
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Included with Pass</span>
-            ${badge ? `<span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-full ${badge.cls}">Open</span>` : `<span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-full bg-slate-50 text-slate-400">Locked</span>`}
-          </div>
+        <div class="w-full">
+          <p class="font-black text-sm truncate mx-auto" style="max-width:140px">${escapeHTML(c.title || 'Untitled course')}</p>
+          <p class="text-[10px] text-slate-400 font-bold truncate mx-auto" style="max-width:140px">${c.subject ? `${escapeHTML(c.subject)} • ` : ''}By ${escapeHTML(c.tutorName || 'Tutor')}</p>
         </div>
       </button>`;
     }).join('');
