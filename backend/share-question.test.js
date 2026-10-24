@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
-import { mountShareQuestion, subjectCandidates, cleanSrc } from './share-question.js';
+import { mountShareQuestion, subjectCandidates, cleanSrc, parseMix } from './share-question.js';
 
 // --- minimal Firestore fake: collection().where().limit().get(), doc().get()/set() ---
 function makeDb(data) {
@@ -231,5 +231,44 @@ test('mock: finish events and mock views are counted', async () => {
     const { payload } = s.db.stats[0];
     assert.deepEqual(payload.mocks, { tiktok: { inc: 1 } });
     assert.deepEqual(payload.finishes, { tiktok: { inc: 1 } });
+  } finally { s.close(); }
+});
+
+test('parseMix: validates, dedupes, caps and keeps order', () => {
+  assert.deepEqual(parseMix('physics.1985.1, Chemistry.1990.3,physics.1985.1,bad,x.1.2,chemistry.1990.0').map((r) => r.key), ['physics.1985.1', 'chemistry.1990.3']);
+  assert.equal(parseMix(Array.from({ length: 60 }, (_, i) => `chemistry.1990.${i + 1}`).join(',')).length, 20);
+  assert.deepEqual(parseMix(undefined), []);
+});
+
+test('mix: mixed papers, order preserved, unkeyed/missing refs skipped', async () => {
+  const s = await start();
+  try {
+    const res = await fetch(`${s.base}/t/mix?i=chemistry.1990.3,physics.1985.1,chemistry.1990.2,chemistry.1990.1,biology.2020.4,physics.1985.3&src=friend`);
+    assert.equal(res.status, 200);
+    const html = await res.text();
+    assert.deepEqual(mockData(html).map((x) => x.n), [3, 1, 1, 3]); // chem3, phys1, chem1, phys3; chem2 has no key, biology missing
+    assert.match(html, /JAMB mixed challenge/);
+    assert.match(html, /data-query="i=chemistry\.1990\.3,physics\.1985\.1/);
+    const single = await (await fetch(`${s.base}/t/mix?i=chemistry.1990.1,chemistry.1990.3,chemistry.1990.4`)).text();
+    assert.match(single, /JAMB Chemistry challenge/);
+    const scored = await (await fetch(`${s.base}/t/mix?i=chemistry.1990.1,chemistry.1990.3,chemistry.1990.4&s=2&of=3`)).text();
+    assert.match(scored, /og:title" content="I scored 2\/3 on JAMB Chemistry challenge/);
+  } finally { s.close(); }
+});
+
+test('mix: too few valid questions or junk input is a 404; assessments never leak', async () => {
+  const s = await start();
+  try {
+    for (const q of ['', '?i=', '?i=chemistry.1990.1,chemistry.1990.3', '?i=junk,more-junk,x', '?i=phy101.2001.1,phy101.2001.2,phy101.2001.3']) {
+      assert.equal((await fetch(`${s.base}/t/mix${q}`)).status, 404, q);
+    }
+  } finally { s.close(); }
+});
+
+test('mock page share link carries its own query so a friend sits the same test', async () => {
+  const s = await start();
+  try {
+    const html = await (await fetch(`${s.base}/t/jamb/chemistry/1990?n=4&from=2`)).text();
+    assert.match(html, /data-query="n=4&amp;from=2"/);
   } finally { s.close(); }
 });

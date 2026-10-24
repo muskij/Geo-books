@@ -59,6 +59,86 @@ function getCorrectIndex(q) {
   return Number.isInteger(a) ? a : -1;
 }
 
+// --- Sharing (WhatsApp) ------------------------------------------------------
+// Questions that came from an imported JAMB paper carry their paper's year and
+// original position (`ord`), so they can be rebuilt on the server from a link:
+//   /q/jamb/<subject>/<year>/<n>            one question
+//   /t/mix?i=<subject>.<year>.<n>,...       a fixed set of questions (see backend/share-question.js)
+// Random, AI-written, bookmarked or non-JAMB questions have no such address, so they
+// are simply left out — and the buttons stay hidden if too few can be shared.
+const SHARE_MIN = 3;
+const SHARE_MAX = 20;
+const slugify = (v) => toText(v).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+function shareRef(q) {
+  if (cbt.examType !== 'JAMB' || !q || q.ai || !Number.isInteger(q.ord)) return null;
+  const year = toText(q.year).trim();
+  const subject = slugify(isJamb() ? q.jambSubject : cbt.subject);
+  if (!/^(19|20)\d{2}$/.test(year) || !/^[a-z0-9-]{2,40}$/.test(subject)) return null;
+  return { subject, year, n: q.ord + 1 };
+}
+
+function shareLabel() {
+  return isJamb() ? 'JAMB mixed' : `JAMB ${toText(cbt.subject).trim() || ''}`.trim();
+}
+
+function openWhatsApp(message) {
+  try {
+    const b = new Blob([JSON.stringify({ type: 'share', src: 'cbt' })], { type: 'application/json' });
+    if (navigator.sendBeacon) navigator.sendBeacon('/api/share/event', b);
+  } catch (e) { /* counting is best-effort */ }
+  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+}
+
+// Up to SHARE_MAX shareable questions, taken round-robin across subjects so a
+// multi-subject simulation challenge is not just the first subject.
+function buildChallenge() {
+  if (cbt.examType !== 'JAMB') return null;
+  const groups = isJamb() ? cbt.subjects.map(subjectIndices) : [cbt.questions.map((_, i) => i)];
+  const lists = groups.map((idxs) => idxs.map((i) => ({ i, ref: shareRef(cbt.questions[i]) })).filter((x) => x.ref));
+  const picked = [];
+  for (let round = 0; picked.length < SHARE_MAX; round++) {
+    let added = false;
+    for (const list of lists) {
+      if (list[round] && picked.length < SHARE_MAX) { picked.push(list[round]); added = true; }
+    }
+    if (!added) break;
+  }
+  if (picked.length < SHARE_MIN) return null;
+  const correct = picked.filter(({ i }) => cbt.answers[i] === getCorrectIndex(cbt.questions[i])).length;
+  const refs = picked.map(({ ref }) => `${ref.subject}.${ref.year}.${ref.n}`).join(',');
+  return {
+    url: `${window.location.origin}/t/mix?i=${refs}&src=friend&s=${correct}&of=${picked.length}`,
+    count: picked.length,
+    correct
+  };
+}
+
+function setupShareButton() {
+  const btn = S('cbtShareBtn');
+  const note = S('cbtShareNote');
+  if (!btn) return;
+  const plan = buildChallenge();
+  btn.classList.toggle('hidden', !plan);
+  if (note) {
+    const partial = plan && plan.count < cbt.questions.length;
+    note.classList.toggle('hidden', !partial);
+    if (partial) note.textContent = `Your friend gets ${plan.count} of your ${cbt.questions.length} questions (the shareable ones).`;
+  }
+}
+
+function shareChallenge() {
+  const plan = buildChallenge();
+  if (!plan) { toast('These questions cannot be shared as a link.', 'info'); return; }
+  openWhatsApp(`I got ${plan.correct}/${plan.count} on ${shareLabel()} questions 🎯 Can you beat me?\n${plan.url}`);
+}
+
+function shareCurrentQuestion() {
+  const ref = shareRef(cbt.questions[cbt.i]);
+  if (!ref) { toast('This question cannot be shared as a link.', 'info'); return; }
+  openWhatsApp(`Can you solve this ${shareLabel()} question? 🤔\n${window.location.origin}/q/jamb/${ref.subject}/${ref.year}/${ref.n}?src=friend`);
+}
+
 function formatMMSS(totalSeconds) {
   const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
   const m = Math.floor(s / 60);
@@ -309,6 +389,7 @@ function renderQuestion() {
   const exp = toText(q?.exp || '').trim();
   if (expWrap) expWrap.classList.toggle('hidden', !(reveal && exp));
   if (expText) expText.textContent = reveal ? exp : '';
+  if (S('cbtShareQBtn')) S('cbtShareQBtn').classList.toggle('hidden', !(reveal && shareRef(q)));
 
   if (S('prevQuestion')) S('prevQuestion').disabled = cbt.i === 0;
   if (S('nextQuestion')) S('nextQuestion').classList.toggle('hidden', cbt.i === cbt.questions.length - 1);
@@ -549,6 +630,7 @@ function finishExam() {
 
   cbt.lastResult = result;
   renderSubjectBreakdown(result);
+  setupShareButton();
 
   // The session's job is done — clear it so a stray refresh doesn't
   // silently restart the same exam from scratch mid-review.
@@ -629,6 +711,8 @@ function bindControls() {
   if (S('cbtSubmitConfirmCloseBtn')) S('cbtSubmitConfirmCloseBtn').onclick = () => setModalOpen('cbtSubmitConfirmModal', false);
   if (S('cbtReviewBtn')) S('cbtReviewBtn').onclick = reviewAnswers;
   if (S('cbtDoneBtn')) S('cbtDoneBtn').onclick = finishAndReturn;
+  if (S('cbtShareBtn')) S('cbtShareBtn').onclick = shareChallenge;
+  if (S('cbtShareQBtn')) S('cbtShareQBtn').onclick = shareCurrentQuestion;
 
   // Re-enter fullscreen if the user taps back into the exam after
   // dismissing it (Esc, swipe-down, etc.)

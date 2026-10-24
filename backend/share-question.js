@@ -34,14 +34,19 @@ const FLUSH_MS = 30 * 1000;
 const ENGLISH = ['English', 'English Language', 'Use of English'];
 const MATHS = ['Mathematics', 'Maths', 'Math'];
 const LITERATURE = ['Literature', 'Literature in English', 'Literature-in-English'];
+const CRS = ['CRS', 'C.R.S', 'Christian Religious Studies'];
+const GOVERNMENT = ['Government', 'Govt'];
 const SUBJECT_ALIASES = {
   english: ENGLISH,
   'use-of-english': ENGLISH,
   mathematics: MATHS,
   maths: MATHS,
   math: MATHS,
-  crs: ['CRS', 'C.R.S', 'Christian Religious Studies'],
-  government: ['Government', 'Govt'],
+  'english-language': ENGLISH,
+  crs: CRS,
+  'christian-religious-studies': CRS,
+  government: GOVERNMENT,
+  govt: GOVERNMENT,
   literature: LITERATURE,
   'literature-in-english': LITERATURE,
 };
@@ -318,7 +323,7 @@ const safeJson = (v) => JSON.stringify(v)
   .replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
   .replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 
-function renderMockPage(mock, { render, base, path, src, from, count, score }) {
+function renderMockPage(mock, { render, base, path, src, query, score }) {
   const items = mock.items.map((v) => ({
     n: v.n,
     q: render(v.text),
@@ -330,7 +335,7 @@ function renderMockPage(mock, { render, base, path, src, from, count, score }) {
   }));
   const hasMath = items.some((it) => /\$/.test([it.q, it.e, ...it.o, ...it.g.map((g) => g.h)].join(' ')));
   const total = items.length;
-  const canonical = `${base}${path}?n=${count}&from=${from}`;
+  const canonical = `${base}${path}?${query}`;
   const heading = `${mock.title} · Mock test`;
   const ogTitle = score
     ? `I scored ${score.s}/${score.of} on ${mock.title}. Can you beat me?`
@@ -361,7 +366,7 @@ ${hasMath ? '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.1
 </style>
 </head>
 <body>
-<main id="m" data-src="${esc(src)}" data-title="${esc(mock.title)}" data-from="${from}" data-count="${count}">
+<main id="m" data-src="${esc(src)}" data-title="${esc(mock.title)}" data-query="${esc(query)}">
   <div class="tag">${esc(heading)}</div>
   <div id="quiz" class="card">
     <div class="prog"><span id="pos"></span><span id="sc"></span></div>
@@ -435,7 +440,7 @@ ${hasMath ? `<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/
   $('go').addEventListener('click',function(){ping('click')});
   $('share').addEventListener('click',function(){
     ping('share');
-    var url=location.origin+location.pathname+'?n='+M.dataset.count+'&from='+M.dataset.from+'&src=friend&s='+score+'&of='+D.length;
+    var url=location.origin+location.pathname+'?'+M.dataset.query+'&src=friend&s='+score+'&of='+D.length;
     var msg='I scored '+score+'/'+D.length+' on '+M.dataset.title+' 🎯 Can you beat me?\\n'+url;
     window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank','noopener');
   });
@@ -445,6 +450,48 @@ ${hasMath ? `<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/
 </script>
 </body>
 </html>`;
+}
+
+// --- mix: an explicit list of questions, e.g. ?i=physics.1985.12,chemistry.1990.3 ---------
+const MIX_ITEM_RE = /^([a-z0-9-]{2,40})\.((?:19|20)\d{2})\.(\d{1,4})$/i;
+
+export function parseMix(raw) {
+  const out = [];
+  const seen = new Set();
+  for (const part of text(raw).split(',').slice(0, 80)) {
+    const m = MIX_ITEM_RE.exec(part.trim());
+    if (!m) continue;
+    const n = parseInt(m[3], 10);
+    const key = `${m[1].toLowerCase()}.${m[2]}.${n}`;
+    if (n < 1 || seen.has(key)) continue;
+    seen.add(key);
+    out.push({ slug: m[1].toLowerCase(), year: m[2], n, key });
+    if (out.length >= MOCK_MAX) break;
+  }
+  return out;
+}
+
+async function loadMix(db, refs) {
+  const papers = new Map();
+  await Promise.all([...new Set(refs.map((r) => `${r.slug}|${r.year}`))].map(async (pk) => {
+    const [slug, year] = pk.split('|');
+    papers.set(pk, (await jambExamDocs(db, slug, year)).map((d) => d.data()));
+  }));
+  const items = [];
+  for (const r of refs) { // keep the sharer's order so everyone sits the same test
+    for (const exam of papers.get(`${r.slug}|${r.year}`) || []) {
+      const v = viewFromExam(exam, r.n);
+      if (v && v.correct >= 0) { items.push({ ...v, n: r.n }); break; }
+    }
+  }
+  if (items.length < MOCK_MIN) return null;
+  const subjects = [...new Set(items.map((x) => x.subject))];
+  return {
+    subject: subjects.length === 1 ? subjects[0] : '',
+    year: '',
+    title: subjects.length === 1 ? `JAMB ${subjects[0]} challenge` : 'JAMB mixed challenge',
+    items,
+  };
 }
 
 function notFoundPage() {
@@ -572,9 +619,35 @@ export async function mountShareQuestion({ app, db, FieldValue, rateLimit }) {
       const src = cleanSrc(req.query.src);
       bump('mocks', src);
       res.set('Cache-Control', 'public, max-age=300');
-      res.type('html').send(renderMockPage(mock, { render, base: baseFor(req), path: req.path, src, from, count, score }));
+      res.type('html').send(renderMockPage(mock, { render, base: baseFor(req), path: req.path, src, query: `n=${count}&from=${from}`, score }));
     } catch (e) {
       console.error('[share-question] mock failed:', e);
+      res.status(500).type('html').send(notFoundPage());
+    }
+  });
+
+  // Challenge built from a student's own CBT session: /t/mix?i=physics.1985.12,chemistry.1990.3
+  app.get('/t/mix', pageLimiter, async (req, res) => {
+    if (!db) return res.status(503).type('html').send(notFoundPage());
+    const refs = parseMix(req.query.i);
+    if (refs.length < MOCK_MIN) return res.status(404).type('html').send(notFoundPage());
+    const sc = num(req.query.s);
+    const of = num(req.query.of);
+    const score = /^\d{1,4}$/.test(String(req.query.s)) && of >= MOCK_MIN && of <= MOCK_MAX && sc <= of ? { s: sc, of } : null;
+    try {
+      const key = `mix:${refs.map((r) => r.key).join(',')}`;
+      let mock = cacheGet(key);
+      if (mock === undefined) {
+        mock = await loadMix(db, refs);
+        cacheSet(key, mock || null);
+      }
+      if (!mock) return res.status(404).type('html').send(notFoundPage());
+      const src = cleanSrc(req.query.src);
+      bump('mocks', src);
+      res.set('Cache-Control', 'public, max-age=300');
+      res.type('html').send(renderMockPage(mock, { render, base: baseFor(req), path: req.path, src, query: `i=${refs.map((r) => r.key).join(',')}`, score }));
+    } catch (e) {
+      console.error('[share-question] mix failed:', e);
       res.status(500).type('html').send(notFoundPage());
     }
   });
