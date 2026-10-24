@@ -25,6 +25,7 @@ import { mountClaudeAdminMcp } from './claude-admin-mcp.js';
 import { getAuth } from 'firebase-admin/auth';
 import { mountLectureNotes } from './lecture-notes.js';
 import { mountFinalYear } from './final-year.js';
+import { mountShareQuestion } from './backend/share-question.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -2122,6 +2123,8 @@ process.on('unhandledRejection', (reason, promise) => {
 
 if (db) mountLectureNotes({ app, db, FieldValue, requireAuth, isAdminUser });
 if (db) mountFinalYear({ app, db, FieldValue, requireAuth, isAdminUser });
+// Public one-tap question links for WhatsApp/social posts: /q/jamb/physics/1985/12 (see backend/share-question.js)
+await mountShareQuestion({ app, db, FieldValue, rateLimit });
 mountClaudeAdminMcp({ app, db, FieldValue, r2: { client: r2Client, bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME, publicUrl: process.env.CLOUDFLARE_R2_PUBLIC_URL, PutObjectCommand, HeadObjectCommand, baseDir: __dirname } }); // no-op unless CLAUDE_MCP_SECRET is set
 
 const server = app.listen(PORT, () => {
