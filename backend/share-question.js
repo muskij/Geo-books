@@ -22,7 +22,10 @@ const ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
 const SLUG_RE = /^[a-z0-9-]{2,40}$/i;
 const YEAR_RE = /^(19|20)\d{2}$/;
 const SRC_RE = /^[a-z0-9_-]{1,24}$/;
-const EVENT_TYPES = ['answer', 'click', 'share'];
+const EVENT_KINDS = { answer: 'answers', click: 'clicks', share: 'shares', finish: 'finishes' };
+const MOCK_DEFAULT = 10;
+const MOCK_MAX = 20;
+const MOCK_MIN = 3;
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const CACHE_MAX = 500;
@@ -127,16 +130,40 @@ function viewFromQuestionDoc(d) {
   };
 }
 
-async function loadByJamb(db, slug, year, n) {
+async function jambExamDocs(db, slug, year) {
   const snap = await db.collection('exams')
     .where('examType', '==', 'JAMB')
     .where('jambSubject', 'in', subjectCandidates(slug))
     .where('jambYear', 'in', [Number(year), String(year)])
     .limit(5)
     .get();
-  for (const doc of snap.docs) {
+  return snap.docs;
+}
+
+async function loadByJamb(db, slug, year, n) {
+  for (const doc of await jambExamDocs(db, slug, year)) {
     const view = viewFromExam(doc.data(), n);
     if (view) return view;
+  }
+  return null;
+}
+
+// A "mock" is the first `count` answer-keyed questions of a paper, starting at question
+// `from`. It is deterministic, so everyone who opens the same link sits the same test.
+async function loadMock(db, slug, year, from, count) {
+  for (const doc of await jambExamDocs(db, slug, year)) {
+    const exam = doc.data();
+    const total = Array.isArray(exam.questions) ? exam.questions.length : 0;
+    const items = [];
+    for (let n = from; n <= total && items.length < count; n++) {
+      const v = viewFromExam(exam, n);
+      if (v && v.correct >= 0) items.push({ ...v, n });
+    }
+    if (items.length >= MOCK_MIN) {
+      const subject = text(exam.jambSubject || exam.subject).trim();
+      const y = text(exam.jambYear).trim();
+      return { subject, year: y, title: `JAMB ${subject}${y ? ` ${y}` : ''}`, items };
+    }
   }
   return null;
 }
@@ -160,6 +187,35 @@ function snippet(raw, max = 150) {
   const s = text(raw).replace(/\$\$?/g, '').replace(/\s+/g, ' ').trim();
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
+
+const BASE_CSS = `
+:root{--bg:#f6f7fb;--card:#fff;--ink:#0f172a;--mute:#64748b;--line:#e2e8f0;--brand:#4f46e5;--ok:#059669;--okbg:#ecfdf5;--bad:#e11d48;--badbg:#fff1f2}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#131a2e;--ink:#e8ecf8;--mute:#93a0c0;--line:#243052;--brand:#818cf8;--okbg:#06281f;--badbg:#33121c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px 16px 40px}
+.tag{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin:8px 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+.q{font-size:18px;font-weight:600;margin:0 0 14px;overflow-wrap:anywhere}
+.qimg{max-width:100%;border-radius:12px;margin:0 0 14px;background:#fff}
+.grp{border:1px solid var(--line);border-radius:14px;margin:0 0 14px;background:var(--bg)}
+.grp summary{cursor:pointer;padding:10px 14px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.grp-body{padding:0 14px 12px;max-height:45vh;overflow:auto;overflow-wrap:anywhere}
+.opt{display:flex;gap:12px;align-items:center;width:100%;text-align:left;margin:0 0 10px;padding:12px 14px;border:2px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+.opt:disabled{cursor:default}.opt:not(:disabled):active{transform:scale(.99)}
+.ltr{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:800;background:var(--bg);color:var(--mute)}
+.otxt{overflow-wrap:anywhere;min-width:0}
+.opt.ok{border-color:var(--ok);background:var(--okbg)}.opt.ok .ltr{background:var(--ok);color:#fff}
+.opt.bad{border-color:var(--bad);background:var(--badbg)}.opt.bad .ltr{background:var(--bad);color:#fff}
+.res{display:none;margin:6px 0 0;font-weight:800}.res.ok{color:var(--ok)}.res.bad{color:var(--bad)}
+.exp{display:none;margin:12px 0 0;padding:12px 14px;border-radius:14px;background:var(--bg);border:1px solid var(--line);overflow-wrap:anywhere}
+.exp b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
+.note{margin:6px 0 0;color:var(--mute);font-size:14px}
+.cta{display:none;margin-top:18px}.cta.show{display:block}
+.btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:14px;padding:14px 16px;margin:0 0 10px;border:2px solid var(--brand);font:inherit;font-weight:800;width:100%;cursor:pointer}
+.btn.p{background:var(--brand);color:#fff}.btn.s{background:transparent;color:var(--brand)}
+footer{margin-top:22px;text-align:center;color:var(--mute);font-size:13px}
+table{border-collapse:collapse;max-width:100%}th,td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:left}
+`;
 
 function renderPage(view, { render, base, path, src }) {
   const hasMath = /\$/.test([view.text, view.exp, ...view.opts, ...view.groups.map((g) => g.text)].join(' '));
@@ -197,34 +253,7 @@ ${view.image ? `<meta property="og:image" content="${esc(view.image)}">` : ''}
 <meta name="twitter:card" content="summary">
 <link rel="canonical" href="${esc(canonical)}">
 ${hasMath ? '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">' : ''}
-<style>
-:root{--bg:#f6f7fb;--card:#fff;--ink:#0f172a;--mute:#64748b;--line:#e2e8f0;--brand:#4f46e5;--ok:#059669;--okbg:#ecfdf5;--bad:#e11d48;--badbg:#fff1f2}
-@media (prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#131a2e;--ink:#e8ecf8;--mute:#93a0c0;--line:#243052;--brand:#818cf8;--okbg:#06281f;--badbg:#33121c}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-main{max-width:640px;margin:0 auto;padding:16px 16px 40px}
-.tag{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin:8px 0 12px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
-.q{font-size:18px;font-weight:600;margin:0 0 14px;overflow-wrap:anywhere}
-.qimg{max-width:100%;border-radius:12px;margin:0 0 14px;background:#fff}
-.grp{border:1px solid var(--line);border-radius:14px;margin:0 0 14px;background:var(--bg)}
-.grp summary{cursor:pointer;padding:10px 14px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
-.grp-body{padding:0 14px 12px;max-height:45vh;overflow:auto;overflow-wrap:anywhere}
-.opt{display:flex;gap:12px;align-items:center;width:100%;text-align:left;margin:0 0 10px;padding:12px 14px;border:2px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
-.opt:disabled{cursor:default}.opt:not(:disabled):active{transform:scale(.99)}
-.ltr{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:800;background:var(--bg);color:var(--mute)}
-.otxt{overflow-wrap:anywhere;min-width:0}
-.opt.ok{border-color:var(--ok);background:var(--okbg)}.opt.ok .ltr{background:var(--ok);color:#fff}
-.opt.bad{border-color:var(--bad);background:var(--badbg)}.opt.bad .ltr{background:var(--bad);color:#fff}
-.res{display:none;margin:6px 0 0;font-weight:800}.res.ok{color:var(--ok)}.res.bad{color:var(--bad)}
-.exp{display:none;margin:12px 0 0;padding:12px 14px;border-radius:14px;background:var(--bg);border:1px solid var(--line);overflow-wrap:anywhere}
-.exp b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
-.note{margin:6px 0 0;color:var(--mute);font-size:14px}
-.cta{display:none;margin-top:18px}.cta.show{display:block}
-.btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:14px;padding:14px 16px;margin:0 0 10px;border:2px solid var(--brand);font:inherit;font-weight:800;width:100%;cursor:pointer}
-.btn.p{background:var(--brand);color:#fff}.btn.s{background:transparent;color:var(--brand)}
-footer{margin-top:22px;text-align:center;color:var(--mute);font-size:13px}
-table{border-collapse:collapse;max-width:100%}th,td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:left}
-</style>
+<style>${BASE_CSS}</style>
 </head>
 <body>
 <main id="q" data-correct="${view.correct}" data-src="${esc(src)}" data-title="${esc(view.title)}" data-subject="${esc(view.subject)}">
@@ -277,6 +306,141 @@ ${hasMath ? `<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/
   document.addEventListener('DOMContentLoaded',function(){
     if(window.renderMathInElement)try{window.renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})}catch(e){}
   });
+})();
+</script>
+</body>
+</html>`;
+}
+
+// Safe to place inside <script type="application/json">: no "</script>", no HTML comment
+// openers, no line-separator characters that break older parsers.
+const safeJson = (v) => JSON.stringify(v)
+  .replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
+  .replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+
+function renderMockPage(mock, { render, base, path, src, from, count, score }) {
+  const items = mock.items.map((v) => ({
+    n: v.n,
+    q: render(v.text),
+    o: v.opts.map((o) => render(o)),
+    a: v.correct,
+    e: v.exp ? render(v.exp) : '',
+    i: v.image,
+    g: v.groups.map((g) => ({ t: esc(g.title || (g.kind === 'directions' ? 'Directions' : 'Read this first')), h: render(g.text) })),
+  }));
+  const hasMath = items.some((it) => /\$/.test([it.q, it.e, ...it.o, ...it.g.map((g) => g.h)].join(' ')));
+  const total = items.length;
+  const canonical = `${base}${path}?n=${count}&from=${from}`;
+  const heading = `${mock.title} · Mock test`;
+  const ogTitle = score
+    ? `I scored ${score.s}/${score.of} on ${mock.title}. Can you beat me?`
+    : `${heading} — ${total} questions, can you pass?`;
+  const ogDesc = `${total} real past questions, free, no sign-up. Tap to start.`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(heading)} | Geo-Books</title>
+<meta name="description" content="${esc(ogDesc)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Geo-Books">
+<meta property="og:title" content="${esc(ogTitle)}">
+<meta property="og:description" content="${esc(ogDesc)}">
+<meta property="og:url" content="${esc(canonical)}">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="${esc(canonical)}">
+${hasMath ? '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">' : ''}
+<style>${BASE_CSS}
+.prog{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--mute);margin:0 0 10px}
+.bar{height:6px;border-radius:6px;background:var(--line);margin:0 0 14px;overflow:hidden}.bar i{display:block;height:100%;background:var(--brand);width:0}
+.score{font-size:56px;font-weight:900;text-align:center;margin:6px 0 0;color:var(--brand)}
+.sub{text-align:center;color:var(--mute);font-weight:700;margin:0 0 18px}
+.nx{display:none}.nx.show{display:block}
+</style>
+</head>
+<body>
+<main id="m" data-src="${esc(src)}" data-title="${esc(mock.title)}" data-from="${from}" data-count="${count}">
+  <div class="tag">${esc(heading)}</div>
+  <div id="quiz" class="card">
+    <div class="prog"><span id="pos"></span><span id="sc"></span></div>
+    <div class="bar"><i id="bar"></i></div>
+    <div id="grps"></div>
+    <p id="qt" class="q"></p>
+    <div id="qi"></div>
+    <div id="opts"></div>
+    <div id="res" class="res" role="status"></div>
+    <div id="exp" class="exp"><b>Explanation</b><span id="expt"></span></div>
+    <button id="next" type="button" class="btn p nx" style="margin-top:14px">Next question</button>
+  </div>
+  <div id="done" class="card" style="display:none">
+    <div class="score" id="big"></div>
+    <p class="sub" id="msg"></p>
+    <button id="share" type="button" class="btn p">Challenge a friend on WhatsApp</button>
+    <a id="go" class="btn s" href="/geo-books.htm">Practise more ${esc(mock.subject || 'JAMB')} on Geo-Books</a>
+    <button id="again" type="button" class="btn s">Retake this mock</button>
+  </div>
+  <footer>Powered by Geo-Books | Peak Flow Digitals</footer>
+</main>
+<script type="application/json" id="d">${safeJson(items)}</script>
+${hasMath ? `<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>` : ''}
+<script>
+(function(){
+  var M=document.getElementById('m'),D=JSON.parse(document.getElementById('d').textContent),src=M.dataset.src;
+  var i=0,score=0,locked=false,L='ABCDEF';
+  function $(id){return document.getElementById(id)}
+  function ping(type){try{var b=new Blob([JSON.stringify({type:type,src:src})],{type:'application/json'});if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/share/event',b))){fetch('/api/share/event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type,src:src}),keepalive:true})}}catch(e){}}
+  function math(el){if(window.renderMathInElement)try{window.renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})}catch(e){}}
+  function show(){
+    var it=D[i];locked=false;
+    $('pos').textContent='Question '+(i+1)+' of '+D.length;$('sc').textContent='Score: '+score;
+    $('bar').style.width=(i/D.length*100)+'%';
+    $('grps').innerHTML=it.g.map(function(g){return '<details class="grp" open><summary>'+g.t+'</summary><div class="grp-body">'+g.h+'</div></details>'}).join('');
+    $('qt').innerHTML=it.q;
+    $('qi').innerHTML='';
+    if(it.i){var im=document.createElement('img');im.className='qimg';im.alt='Question diagram';im.src=it.i;$('qi').appendChild(im)}
+    $('opts').innerHTML=it.o.map(function(o,k){return '<button type="button" class="opt" data-i="'+k+'"><span class="ltr">'+L[k]+'</span><span class="otxt">'+o+'</span></button>'}).join('');
+    $('res').style.display='none';$('exp').style.display='none';$('next').classList.remove('show');
+    $('next').textContent=(i===D.length-1)?'See my score':'Next question';
+    Array.prototype.forEach.call($('opts').children,function(b){b.addEventListener('click',function(){pick(parseInt(b.dataset.i,10),b)})});
+    math($('quiz'));
+  }
+  function pick(k,btn){
+    if(locked)return;locked=true;
+    var it=D[i],kids=$('opts').children;
+    Array.prototype.forEach.call(kids,function(o){o.disabled=true});
+    kids[it.a].classList.add('ok');
+    var res=$('res');
+    if(k===it.a){score++;res.textContent='Correct!';res.className='res ok'}
+    else{btn.classList.add('bad');res.textContent='Not quite — the answer is '+L[it.a]+'.';res.className='res bad'}
+    res.style.display='block';
+    if(it.e){$('expt').innerHTML=it.e;$('exp').style.display='block';math($('exp'))}
+    $('sc').textContent='Score: '+score;
+    $('next').classList.add('show');
+    ping('answer');
+  }
+  function finish(){
+    $('quiz').style.display='none';$('done').style.display='block';$('bar').style.width='100%';
+    $('big').textContent=score+'/'+D.length;
+    var p=score/D.length;
+    $('msg').textContent=p>=0.8?'Excellent work! 🎉':p>=0.5?'Good effort. Review the ones you missed and go again. 💪':'Keep practising. Every attempt makes you better. 📚';
+    var go=$('go'),phone=window.matchMedia&&window.matchMedia('(max-width:900px)').matches;
+    go.href=(phone?'/geo-books-phone.htm':'/geo-books.htm')+'?src='+encodeURIComponent(src);
+    window.scrollTo(0,0);ping('finish');
+  }
+  $('next').addEventListener('click',function(){i++;if(i>=D.length)finish();else show()});
+  $('again').addEventListener('click',function(){i=0;score=0;$('done').style.display='none';$('quiz').style.display='block';show();window.scrollTo(0,0)});
+  $('go').addEventListener('click',function(){ping('click')});
+  $('share').addEventListener('click',function(){
+    ping('share');
+    var url=location.origin+location.pathname+'?n='+M.dataset.count+'&from='+M.dataset.from+'&src=friend&s='+score+'&of='+D.length;
+    var msg='I scored '+score+'/'+D.length+' on '+M.dataset.title+' 🎯 Can you beat me?\\n'+url;
+    window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank','noopener');
+  });
+  document.addEventListener('DOMContentLoaded',function(){math($('quiz'))});
+  show();
 })();
 </script>
 </body>
@@ -385,10 +549,40 @@ export async function mountShareQuestion({ app, db, FieldValue, rateLimit }) {
     return respond(req, res, `question:${id}`, () => loadByQuestionId(db, id));
   });
 
+  // Shareable mock: /t/jamb/physics/1985?n=10&from=1 — same questions for everyone.
+  // ?s=7&of=10 only changes the preview card ("I scored 7/10…"); it never alters the test.
+  app.get('/t/jamb/:subject/:year', pageLimiter, async (req, res) => {
+    const { subject, year } = req.params;
+    if (!SLUG_RE.test(subject) || !YEAR_RE.test(year)) return res.status(404).type('html').send(notFoundPage());
+    if (!db) return res.status(503).type('html').send(notFoundPage());
+    const asked = num(req.query.n) || MOCK_DEFAULT;
+    const count = Math.min(Math.max(asked, MOCK_MIN), MOCK_MAX);
+    const from = Math.max(num(req.query.from), 1);
+    const sc = num(req.query.s);
+    const of = num(req.query.of);
+    const score = /^\d{1,4}$/.test(String(req.query.s)) && of >= MOCK_MIN && of <= MOCK_MAX && sc <= of ? { s: sc, of } : null;
+    try {
+      const key = `mock:${subject.toLowerCase()}:${year}:${from}:${count}`;
+      let mock = cacheGet(key);
+      if (mock === undefined) {
+        mock = await loadMock(db, subject, year, from, count);
+        cacheSet(key, mock || null);
+      }
+      if (!mock) return res.status(404).type('html').send(notFoundPage());
+      const src = cleanSrc(req.query.src);
+      bump('mocks', src);
+      res.set('Cache-Control', 'public, max-age=300');
+      res.type('html').send(renderMockPage(mock, { render, base: baseFor(req), path: req.path, src, from, count, score }));
+    } catch (e) {
+      console.error('[share-question] mock failed:', e);
+      res.status(500).type('html').send(notFoundPage());
+    }
+  });
+
   app.post('/api/share/event', eventLimiter, (req, res) => {
     const type = text(req.body?.type);
-    if (!EVENT_TYPES.includes(type)) return res.status(400).json({ error: 'Unknown event type' });
-    bump(`${type}s`, cleanSrc(req.body?.src));
+    if (!Object.hasOwn(EVENT_KINDS, type)) return res.status(400).json({ error: 'Unknown event type' });
+    bump(EVENT_KINDS[type], cleanSrc(req.body?.src));
     res.status(204).end();
   });
 
