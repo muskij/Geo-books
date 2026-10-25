@@ -216,6 +216,18 @@
               <h3 class="text-4xl font-black" id="stat-support">...</h3>
             </div>
           </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="premium-card p-8 bg-emerald-50/50 border-emerald-100">
+              <p class="text-sm font-bold text-emerald-600 uppercase tracking-widest mb-1 flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online Now</p>
+              <h3 class="text-4xl font-black" id="stat-online">...</h3>
+              <p class="text-xs font-bold text-slate-400 mt-2">Signed-in users active in the last 2.5 minutes</p>
+            </div>
+            <div class="premium-card p-8 bg-brand-50/50 border-brand-100">
+              <p class="text-sm font-bold text-brand-600 uppercase tracking-widest mb-1" id="stat-revenue-label">Revenue This Month</p>
+              <h3 class="text-4xl font-black" id="stat-revenue-month">...</h3>
+              <p class="text-xs font-bold text-slate-400 mt-2" id="stat-revenue-sub">Approved subscription payments</p>
+            </div>
+          </div>
           <div class="bg-white rounded-[3rem] border border-slate-200 overflow-hidden shadow-soft">
             <div class="p-10 border-b border-slate-100 flex justify-between items-center"><h3 class="text-2xl font-black">Recent Activity</h3></div>
             <div class="divide-y divide-slate-100" id="recentActivityList"></div>
@@ -3368,6 +3380,20 @@
           "subscription.status": "active"
         });
         
+        // Close out this student's pending payment request (if any) so the
+        // payment counts toward monthly revenue and isn't left in the
+        // Pending Payment Requests list to be approved a second time.
+        try {
+          const matching = pendingRequests
+            .filter(r => r.userId === userId)
+            .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))[0];
+          if (matching) {
+            await updateDoc(doc(db, "subscriptionRequests", matching.id), { status: 'approved', reviewedAt: serverTimestamp() });
+          }
+        } catch (reqErr) {
+          console.warn('Could not close matching payment request:', reqErr);
+        }
+
         await addDoc(collection(db, "activity_logs"), {
           title: `Plan Verified: ${sub.tier}`,
           user: userSnap.data().email,
@@ -3578,7 +3604,66 @@
       }
     };
 
+    // ---- Online now + monthly revenue (System Overview) ----
+    // Presence: app.js's heartbeat writes users/{uid}.status='online' and
+    // lastSeen every 60s while a tab is visible. A force-closed tab never
+    // writes 'offline', so a doc only counts as online if lastSeen is also
+    // fresh (same 150s window the in-app Community "Online" dot uses).
+    let onlineDocs = [];
+    function renderOnlineCount() {
+      const el = document.getElementById('stat-online');
+      if (!el) return;
+      const now = Date.now();
+      const n = onlineDocs.filter(u => {
+        const ms = u.lastSeen?.toMillis ? u.lastSeen.toMillis() : 0;
+        return ms && now - ms < 150000;
+      }).length;
+      el.textContent = n.toLocaleString();
+    }
+
+    // Revenue: sum of finalPrice on subscriptionRequests an admin approved
+    // (approveRequest / verifySubscription both stamp reviewedAt), bucketed by
+    // the month the payment was approved, in the admin's local time.
+    let approvedRequests = [];
+    function renderMonthlyRevenue() {
+      const el = document.getElementById('stat-revenue-month');
+      if (!el) return;
+      const now = new Date();
+      const startThis = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      const startPrev = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      let thisTotal = 0, thisCount = 0, prevTotal = 0;
+      approvedRequests.forEach(r => {
+        const ms = r.reviewedAt?.toMillis ? r.reviewedAt.toMillis() : 0;
+        const amt = Number(r.finalPrice) || 0;
+        if (ms >= startThis) { thisTotal += amt; thisCount += 1; }
+        else if (ms >= startPrev) { prevTotal += amt; }
+      });
+      el.textContent = '₦' + thisTotal.toLocaleString();
+      const label = document.getElementById('stat-revenue-label');
+      if (label) label.textContent = `Revenue — ${now.toLocaleString('default', { month: 'long' })}`;
+      const sub = document.getElementById('stat-revenue-sub');
+      if (sub) {
+        const prevName = new Date(now.getFullYear(), now.getMonth() - 1, 1).toLocaleString('default', { month: 'long' });
+        sub.textContent = `${thisCount} approved payment${thisCount === 1 ? '' : 's'} • ${prevName}: ₦${prevTotal.toLocaleString()}`;
+      }
+    }
+
+    function initOnlineAndRevenueStats() {
+      onSnapshot(query(collection(db, "users"), where("status", "==", "online")), (snap) => {
+        onlineDocs = snap.docs.map(d => d.data());
+        renderOnlineCount();
+      }, (e) => { console.error('online stat failed:', e); document.getElementById('stat-online').textContent = '—'; });
+      // lastSeen ages out without any Firestore change, so re-check regularly.
+      setInterval(renderOnlineCount, 30000);
+
+      onSnapshot(query(collection(db, "subscriptionRequests"), where("status", "==", "approved")), (snap) => {
+        approvedRequests = snap.docs.map(d => d.data());
+        renderMonthlyRevenue();
+      }, (e) => { console.error('revenue stat failed:', e); document.getElementById('stat-revenue-month').textContent = '—'; });
+    }
+
     function initDashboardStats() {
+      initOnlineAndRevenueStats();
       onSnapshot(collection(db, "users"), (snap) => document.getElementById('stat-scholars').textContent = snap.size.toLocaleString());
       onSnapshot(collection(db, "exams"), (snap) => {
         document.getElementById('stat-exams').textContent = snap.size.toLocaleString();
