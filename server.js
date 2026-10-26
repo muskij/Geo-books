@@ -2124,7 +2124,7 @@ process.on('unhandledRejection', (reason, promise) => {
 if (db) mountLectureNotes({ app, db, FieldValue, requireAuth, isAdminUser });
 if (db) mountFinalYear({ app, db, FieldValue, requireAuth, isAdminUser });
 // Public one-tap question links for WhatsApp/social posts: /q/jamb/physics/1985/12 (see backend/share-question.js)
-await mountShareQuestion({ app, db, FieldValue, rateLimit });
+await mountShareQuestion({ app, db, FieldValue, rateLimit, requireAuth, isAdminUser });
 mountClaudeAdminMcp({ app, db, FieldValue, r2: { client: r2Client, bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME, publicUrl: process.env.CLOUDFLARE_R2_PUBLIC_URL, PutObjectCommand, HeadObjectCommand, baseDir: __dirname } }); // no-op unless CLAUDE_MCP_SECRET is set
 
 const server = app.listen(PORT, () => {

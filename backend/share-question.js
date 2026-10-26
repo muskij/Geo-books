@@ -14,15 +14,25 @@
 // Only JAMB papers and active `questions` docs are exposed — never university
 // assessments or other exam types that live in the same `exams` collection.
 //
-// Usage metrics (views / answers / clicks / shares per `?src=` tag) are buffered in
-// memory and flushed to Firestore `shareStats/{day}` every FLUSH_MS, because one
-// Firestore document sustains only ~1 write/second and a viral post can exceed that.
+// Usage metrics are buffered in memory and flushed to Firestore every FLUSH_MS, because
+// one Firestore document sustains only ~1 write/second and a viral post can exceed that:
+//   shareStats/{day}   views / uniques / answers / clicks / shares per `?src=` tag
+//   shareLinks/{link}  the same counters per shareable link (one doc per question), plus a
+//                      per-`src` view breakdown -- read by the admin panel through
+//                      GET /api/share/links.
+// A "view" is counted by a beacon the page sends when it loads in a real browser, not when
+// the server renders it, so link-preview crawlers (WhatsApp, Telegram, ...) that fetch the
+// page to build the preview card are never counted. A "unique" is the first view of a link
+// in a given browser (remembered in localStorage), i.e. roughly one per person.
 
 const ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
 const SLUG_RE = /^[a-z0-9-]{2,40}$/i;
 const YEAR_RE = /^(19|20)\d{2}$/;
 const SRC_RE = /^[a-z0-9_-]{1,24}$/;
-const EVENT_TYPES = ['answer', 'click', 'share'];
+const EVENT_TYPES = ['view', 'unique', 'answer', 'click', 'share'];
+// One id per shareable link; reversible so the admin panel can rebuild the URL.
+const LINK_RE = /^(jamb_[a-z0-9-]{2,40}_(19|20)\d{2}_\d{1,4}|exam_[A-Za-z0-9_-]{8,64}_\d{1,4}|question_[A-Za-z0-9_-]{8,64})$/;
+const MAX_LINKS_PER_FLUSH = 300;
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const CACHE_MAX = 500;
@@ -77,6 +87,21 @@ function httpsUrl(raw) {
 export function cleanSrc(raw) {
   const s = text(raw).trim().toLowerCase();
   return SRC_RE.test(s) ? s : 'direct';
+}
+
+export function pathFromLinkId(id) {
+  const v = text(id);
+  if (!LINK_RE.test(v)) return '';
+  if (v.startsWith('jamb_')) {
+    const [, subject, year, n] = v.split('_');
+    return `/q/jamb/${subject}/${year}/${n}`;
+  }
+  if (v.startsWith('exam_')) {
+    const rest = v.slice(5);
+    const i = rest.lastIndexOf('_');
+    return `/q/${rest.slice(0, i)}/${rest.slice(i + 1)}`;
+  }
+  return `/q/${v.slice(9)}`;
 }
 
 // --- loading ----------------------------------------------------------------
@@ -161,7 +186,7 @@ function snippet(raw, max = 150) {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
 
-function renderPage(view, { render, base, path, src }) {
+function renderPage(view, { render, base, path, src, link }) {
   const hasMath = /\$/.test([view.text, view.exp, ...view.opts, ...view.groups.map((g) => g.text)].join(' '));
   const canonical = base ? `${base}${path}` : path;
   const interactive = view.correct >= 0;
@@ -227,7 +252,7 @@ table{border-collapse:collapse;max-width:100%}th,td{border-bottom:1px solid var(
 </style>
 </head>
 <body>
-<main id="q" data-correct="${view.correct}" data-src="${esc(src)}" data-title="${esc(view.title)}" data-subject="${esc(view.subject)}">
+<main id="q" data-correct="${view.correct}" data-src="${esc(src)}" data-link="${esc(link)}" data-title="${esc(view.title)}" data-subject="${esc(view.subject)}">
   <div class="tag">${esc(view.title)}</div>
   <div class="card">
     ${groups}
@@ -248,8 +273,12 @@ ${hasMath ? `<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>` : ''}
 <script>
 (function(){
-  var root=document.getElementById('q'),correct=parseInt(root.dataset.correct,10),src=root.dataset.src;
-  function ping(type){try{var b=new Blob([JSON.stringify({type:type,src:src})],{type:'application/json'});if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/share/event',b))){fetch('/api/share/event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type,src:src}),keepalive:true})}}catch(e){}}
+  var root=document.getElementById('q'),correct=parseInt(root.dataset.correct,10),src=root.dataset.src,link=root.dataset.link;
+  function ping(type){try{var body=JSON.stringify({type:type,src:src,link:link});var b=new Blob([body],{type:'application/json'});if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/share/event',b))){fetch('/api/share/event',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true})}}catch(e){}}
+  // Counted here (a real browser running JS), not on the server render, so preview
+  // crawlers don't inflate it. 'unique' = first time this browser opens this link.
+  ping('view');
+  try{var k='gb_seen_'+link;if(!localStorage.getItem(k)){localStorage.setItem(k,'1');ping('unique')}}catch(e){}
   var go=document.getElementById('go');
   var phone=window.matchMedia&&window.matchMedia('(max-width:900px)').matches;
   go.href=(phone?'/geo-books-phone.htm':'/geo-books.htm')+'?src='+encodeURIComponent(src);
@@ -291,7 +320,7 @@ function notFoundPage() {
 
 // --- mount ------------------------------------------------------------------
 
-export async function mountShareQuestion({ app, db, FieldValue, rateLimit }) {
+export async function mountShareQuestion({ app, db, FieldValue, rateLimit, requireAuth, isAdminUser }) {
   const render = await loadRenderer();
 
   const pageLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, message: 'Too many requests. Please try again in a minute.' });
@@ -311,28 +340,62 @@ export async function mountShareQuestion({ app, db, FieldValue, rateLimit }) {
     cache.set(k, { t: Date.now(), v });
   };
 
-  // Buffered counters -> one Firestore write per flush.
+  // Buffered counters -> a few Firestore writes per flush.
   let pending = {};
+  let pendingLinks = {};
   const bump = (kind, src) => {
     pending[kind] = pending[kind] || {};
     pending[kind][src] = (pending[kind][src] || 0) + 1;
   };
-  async function flush() {
-    if (!db || !FieldValue || !Object.keys(pending).length) return;
-    const batch = pending;
-    pending = {};
-    const data = {};
-    for (const [kind, bySrc] of Object.entries(batch)) {
-      data[kind] = {};
-      for (const [src, n] of Object.entries(bySrc)) data[kind][src] = FieldValue.increment(n);
+  const bumpLink = (link, kind, src, title) => {
+    if (!LINK_RE.test(text(link))) return;
+    if (!pendingLinks[link]) {
+      if (Object.keys(pendingLinks).length >= MAX_LINKS_PER_FLUSH) return; // bound abuse
+      pendingLinks[link] = { counts: {}, bySrc: {}, title: '' };
     }
+    const l = pendingLinks[link];
+    l.counts[kind] = (l.counts[kind] || 0) + 1;
+    if (kind === 'views') l.bySrc[src] = (l.bySrc[src] || 0) + 1;
+    if (title) l.title = title;
+  };
+  // Titles are only known when this instance rendered the page; remember them so the
+  // event beacons that follow can store a human-readable name next to the counters.
+  const titles = new Map();
+  async function flush() {
+    if (!db || !FieldValue) return;
+    const batch = pending;
+    const linkBatch = pendingLinks;
+    pending = {};
+    pendingLinks = {};
     // Days roll over at midnight Lagos time (UTC+1, no DST) to match the audience.
     const day = new Date(Date.now() + 3600 * 1000).toISOString().slice(0, 10);
-    try {
-      await db.collection('shareStats').doc(day).set(data, { merge: true });
-    } catch (e) {
-      console.error('[share-question] stats flush failed:', e.message);
+    if (Object.keys(batch).length) {
+      const data = {};
+      for (const [kind, bySrc] of Object.entries(batch)) {
+        data[kind] = {};
+        for (const [src, n] of Object.entries(bySrc)) data[kind][src] = FieldValue.increment(n);
+      }
+      try {
+        await db.collection('shareStats').doc(day).set(data, { merge: true });
+      } catch (e) {
+        console.error('[share-question] stats flush failed:', e.message);
+      }
     }
+    await Promise.all(Object.entries(linkBatch).map(async ([link, l]) => {
+      const data = { path: pathFromLinkId(link), lastEventAt: new Date() };
+      if (l.title) data.title = l.title;
+      for (const [kind, n] of Object.entries(l.counts)) data[kind] = FieldValue.increment(n);
+      if (Object.keys(l.bySrc).length) {
+        data.bySrc = {};
+        for (const [src, n] of Object.entries(l.bySrc)) data.bySrc[src] = FieldValue.increment(n);
+      }
+      if (l.counts.views) data.lastViewAt = new Date();
+      try {
+        await db.collection('shareLinks').doc(link).set(data, { merge: true });
+      } catch (e) {
+        console.error('[share-question] link stats flush failed:', e.message);
+      }
+    }));
   }
   setInterval(flush, FLUSH_MS).unref();
 
@@ -343,7 +406,7 @@ export async function mountShareQuestion({ app, db, FieldValue, rateLimit }) {
     return /^[a-z0-9.-]+(:\d+)?$/i.test(host) ? `${req.protocol}://${host}` : '';
   };
 
-  async function respond(req, res, key, loader) {
+  async function respond(req, res, key, link, loader) {
     if (!db) return res.status(503).type('html').send(notFoundPage());
     try {
       let view = cacheGet(key);
@@ -353,9 +416,10 @@ export async function mountShareQuestion({ app, db, FieldValue, rateLimit }) {
       }
       if (!view) return res.status(404).type('html').send(notFoundPage());
       const src = cleanSrc(req.query.src);
-      bump('views', src);
+      titles.set(link, view.title);
+      if (titles.size > CACHE_MAX) titles.delete(titles.keys().next().value);
       res.set('Cache-Control', 'public, max-age=300');
-      res.type('html').send(renderPage(view, { render, base: baseFor(req), path: req.path, src }));
+      res.type('html').send(renderPage(view, { render, base: baseFor(req), path: req.path, src, link }));
     } catch (e) {
       console.error('[share-question] failed:', e);
       res.status(500).type('html').send(notFoundPage());
@@ -369,28 +433,64 @@ export async function mountShareQuestion({ app, db, FieldValue, rateLimit }) {
     const { subject, year } = req.params;
     const n = num(req.params.n);
     if (!SLUG_RE.test(subject) || !YEAR_RE.test(year) || n < 1) return res.status(404).type('html').send(notFoundPage());
-    return respond(req, res, `jamb:${subject.toLowerCase()}:${year}:${n}`, () => loadByJamb(db, subject, year, n));
+    return respond(req, res, `jamb:${subject.toLowerCase()}:${year}:${n}`, `jamb_${subject.toLowerCase()}_${year}_${n}`, () => loadByJamb(db, subject, year, n));
   });
 
   app.get('/q/:id/:n', pageLimiter, (req, res) => {
     const { id } = req.params;
     const n = num(req.params.n);
     if (!ID_RE.test(id) || n < 1) return res.status(404).type('html').send(notFoundPage());
-    return respond(req, res, `exam:${id}:${n}`, () => loadByExamId(db, id, n));
+    return respond(req, res, `exam:${id}:${n}`, `exam_${id}_${n}`, () => loadByExamId(db, id, n));
   });
 
   app.get('/q/:id', pageLimiter, (req, res) => {
     const { id } = req.params;
     if (!ID_RE.test(id)) return res.status(404).type('html').send(notFoundPage());
-    return respond(req, res, `question:${id}`, () => loadByQuestionId(db, id));
+    return respond(req, res, `question:${id}`, `question_${id}`, () => loadByQuestionId(db, id));
   });
 
   app.post('/api/share/event', eventLimiter, (req, res) => {
     const type = text(req.body?.type);
     if (!EVENT_TYPES.includes(type)) return res.status(400).json({ error: 'Unknown event type' });
-    bump(`${type}s`, cleanSrc(req.body?.src));
+    const src = cleanSrc(req.body?.src);
+    const kind = `${type}s`;
+    bump(kind, src);
+    const link = text(req.body?.link);
+    bumpLink(link, kind, src, titles.get(link));
     res.status(204).end();
   });
+
+  // Admin-only: per-link counters for the "Shared Question Links" table in main_admin.htm.
+  if (requireAuth && isAdminUser) {
+    app.get('/api/share/links', requireAuth, async (req, res) => {
+      if (!db) return res.status(503).json({ error: 'Firebase Admin not configured' });
+      try {
+        if (!(await isAdminUser(req.user))) return res.status(403).json({ error: 'Admin access required' });
+        await flush(); // so the numbers include events still sitting in memory
+        const snap = await db.collection('shareLinks').orderBy('views', 'desc').limit(300).get();
+        const ms = (t) => (t && typeof t.toMillis === 'function' ? t.toMillis() : (t instanceof Date ? t.getTime() : 0));
+        const links = snap.docs.map((d) => {
+          const v = d.data();
+          return {
+            id: d.id,
+            path: v.path || pathFromLinkId(d.id),
+            title: v.title || '',
+            views: v.views || 0,
+            uniques: v.uniques || 0,
+            answers: v.answers || 0,
+            clicks: v.clicks || 0,
+            shares: v.shares || 0,
+            bySrc: v.bySrc || {},
+            lastViewAt: ms(v.lastViewAt),
+          };
+        });
+        res.set('Cache-Control', 'no-store').json({ links });
+      } catch (e) {
+        console.error('[share-question] links read failed:', e);
+        res.status(500).json({ error: 'Could not load link stats' });
+      }
+    });
+  }
 
   return { flush }; // exposed for tests and graceful shutdown
 }

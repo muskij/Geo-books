@@ -296,6 +296,40 @@
             <div class="p-10 border-b border-slate-100 flex justify-between items-center"><h3 class="text-2xl font-black">Top Universities</h3></div>
             <div class="divide-y divide-slate-100" id="an-top-universities"></div>
           </div>
+
+          <!-- Shared question links (/q/jamb/physics/1985/12?src=channel).
+               Counts come from the server's GET /api/share/links; a "view" is a
+               real browser opening the page (link-preview crawlers aren't
+               counted), "unique" is first open per browser per link. -->
+          <div class="bg-white rounded-[3rem] border border-slate-200 overflow-hidden shadow-soft">
+            <div class="p-10 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <h3 class="text-2xl font-black">Shared Question Links</h3>
+                <p class="text-xs font-bold text-slate-400 mt-1" id="shareLinksSummary">Loading…</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <input id="shareLinksFilter" oninput="window.renderShareLinks()" type="text" placeholder="Paste a link or search…" class="w-full lg:w-72 px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-bold outline-none focus:border-brand-500">
+                <button onclick="window.loadShareLinks()" class="px-5 py-3 rounded-2xl bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all shrink-0">Refresh</button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left">
+                <thead class="bg-slate-50/50 border-b border-slate-100">
+                  <tr>
+                    <th class="px-8 py-4 text-[10px] font-black uppercase text-slate-400">Link</th>
+                    <th class="px-4 py-4 text-[10px] font-black uppercase text-slate-400 text-right">Views</th>
+                    <th class="px-4 py-4 text-[10px] font-black uppercase text-slate-400 text-right">People</th>
+                    <th class="px-4 py-4 text-[10px] font-black uppercase text-slate-400 text-right">Answered</th>
+                    <th class="px-4 py-4 text-[10px] font-black uppercase text-slate-400 text-right">Opened app</th>
+                    <th class="px-4 py-4 text-[10px] font-black uppercase text-slate-400 text-right">Shared</th>
+                    <th class="px-8 py-4 text-[10px] font-black uppercase text-slate-400">Sources</th>
+                    <th class="px-8 py-4 text-[10px] font-black uppercase text-slate-400">Last view</th>
+                  </tr>
+                </thead>
+                <tbody id="shareLinksBody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -5989,10 +6023,61 @@
           data: { labels: Object.keys(categoryCounts), datasets: [{ data: Object.values(categoryCounts), backgroundColor: brandPalette }] },
           options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
         });
+        window.loadShareLinks(); // independent of the Firestore reads above
       } catch (e) {
         console.error('Analytics error:', e);
         window.toast('Failed to load analytics', 'error');
       }
+    };
+
+    // ---- Shared Question Links table ----
+    let shareLinks = [];
+    window.loadShareLinks = async () => {
+      const summary = document.getElementById('shareLinksSummary');
+      try {
+        const idToken = await auth.currentUser.getIdToken();
+        const res = await fetch(`${ADMIN_API_BASE_URL}/api/share/links`, { headers: { Authorization: `Bearer ${idToken}` } });
+        if (!res.ok) { let m = `Request failed (${res.status})`; try { m = (await res.json()).error || m; } catch (e) {} throw new Error(m); }
+        shareLinks = (await res.json()).links || [];
+        window.renderShareLinks();
+      } catch (e) {
+        console.error('Share links load failed:', e);
+        shareLinks = [];
+        if (summary) summary.textContent = `Could not load link stats (${e.message}).`;
+        const body = document.getElementById('shareLinksBody');
+        if (body) body.innerHTML = '';
+      }
+    };
+
+    window.renderShareLinks = () => {
+      const body = document.getElementById('shareLinksBody');
+      const summary = document.getElementById('shareLinksSummary');
+      if (!body) return;
+      // Accept a pasted full URL: keep just the path, drop origin and ?query.
+      let q = (document.getElementById('shareLinksFilter')?.value || '').trim().toLowerCase();
+      q = q.replace(/^https?:\/\/[^/]+/, '').split('?')[0].split('#')[0];
+      const rows = q ? shareLinks.filter(l => (l.path || '').toLowerCase().includes(q) || (l.title || '').toLowerCase().includes(q)) : shareLinks;
+      const sum = (k) => rows.reduce((t, l) => t + (Number(l[k]) || 0), 0);
+      if (summary) summary.textContent = `${rows.length} link${rows.length === 1 ? '' : 's'} • ${sum('views').toLocaleString()} views • ${sum('uniques').toLocaleString()} people`;
+      if (!rows.length) {
+        body.innerHTML = `<tr><td colspan="8" class="p-12 text-center text-slate-400 font-bold">${shareLinks.length ? 'No links match.' : 'No shared-link visits recorded yet.'}</td></tr>`;
+        return;
+      }
+      const num = (n) => `<td class="px-4 py-5 text-right text-sm font-black">${(Number(n) || 0).toLocaleString()}</td>`;
+      body.innerHTML = rows.map(l => {
+        const srcs = Object.entries(l.bySrc || {}).sort((a, b) => b[1] - a[1]).slice(0, 4)
+          .map(([k, v]) => `<span class="inline-block mr-1 mb-1 px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 text-[9px] font-black uppercase">${escapeHTML(k)} ${Number(v).toLocaleString()}</span>`).join('');
+        const last = l.lastViewAt ? new Date(l.lastViewAt).toLocaleString() : '—';
+        return `<tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-8 py-5">
+            <p class="font-black text-sm">${escapeHTML(l.title || l.path)}</p>
+            <a href="${escapeHTML(l.path)}" target="_blank" rel="noopener" class="text-[10px] text-brand-600 font-bold break-all">${escapeHTML(l.path)}</a>
+          </td>
+          ${num(l.views)}${num(l.uniques)}${num(l.answers)}${num(l.clicks)}${num(l.shares)}
+          <td class="px-8 py-5">${srcs || '<span class="text-slate-300 text-xs">—</span>'}</td>
+          <td class="px-8 py-5 text-[10px] text-slate-400 font-bold whitespace-nowrap">${escapeHTML(last)}</td>
+        </tr>`;
+      }).join('');
     };
 
     // ==========================================================================
