@@ -1249,7 +1249,10 @@ app.post('/api/ai/generate-quiz', requireAuth, async (req, res) => {
 
   const systemPrompt = [
     'You are a world-class exam creator for Nigerian students.',
-    `Target: ${safeIntensity} difficulty CBT questions.`,
+    // One notch harder than the label: "standard" now targets about twice the demand of a real exam.
+    `Target: CBT questions. ${safeIntensity === 'easy' ? 'Level: matching a real examination in difficulty and style.'
+      : safeIntensity === 'hard' ? 'Level: the hardest end of the material, far above real-exam difficulty; every question needs three or more reasoning steps, combines ideas, and uses distractors built from common student mistakes. No recall or one-step questions.'
+      : 'Level: roughly TWICE as demanding as a real examination; every question needs at least two reasoning steps, combines ideas where possible, and uses close, plausible distractors built from common student mistakes. No pure recall or one-step questions.'}`,
     'Extract core academic concepts, definitions, and facts from the provided document text.',
     'Return ONLY valid JSON with this exact structure:',
     '{ "subject": string, "questions": [ { "q": string, "opts": [string,string,string,string], "correct": 0|1|2|3, "exp": string } ] }'

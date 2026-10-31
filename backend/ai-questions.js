@@ -227,10 +227,12 @@ export function diagramTargetFor(subject, count) {
 // ---------------------------------------------------------------------------
 // Prompts
 // ---------------------------------------------------------------------------
-function difficultyLine(d) {
-  return d === 'easy' ? 'Level: easy, recall and direct application.'
-    : d === 'hard' ? 'Level: hard, multi-step and tricky distractors.'
-    : 'Level: standard, matching a real examination.';
+// Every tier is deliberately one notch harder than its name suggests: the
+// default ("standard") now targets roughly twice the demand of a real exam.
+export function difficultyLine(d) {
+  return d === 'easy' ? 'Level: matching a real examination in difficulty and style.'
+    : d === 'hard' ? 'Level: the hardest end of the syllabus, far above real-exam difficulty. Every question needs three or more reasoning or calculation steps, combines two or more syllabus ideas, and has distractors built from the most common student mistakes. No recall or one-step questions.'
+    : 'Level: roughly TWICE as demanding as a real examination. Every question needs at least two reasoning or calculation steps, combines two syllabus ideas where possible, and has close, plausible distractors built from common student mistakes. No pure recall or one-step questions.';
 }
 
 const SVG_RULES = [
